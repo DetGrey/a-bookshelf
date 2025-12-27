@@ -51,3 +51,5 @@ coverage/
 # Database
 *.sqlite
 *.db
+
+secret.md
