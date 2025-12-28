@@ -63,7 +63,7 @@ const router = createBrowserRouter([
       },
     ],
   },
-])
+], { basename: '/a-bookshelf' })
 
 createRoot(document.getElementById('root')).render(
   <StrictMode>

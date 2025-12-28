@@ -93,3 +93,7 @@
 - Optimize Edge Function for more sites (AniList, Goodreads, etc.)
 - Add dark mode toggle
 - Implement offline mode with service workers
+
+
+# Additional
+
