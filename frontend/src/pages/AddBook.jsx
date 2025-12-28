@@ -31,6 +31,7 @@ function AddBook() {
     setError('')
     setSuccess('')
     setLoading(true)
+    setMetadata(null)
 
     try {
       const { data, error: fnError } = await supabase.functions.invoke('fetch-metadata', {
@@ -38,33 +39,25 @@ function AddBook() {
       })
 
       if (fnError) throw fnError
+      if (data?.error) throw new Error(data.error)
 
-      // Fallback to demo metadata if the function is not configured yet
-      const fallback = {
-        title: 'Metadata demo title',
-        description: 'Connect your Supabase Edge Function to return real data.',
-        image:
-          'https://images.unsplash.com/photo-1521587760476-6c12a4b040da?auto=format&fit=crop&w=400&q=80',
-        genres: [],
-        original_language: '',
-        latest_chapter: '',
-        last_uploaded_at: null,
+      // SUCCESS: Auto-fill the form
+      if (data?.metadata) {
+        const m = data.metadata
+        setMetadata(m)
+        setFetchedAt(new Date())
+
+        setForm((prev) => ({
+          ...prev,
+          title: m.title || prev.title,
+          description: m.description || prev.description,
+          cover_url: m.image || prev.cover_url,
+          genres: Array.isArray(m.genres) ? m.genres.join(', ') : (m.genres || prev.genres),
+          original_language: m.original_language || prev.original_language,
+          latest_chapter: m.latest_chapter || prev.latest_chapter,
+          last_uploaded_at: m.last_uploaded_at || prev.last_uploaded_at,
+        }))
       }
-
-      const meta = data?.metadata ?? fallback
-      setMetadata(meta)
-      setFetchedAt(new Date().toISOString())
-      // Autofill form fields where possible
-      setForm((prev) => ({
-        ...prev,
-        title: meta.title ?? prev.title,
-        description: meta.description ?? prev.description,
-        cover_url: meta.image ?? prev.cover_url,
-        genres: (meta.genres ?? []).join(', '),
-        original_language: meta.original_language ?? prev.original_language,
-        latest_chapter: meta.latest_chapter ?? prev.latest_chapter,
-        last_uploaded_at: meta.last_uploaded_at ?? prev.last_uploaded_at,
-      }))
       setSuccess('Metadata fetched. Review or edit fields below, then save.')
     } catch (err) {
       setError(err?.message ?? 'Unable to fetch metadata right now.')
