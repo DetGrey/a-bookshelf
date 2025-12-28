@@ -1,12 +1,13 @@
-import * as cheerio from "cheerio"
+import { serve } from "https://deno.land/std@0.168.0/http/server.ts"
+import * as cheerio from "https://esm.sh/cheerio@1.0.0-rc.12"
 
 const corsHeaders = {
   'Access-Control-Allow-Origin': '*',
   'Access-Control-Allow-Headers': 'authorization, x-client-info, apikey, content-type',
 }
 
-Deno.serve(async (req: Request) => {
-  // 1. Handle CORS (Allow your frontend to call this)
+serve(async (req) => {
+  // 1. Handle CORS
   if (req.method === 'OPTIONS') {
     return new Response('ok', { headers: corsHeaders })
   }
@@ -18,10 +19,10 @@ Deno.serve(async (req: Request) => {
       throw new Error('No URL provided')
     }
 
-    // 2. Fetch the HTML from the external site
+    // 2. Fetch the HTML
     const response = await fetch(url, {
       headers: {
-        'User-Agent': 'Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/91.0.4472.124 Safari/537.36'
+        'User-Agent': 'Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/119.0.0.0 Safari/537.36'
       }
     })
     
@@ -30,39 +31,86 @@ Deno.serve(async (req: Request) => {
     const html = await response.text()
     const $ = cheerio.load(html)
 
-    // 3. Extract Standard Data (Open Graph)
-    let title = $('meta[property="og:title"]').attr('content') || $('title').text()
-    let description = $('meta[property="og:description"]').attr('content') || $('meta[name="description"]').attr('content')
+    // 3. Extract Info
+    
+    // -- Title --
+    // Try OG tag first, fallback to the H3 header found in your HTML
+    let title = $('meta[property="og:title"]').attr('content') || 
+                $('h3.font-bold a').first().text().trim() || 
+                $('title').text().trim()
+
+    // -- Description --
+    // The HTML uses a specific class for the summary
+    let description = $('.limit-html-p').text().trim() || 
+                      $('meta[property="og:description"]').attr('content') || 
+                      ''
+
+    // -- Cover Image --
+    // Try OG image, fallback to the specific image container class
     let image = $('meta[property="og:image"]').attr('content')
+    if (!image) {
+      // Find the image inside the flex container (w-24 md:w-52)
+      const imgSrc = $('div.w-24 img').attr('src')
+      if (imgSrc) {
+        // Fix relative URLs if necessary
+        image = imgSrc.startsWith('http') ? imgSrc : `https://bato.ing${imgSrc}`
+      }
+    }
 
-    // CLEANUP: Remove common suffixes like " - Read Free Manga"
-    title = title?.replace(/ - Read Free.*$/, '').trim()
-
-    // 4. Extract "Bato-Specific" Data
-    // These selectors work for Bato.ing as of today.
-    
-    // Genres
+    // -- Genres --
+    // Logic: Find the "Genres:" bold text, then get all spans in that same container
     const genres: string[] = []
-    $('.attr-item:contains("Genres") span').each((_: number, el: any) => {
-      genres.push($(el).text().trim())
-    })
+    const genreLabel = $('b:contains("Genres:")')
+    if (genreLabel.length) {
+      // The spans are siblings of the bold tag
+      genreLabel.parent().find('span').each((_: any, el: any) => {
+        const text = $(el).text().trim()
+        // Filter out commas and empty strings
+        if (text && text !== ',') {
+          genres.push(text)
+        }
+      })
+    }
 
-    // Original Language (Guessing based on Type)
+    // -- Original Language --
+    // Logic: Look for "Tr From" and get the text following it
     let original_language = 'Unknown'
-    const typeText = $('.attr-item:contains("Type") span').text().trim().toLowerCase()
-    if (typeText.includes('manga')) original_language = 'Japanese'
-    if (typeText.includes('manhwa')) original_language = 'Korean'
-    if (typeText.includes('manhua')) original_language = 'Chinese'
+    const trFromEl = $('span:contains("Tr From")')
+    if (trFromEl.length) {
+      // The language name (e.g. "Korean") is usually in a span sibling
+      // structure: <span>Tr From</span> <span>Flag</span> <span>Language</span>
+      const langText = trFromEl.nextAll('span').last().text().trim()
+      if (langText) original_language = langText
+    }
 
-    // Latest Chapter
-    const latestChapterElement = $('.main .item:first-child')
-    const latest_chapter = latestChapterElement.find('b').first().text().trim() || 'Unknown'
-    
-    // Upload Date (Rough approximation)
-    // If we found a chapter, we mark "now" as the last upload time for sorting purposes
-    const last_uploaded_at = latest_chapter !== 'Unknown' ? new Date().toISOString() : null
+    // -- Latest Chapter & Upload Date --
+    let latest_chapter = 'Unknown'
+    let last_uploaded_at = null
 
-    // 5. Return JSON
+    // Find the chapter list container
+    const chapterList = $('.group.flex.flex-col').first()
+    if (chapterList.length) {
+      // Get the first row (latest chapter)
+      const firstRow = chapterList.children().first()
+      
+      // Extract Chapter Name
+      const chapterLink = firstRow.find('a.link-hover').first()
+      if (chapterLink.length) {
+        latest_chapter = chapterLink.text().trim()
+      }
+
+      // Extract Timestamp
+      // Your HTML uses <time data-time="1766802134723">
+      const timeTag = firstRow.find('time')
+      const timestamp = timeTag.attr('data-time')
+      
+      if (timestamp) {
+        // Convert milliseconds timestamp to ISO string
+        last_uploaded_at = new Date(parseInt(timestamp)).toISOString()
+      }
+    }
+
+    // 4. Return JSON
     return new Response(
       JSON.stringify({
         metadata: {
