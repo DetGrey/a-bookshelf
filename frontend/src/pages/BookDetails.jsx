@@ -18,10 +18,19 @@ function BookDetails() {
     last_read: '',
     latest_chapter: '',
     notes: '',
+    cover_url: '',
+    genres: '', // comma-separated for editing
+    last_uploaded_at: '',
+    last_fetched_at: '',
   })
   const [newSourceLabel, setNewSourceLabel] = useState('')
   const [newSourceUrl, setNewSourceUrl] = useState('')
   const [sources, setSources] = useState([])
+  const [fetchUrl, setFetchUrl] = useState('')
+  const [fetchLoading, setFetchLoading] = useState(false)
+  const [fetchError, setFetchError] = useState('')
+  const [fetchSuccess, setFetchSuccess] = useState('')
+  const [fetchedMetadata, setFetchedMetadata] = useState(null)
 
   useEffect(() => {
     let mounted = true
@@ -41,6 +50,10 @@ function BookDetails() {
           last_read: b.last_read ?? '',
           latest_chapter: b.latest_chapter ?? '',
           notes: b.notes ?? '',
+          cover_url: b.cover_url ?? '',
+          genres: (b.genres ?? []).join(', '),
+          last_uploaded_at: b.last_uploaded_at ?? '',
+          last_fetched_at: b.last_fetched_at ?? '',
         })
       } catch (err) {
         if (mounted) setError(err.message)
@@ -89,8 +102,14 @@ function BookDetails() {
   }
 
   const handleSave = async () => {
-    await updateBook(book.id, editForm)
-    setBook({ ...book, ...editForm })
+    const payload = {
+      ...editForm,
+      genres: editForm.genres
+        ? editForm.genres.split(',').map((g) => g.trim()).filter(Boolean)
+        : [],
+    }
+    await updateBook(book.id, payload)
+    setBook({ ...book, ...payload })
     setIsEditing(false)
   }
 
@@ -117,6 +136,54 @@ function BookDetails() {
     setSources(sources.filter((_, i) => i !== index))
   }
 
+  const handleFetch = async (e) => {
+    e.preventDefault()
+    setFetchError('')
+    setFetchSuccess('')
+    setFetchLoading(true)
+    try {
+      if (!fetchUrl) throw new Error('Please enter a URL to fetch.')
+      const { data, error: fnError } = await supabase.functions.invoke('fetch-metadata', {
+        body: { url: fetchUrl },
+      })
+      if (fnError) throw fnError
+      const fallback = {
+        title: 'Metadata demo title',
+        description: 'Connect your Supabase Edge Function to return real data.',
+        image:
+          'https://images.unsplash.com/photo-1521587760476-6c12a4b040da?auto=format&fit=crop&w=400&q=80',
+        genres: [],
+        original_language: '',
+        latest_chapter: '',
+        last_uploaded_at: null,
+      }
+      const meta = data?.metadata ?? fallback
+      setFetchedMetadata(meta)
+      setFetchSuccess('Metadata fetched. Review below, then apply to fields.')
+    } catch (err) {
+      setFetchError(err?.message ?? 'Unable to fetch metadata right now.')
+    } finally {
+      setFetchLoading(false)
+    }
+  }
+
+  const applyFetched = () => {
+    if (!fetchedMetadata) return
+    const now = new Date().toISOString()
+    setEditForm((prev) => ({
+      ...prev,
+      title: fetchedMetadata.title ?? prev.title,
+      description: fetchedMetadata.description ?? prev.description,
+      cover_url: fetchedMetadata.image ?? prev.cover_url,
+      genres: (fetchedMetadata.genres ?? []).join(', '),
+      original_language: fetchedMetadata.original_language ?? prev.original_language,
+      latest_chapter: fetchedMetadata.latest_chapter ?? prev.latest_chapter,
+      last_uploaded_at: fetchedMetadata.last_uploaded_at ?? prev.last_uploaded_at,
+      last_fetched_at: now,
+    }))
+    setFetchSuccess('Applied metadata to fields. Remember to Save Changes.')
+  }
+
   return (
     <div className="page">
       <div className="page-head">
@@ -136,6 +203,47 @@ function BookDetails() {
       {isEditing ? (
         <div className="stack">
           <h1>Edit Book</h1>
+          <section className="card" style={{ marginBottom: '16px' }}>
+            <p className="eyebrow">Fetch Metadata</p>
+            <form onSubmit={handleFetch} className="stack">
+              <label className="field">
+                <span>Source URL</span>
+                <div style={{ display: 'flex', gap: '8px' }}>
+                  <input
+                    style={{ flex: 1 }}
+                    type="url"
+                    value={fetchUrl}
+                    onChange={(e) => setFetchUrl(e.target.value)}
+                    placeholder="https://example.com/title-page"
+                  />
+                  <button type="submit" className="ghost" disabled={fetchLoading}>
+                    {fetchLoading ? 'Fetching…' : 'Fetch'}
+                  </button>
+                </div>
+              </label>
+              {fetchError && <p className="error">{fetchError}</p>}
+              {fetchSuccess && <p className="success">{fetchSuccess}</p>}
+            </form>
+            {fetchedMetadata && (
+              <div className="metadata-preview" style={{ marginTop: '8px' }}>
+                <div className="thumb" style={{ backgroundImage: `url(${fetchedMetadata.image})` }} />
+                <div className="stack">
+                  <strong>{fetchedMetadata.title}</strong>
+                  <p className="muted" style={{ margin: 0 }}>{fetchedMetadata.description}</p>
+                  {fetchedMetadata.genres?.length > 0 && (
+                    <div className="pill-row" style={{ marginTop: '8px' }}>
+                      {fetchedMetadata.genres.map((g, i) => (
+                        <span key={`${g}-${i}`} className="pill ghost">{g}</span>
+                      ))}
+                    </div>
+                  )}
+                  <div style={{ display: 'flex', gap: '8px', marginTop: '8px' }}>
+                    <button className="ghost" onClick={applyFetched}>Apply to fields</button>
+                  </div>
+                </div>
+              </div>
+            )}
+          </section>
           
           <label className="field">
             <span>Title</span>
@@ -191,12 +299,52 @@ function BookDetails() {
             </label>
           </div>
 
+          <div className="grid-2">
+            <label className="field">
+              <span>Cover Image URL</span>
+              <input
+                type="url"
+                value={editForm.cover_url}
+                onChange={(e) => setEditForm({ ...editForm, cover_url: e.target.value })}
+                placeholder="https://..."
+              />
+            </label>
+
+            <label className="field">
+              <span>Genres</span>
+              <input
+                type="text"
+                value={editForm.genres}
+                onChange={(e) => setEditForm({ ...editForm, genres: e.target.value })}
+                placeholder="Action, Romance, Fantasy"
+              />
+            </label>
+          </div>
+
           <label className="field">
             <span>Latest Chapter (site)</span>
             <input
               type="text"
               value={editForm.latest_chapter}
               onChange={(e) => setEditForm({ ...editForm, latest_chapter: e.target.value })}
+            />
+          </label>
+
+          <label className="field">
+            <span>Last Uploaded At (site)</span>
+            <input
+              type="datetime-local"
+              value={editForm.last_uploaded_at || ''}
+              onChange={(e) => setEditForm({ ...editForm, last_uploaded_at: e.target.value })}
+            />
+          </label>
+
+          <label className="field">
+            <span>Last Fetched At</span>
+            <input
+              type="datetime-local"
+              value={editForm.last_fetched_at || ''}
+              onChange={(e) => setEditForm({ ...editForm, last_fetched_at: e.target.value })}
             />
           </label>
 
