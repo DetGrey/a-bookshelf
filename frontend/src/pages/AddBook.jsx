@@ -9,6 +9,22 @@ function AddBook() {
   const [metadata, setMetadata] = useState(null)
   const [fetchedAt, setFetchedAt] = useState(null)
   const [loading, setLoading] = useState(false)
+
+  // Helper to convert ISO string to datetime-local format
+  const formatDatetimeLocal = (isoString) => {
+    if (!isoString) return ''
+    try {
+      const date = new Date(isoString)
+      const year = date.getFullYear()
+      const month = String(date.getMonth() + 1).padStart(2, '0')
+      const day = String(date.getDate()).padStart(2, '0')
+      const hours = String(date.getHours()).padStart(2, '0')
+      const minutes = String(date.getMinutes()).padStart(2, '0')
+      return `${year}-${month}-${day}T${hours}:${minutes}`
+    } catch {
+      return ''
+    }
+  }
   const [error, setError] = useState('')
   const [success, setSuccess] = useState('')
   const [saving, setSaving] = useState(false)
@@ -55,7 +71,7 @@ function AddBook() {
           genres: Array.isArray(m.genres) ? m.genres.join(', ') : (m.genres || prev.genres),
           original_language: m.original_language || prev.original_language,
           latest_chapter: m.latest_chapter || prev.latest_chapter,
-          last_uploaded_at: m.last_uploaded_at || prev.last_uploaded_at,
+          last_uploaded_at: formatDatetimeLocal(m.last_uploaded_at) || prev.last_uploaded_at,
         }))
       }
       setSuccess('Metadata fetched. Review or edit fields below, then save.')
