@@ -1,7 +1,7 @@
 import { useEffect, useState } from 'react'
 import { Link } from 'react-router-dom'
 import { useAuth } from '../context/AuthProvider.jsx'
-import { getBooks, STATUS } from '../lib/db.js'
+import { getBooks, STATUS, truncateText } from '../lib/db.js'
 
 function BookCard({ book }) {
   return (
@@ -10,7 +10,7 @@ function BookCard({ book }) {
         <div className="thumb" style={{ backgroundImage: `url(${book.cover_url})` }} />
         <div>
           <h3>{book.title}</h3>
-          <p className="muted">{book.description}</p>
+          <p className="muted">{truncateText(book.description)}</p>
           <div className="pill-row">
             <span className="pill">{STATUS[book.status] ?? book.status}</span>
             {book.original_language && <span className="pill ghost">{book.original_language}</span>}

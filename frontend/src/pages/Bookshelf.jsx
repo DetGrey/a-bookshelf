@@ -1,7 +1,7 @@
 import { useEffect, useState } from 'react'
 import { Link } from 'react-router-dom'
 import { useAuth } from '../context/AuthProvider.jsx'
-import { getBooks, getShelves, toggleBookShelf, createShelf, deleteShelf, STATUS } from '../lib/db.js'
+import { getBooks, getShelves, toggleBookShelf, createShelf, deleteShelf, STATUS, truncateText } from '../lib/db.js'
 
 // Built-in status-based shelves
 const statusShelves = [
@@ -36,7 +36,7 @@ function BookCard({ book, onAddToShelf, customShelves, onGenreClick }) {
         </Link>
         <div>
           <h3>{book.title}</h3>
-          <p className="muted">{book.description}</p>
+          <p className="muted">{truncateText(book.description)}</p>
           <div className="pill-row">
             <span className="pill">{STATUS[book.status] ?? book.status}</span>
             {book.original_language && <span className="pill ghost">{book.original_language}</span>}
@@ -129,6 +129,15 @@ function Bookshelf() {
   const [newShelfName, setNewShelfName] = useState('')
   const [loading, setLoading] = useState(true)
   const [error, setError] = useState('')
+
+  // Read genre from URL params on mount
+  useEffect(() => {
+    const params = new URLSearchParams(window.location.search)
+    const genreParam = params.get('genre')
+    if (genreParam) {
+      setActiveGenre(decodeURIComponent(genreParam))
+    }
+  }, [])
 
   useEffect(() => {
     let mounted = true

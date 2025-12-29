@@ -294,7 +294,10 @@ function BookDetails() {
               <input
                 type="text"
                 value={editForm.last_read}
-                onChange={(e) => setEditForm({ ...editForm, last_read: e.target.value })}
+                onChange={(e) => {
+                  const val = e.target.value
+                  setEditForm({ ...editForm, last_read: val ? val.charAt(0).toUpperCase() + val.slice(1) : val })
+                }}
                 placeholder="Ch 50"
               />
             </label>
@@ -458,7 +461,14 @@ function BookDetails() {
               {book.genres?.length > 0 && (
                 <div className="pill-row" style={{ marginTop: '8px' }}>
                   {book.genres.map((g, i) => (
-                    <span key={`${g}-${i}`} className="pill ghost">{g}</span>
+                    <button
+                      key={`${g}-${i}`}
+                      className="pill ghost"
+                      onClick={() => navigate(`/bookshelf?genre=${encodeURIComponent(g)}`)}
+                      style={{ cursor: 'pointer', border: 'none', background: 'inherit', padding: '5px 10px' }}
+                    >
+                      {g}
+                    </button>
                   ))}
                 </div>
               )}

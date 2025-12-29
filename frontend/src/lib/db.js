@@ -11,6 +11,16 @@ export const STATUS = {
 }
 export const STATUS_KEYS = Object.keys(STATUS)
 
+// Helper to truncate text to first N words
+export function truncateText(text, maxWords = 15) {
+  if (!text) return ''
+  const words = text.trim().split(/\s+/)
+  if (words.length > maxWords) {
+    return words.slice(0, maxWords).join(' ') + '...'
+  }
+  return text
+}
+
 export async function getBooks(userId) {
   const { data, error } = await supabase
     .from('books')

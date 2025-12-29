@@ -10,6 +10,8 @@ function AddBook() {
   const [metadata, setMetadata] = useState(null)
   const [fetchedAt, setFetchedAt] = useState(null)
   const [loading, setLoading] = useState(false)
+  const [customShelves, setCustomShelves] = useState([])
+  const [selectedShelves, setSelectedShelves] = useState([])
 
   // Helper to convert ISO string to datetime-local format
   const formatDatetimeLocal = (isoString) => {
