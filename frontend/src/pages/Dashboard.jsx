@@ -65,7 +65,7 @@ function Dashboard() {
     }
   }, [user])
 
-  const sectionKeys = ['reading', 'plan_to_read', 'completed', 'dropped']
+  const sectionKeys = ['reading', 'plan_to_read', 'waiting', 'completed', 'dropped']
   const lastUpdated = books[0]?.updated_at
 
   return (

@@ -1,5 +1,6 @@
 import { useEffect, useState } from 'react'
 import { Link, useNavigate, useParams } from 'react-router-dom'
+import { supabase } from '../lib/supabaseClient.js'
 import { getBook, updateBook, addLink, deleteLink, deleteBook, STATUS, STATUS_KEYS } from '../lib/db.js'
 
 function BookDetails() {
