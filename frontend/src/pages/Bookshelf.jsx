@@ -272,16 +272,9 @@ function Bookshelf() {
           <div className="block">
             <div className="block-head">
               <p className="eyebrow">Status</p>
-              <button
-                className="ghost"
-                style={{ fontSize: '0.85rem', padding: '6px 10px' }}
-                onClick={() => setShowNewShelfForm(!showNewShelfForm)}
-              >
-                + New
-              </button>
             </div>
             <nav className="shelf-list">
-              {allShelves.map((shelf) => {
+              {statusShelves.map((shelf) => {
                 const count = getShelfCount(shelf.id)
                 return (
                   <button
@@ -293,17 +286,45 @@ function Bookshelf() {
                       <span>{shelf.name}</span>
                       <span className="shelf-count">{count}</span>
                     </div>
-                    {!shelf.isStatus && (
-                      <button
-                        className="shelf-delete"
-                        onClick={(e) => {
-                          e.stopPropagation()
-                          handleDeleteShelf(shelf.id)
-                        }}
-                      >
-                        ×
-                      </button>
-                    )}
+                  </button>
+                )
+              })}
+            </nav>
+          </div>
+          
+          <div className="block" style={{ marginTop: '16px' }}>
+            <div className="block-head">
+              <p className="eyebrow">Custom Shelves</p>
+              <button
+                className="ghost"
+                style={{ fontSize: '0.85rem', padding: '6px 10px' }}
+                onClick={() => setShowNewShelfForm(!showNewShelfForm)}
+              >
+                + New
+              </button>
+            </div>
+            <nav className="shelf-list">
+              {customShelves.map((shelf) => {
+                const count = getShelfCount(shelf.id)
+                return (
+                  <button
+                    key={shelf.id}
+                    className={`shelf-item ${activeShelf === shelf.id ? 'active' : ''}`}
+                    onClick={() => setActiveShelf(shelf.id)}
+                  >
+                    <div>
+                      <span>{shelf.name}</span>
+                      <span className="shelf-count">{count}</span>
+                    </div>
+                    <button
+                      className="shelf-delete"
+                      onClick={(e) => {
+                        e.stopPropagation()
+                        handleDeleteShelf(shelf.id)
+                      }}
+                    >
+                      ×
+                    </button>
                   </button>
                 )
               })}
