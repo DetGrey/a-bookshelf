@@ -110,9 +110,6 @@ function Dashboard() {
                 <p className="eyebrow">{STATUS[key]}</p>
                 <h2>{key === 'reading' ? 'Currently reading' : STATUS[key]}</h2>
               </div>
-              <Link to="/add" className="ghost">
-                Add link
-              </Link>
             </div>
             <div className="card-grid">
               {sectionBooks.map((book) => (

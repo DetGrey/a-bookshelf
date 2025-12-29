@@ -449,7 +449,7 @@ function BookDetails() {
                   <strong>{book.last_fetched_at ? new Date(book.last_fetched_at).toLocaleString() : '—'}</strong>
                 </div>
                 <div className="stat">
-                  <p className="muted">Uploaded</p>
+                  <p className="muted">Last Upload</p>
                   <strong>{book.last_uploaded_at ? new Date(book.last_uploaded_at).toLocaleString() : '—'}</strong>
                 </div>
               </div>

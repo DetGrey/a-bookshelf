@@ -8,6 +8,7 @@ const statusShelves = [
   { id: 'all', name: 'All Books', isStatus: true },
   { id: 'reading', name: STATUS.reading, isStatus: true },
   { id: 'plan_to_read', name: STATUS.plan_to_read, isStatus: true },
+  { id: 'waiting', name: STATUS.waiting, isStatus: true },
   { id: 'completed', name: STATUS.completed, isStatus: true },
   { id: 'dropped', name: STATUS.dropped, isStatus: true },
   { id: 'on_hold', name: STATUS.on_hold, isStatus: true },
@@ -19,7 +20,7 @@ const sortOptions = [
   { value: 'status', label: 'Status' },
 ]
 
-function BookCard({ book, onAddToShelf, customShelves }) {
+function BookCard({ book, onAddToShelf, customShelves, onGenreClick }) {
   const [showShelfMenu, setShowShelfMenu] = useState(false)
 
   const handleToggleShelf = (shelfId) => {
@@ -30,7 +31,9 @@ function BookCard({ book, onAddToShelf, customShelves }) {
   return (
     <article className="card">
       <div className="card-head">
-        <div className="thumb" style={{ backgroundImage: `url(${book.cover_url})` }} />
+        <Link to={`/book/${book.id}`} style={{ display: 'block' }}>
+          <div className="thumb" style={{ backgroundImage: `url(${book.cover_url})`, cursor: 'pointer' }} />
+        </Link>
         <div>
           <h3>{book.title}</h3>
           <p className="muted">{book.description}</p>
@@ -47,6 +50,20 @@ function BookCard({ book, onAddToShelf, customShelves }) {
               ) : null
             })}
           </div>
+          {book.genres?.length > 0 && (
+            <div className="pill-row" style={{ marginTop: '6px' }}>
+              {book.genres.map((g, i) => (
+                <button
+                  key={`${g}-${i}`}
+                  className="pill ghost"
+                  onClick={() => onGenreClick(g)}
+                  style={{ cursor: 'pointer', fontSize: '0.8rem' }}
+                >
+                  {g}
+                </button>
+              ))}
+            </div>
+          )}
         </div>
       </div>
       <div className="card-footer">
@@ -105,6 +122,7 @@ function Bookshelf() {
   const [books, setBooks] = useState([])
   const [customShelves, setCustomShelves] = useState([])
   const [activeShelf, setActiveShelf] = useState('all')
+  const [activeGenre, setActiveGenre] = useState('')
   const [sortBy, setSortBy] = useState('updated')
   const [searchQuery, setSearchQuery] = useState('')
   const [showNewShelfForm, setShowNewShelfForm] = useState(false)
@@ -136,18 +154,18 @@ function Bookshelf() {
     }
   }, [user])
 
-  // Get all shelves (status + custom)
-  const allShelves = [...statusShelves, ...customShelves]
-
   // Calculate shelf counts
   const getShelfCount = (shelfId) => {
     if (shelfId === 'all') return books.length
-    const statusKeys = ['reading', 'plan_to_read', 'completed', 'dropped', 'on_hold']
+    const statusKeys = ['reading', 'plan_to_read', 'waiting', 'completed', 'dropped', 'on_hold']
     if (statusKeys.includes(shelfId)) {
       return books.filter((b) => b.status === shelfId).length
     }
     return books.filter((b) => b.shelves?.includes(shelfId)).length
   }
+
+  // Get all unique genres from books
+  const allGenres = [...new Set(books.flatMap(b => b.genres ?? []))].sort()
 
   // Filter books by active shelf
   const getFilteredBooks = () => {
@@ -155,12 +173,17 @@ function Bookshelf() {
 
     // Filter by shelf
     if (activeShelf !== 'all') {
-      const statusKeys = ['reading', 'plan_to_read', 'completed', 'dropped', 'on_hold']
+      const statusKeys = ['reading', 'plan_to_read', 'waiting', 'completed', 'dropped', 'on_hold']
       if (statusKeys.includes(activeShelf)) {
         filtered = filtered.filter((book) => book.status === activeShelf)
       } else {
         filtered = filtered.filter((book) => book.shelves?.includes(activeShelf))
       }
+    }
+
+    // Filter by genre
+    if (activeGenre) {
+      filtered = filtered.filter((book) => book.genres?.includes(activeGenre))
     }
 
     // Search filter
@@ -248,7 +271,7 @@ function Bookshelf() {
         <aside className="shelf-sidebar">
           <div className="block">
             <div className="block-head">
-              <p className="eyebrow">Shelves</p>
+              <p className="eyebrow">Status</p>
               <button
                 className="ghost"
                 style={{ fontSize: '0.85rem', padding: '6px 10px' }}
@@ -340,6 +363,34 @@ function Bookshelf() {
               </select>
             </label>
           </div>
+          
+          {/* Genre filter */}
+          {allGenres.length > 0 && (
+            <div className="block" style={{ marginTop: '12px' }}>
+              <p className="eyebrow" style={{ marginBottom: '8px' }}>Filter by Genre</p>
+              <div className="pill-row">
+                {activeGenre && (
+                  <button
+                    className="pill"
+                    onClick={() => setActiveGenre('')}
+                    style={{ cursor: 'pointer' }}
+                  >
+                    ✕ Clear
+                  </button>
+                )}
+                {allGenres.map((genre) => (
+                  <button
+                    key={genre}
+                    className={activeGenre === genre ? 'pill' : 'pill ghost'}
+                    onClick={() => setActiveGenre(activeGenre === genre ? '' : genre)}
+                    style={{ cursor: 'pointer' }}
+                  >
+                    {genre}
+                  </button>
+                ))}
+              </div>
+            </div>
+          )}
 
           {/* Results count */}
           <p className="muted" style={{ marginBottom: '12px' }}>
@@ -355,6 +406,7 @@ function Bookshelf() {
                   book={book}
                   onAddToShelf={handleToggleBookShelf}
                   customShelves={customShelves}
+                  onGenreClick={(genre) => setActiveGenre(genre)}
                 />
               ))}
             </div>

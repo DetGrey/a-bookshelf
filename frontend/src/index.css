@@ -550,7 +550,7 @@ button.ghost {
   min-width: 200px;
   max-width: 90vw;
   box-shadow: var(--shadow);
-  z-index: 100;
+  z-index: 1000;
   display: grid;
   gap: 2px;
 }

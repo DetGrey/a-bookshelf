@@ -1,7 +1,8 @@
-import { useState } from 'react'
+import { useState, useEffect } from 'react'
+import { useNavigate } from 'react-router-dom'
 import { supabase } from '../lib/supabaseClient.js'
 import { useAuth } from '../context/AuthProvider.jsx'
-import { createBook, addLink, STATUS, STATUS_KEYS } from '../lib/db.js'
+import { createBook, addLink, getShelves, toggleBookShelf, STATUS, STATUS_KEYS } from '../lib/db.js'
 
 function AddBook() {
   const { user } = useAuth()
@@ -41,6 +42,21 @@ function AddBook() {
     latest_chapter: '',
     last_uploaded_at: '', // ISO string or empty
   })
+
+  useEffect(() => {
+    let mounted = true
+    async function loadShelves() {
+      if (!user) return
+      try {
+        const shelves = await getShelves(user.id)
+        if (mounted) setCustomShelves(shelves)
+      } catch (err) {
+        console.error('Failed to load shelves:', err)
+      }
+    }
+    loadShelves()
+    return () => { mounted = false }
+  }, [user])
 
   const handleFetch = async (event) => {
     event.preventDefault()
@@ -106,7 +122,15 @@ function AddBook() {
 
       const bookId = await createBook(user.id, payload)
       if (url) await addLink(bookId, 'Source', url)
+      
+      // Add to selected shelves
+      for (const shelfId of selectedShelves) {
+        await toggleBookShelf(bookId, shelfId)
+      }
+      
       setSuccess('Saved to your library!')
+      // Redirect to bookshelf after short delay
+      setTimeout(() => navigate('/bookshelf'), 800)
     } catch (err) {
       setError(err.message)
     } finally {
@@ -231,7 +255,10 @@ function AddBook() {
               <input
                 type="text"
                 value={form.latest_chapter}
-                onChange={(e) => setForm({ ...form, latest_chapter: e.target.value })}
+                onChange={(e) => {
+                  const val = e.target.value
+                  setForm({ ...form, latest_chapter: val ? val.charAt(0).toUpperCase() + val.slice(1) : val })
+                }}
               />
             </label>
           </div>
@@ -254,6 +281,33 @@ function AddBook() {
               onChange={(e) => setForm({ ...form, notes: e.target.value })}
             />
           </label>
+
+          {customShelves.length > 0 && (
+            <label className="field">
+              <span>Add to Shelves (optional)</span>
+              <div className="pill-row" style={{ marginTop: '4px' }}>
+                {customShelves.map((shelf) => {
+                  const isSelected = selectedShelves.includes(shelf.id)
+                  return (
+                    <button
+                      key={shelf.id}
+                      type="button"
+                      className={isSelected ? 'pill' : 'pill ghost'}
+                      onClick={() => {
+                        setSelectedShelves(isSelected 
+                          ? selectedShelves.filter(id => id !== shelf.id)
+                          : [...selectedShelves, shelf.id]
+                        )
+                      }}
+                      style={{ cursor: 'pointer' }}
+                    >
+                      {isSelected ? '✓ ' : ''}{shelf.name}
+                    </button>
+                  )
+                })}
+              </div>
+            </label>
+          )}
 
           <div style={{ display: 'flex', gap: '8px' }}>
             <button type="button" className="ghost" disabled={saving} onClick={handleSave}>

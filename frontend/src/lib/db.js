@@ -4,6 +4,7 @@ import { supabase } from './supabaseClient.js'
 export const STATUS = {
   reading: 'Reading',
   plan_to_read: 'Plan to Read',
+  waiting: 'Waiting',
   completed: 'Completed',
   dropped: 'Dropped',
   on_hold: 'On Hold',
