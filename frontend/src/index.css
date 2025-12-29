@@ -365,6 +365,11 @@ button.ghost {
   border-color: rgba(0, 201, 167, 0.4);
 }
 
+.field select option {
+  background: var(--panel-strong);
+  color: var(--text-primary);
+}
+
 .stack {
   display: grid;
   gap: 14px;
