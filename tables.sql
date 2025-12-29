@@ -19,7 +19,7 @@ create table public.books (
   original_language text, -- e.g. "Japanese"
   
   -- Progress
-  status text check (status in ('reading', 'plan_to_read', 'completed', 'dropped', 'on_hold')) default 'reading',
+  status text check (status in ('reading', 'plan_to_read', 'completed', 'waiting', 'dropped', 'on_hold')) default 'reading',
   last_read text,         -- Your progress (e.g. "Ch 50")
   notes text,
 

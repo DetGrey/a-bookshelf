@@ -6,6 +6,7 @@ import { createBook, addLink, getShelves, toggleBookShelf, STATUS, STATUS_KEYS }
 
 function AddBook() {
   const { user } = useAuth()
+  const navigate = useNavigate()
   const [url, setUrl] = useState('')
   const [metadata, setMetadata] = useState(null)
   const [fetchedAt, setFetchedAt] = useState(null)

@@ -35,7 +35,7 @@ Deno.serve(async (req) => {
                   'Unknown Title';
 
     // -- Description --
-    const description = $('.limit-html-p').text().trim() || 
+    const description = $('.limit-html-p').first().text().trim() || 
                         $('meta[property="og:description"]').attr('content') || 
                         '';
 

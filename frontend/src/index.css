@@ -543,16 +543,17 @@ button.ghost {
   position: absolute;
   top: calc(100% + 4px);
   right: 0;
-  background: var(--panel-strong);
+  background: var(--panel);
   border: 1px solid var(--border);
   border-radius: 10px;
   padding: 6px;
   min-width: 200px;
   max-width: 90vw;
-  box-shadow: var(--shadow);
+  box-shadow: 0 12px 32px rgba(0, 0, 0, 0.5);
   z-index: 1000;
   display: grid;
   gap: 2px;
+  backdrop-filter: blur(12px);
 }
 
 .shelf-dropdown-item {

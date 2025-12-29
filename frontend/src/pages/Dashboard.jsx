@@ -7,7 +7,9 @@ function BookCard({ book }) {
   return (
     <article className="card">
       <div className="card-head">
-        <div className="thumb" style={{ backgroundImage: `url(${book.cover_url})` }} />
+        <Link to={`/book/${book.id}`} style={{ display: 'block' }}>
+          <div className="thumb" style={{ backgroundImage: `url(${book.cover_url})`, cursor: 'pointer' }} />
+        </Link>
         <div>
           <h3>{book.title}</h3>
           <p className="muted">{truncateText(book.description)}</p>
