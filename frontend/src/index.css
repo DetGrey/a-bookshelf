@@ -258,7 +258,6 @@ button.ghost {
   flex-direction: column;
   gap: 10px;
   position: relative;
-  z-index: 100;
   overflow: visible;
 }
 
@@ -274,6 +273,7 @@ button.ghost {
   grid-template-columns: 1fr;
   gap: 12px;
   position: relative;
+  overflow: visible;
 }
 
 .block {
@@ -305,6 +305,7 @@ button.ghost {
   font-weight: 600;
   color: var(--text-primary);
   font-size: 0.85rem;
+  min-height: 20px;
 }
 
 .pill.ghost {

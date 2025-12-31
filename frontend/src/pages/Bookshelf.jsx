@@ -2,6 +2,7 @@ import { useEffect, useState } from 'react'
 import { Link } from 'react-router-dom'
 import { useAuth } from '../context/AuthProvider.jsx'
 import { getBooks, getShelves, toggleBookShelf, createShelf, deleteShelf, STATUS, truncateText } from '../lib/db.js'
+import { supabase } from '../lib/supabaseClient.js'
 
 // Built-in status-based shelves
 const statusShelves = [
@@ -65,7 +66,7 @@ function BookCard({ book, onAddToShelf, customShelves, onGenreClick, activeGenre
                         : [...activeGenres, g]
                       )
                     }}
-                    style={{ cursor: 'pointer', fontSize: '0.8rem', border: 'none', borderRadius: '8px' }}
+                    style={{ cursor: 'pointer', fontSize: '0.8rem', background: 'none', border: 'none', padding: 0 }}
                   >
                     {g}
                   </button>
@@ -86,7 +87,7 @@ function BookCard({ book, onAddToShelf, customShelves, onGenreClick, activeGenre
               {source.label}
             </a>
           ))}
-          <div style={{ position: 'relative' }}>
+          <div style={{ position: 'relative', zIndex: 1000 }}>
             <button
               className="ghost"
               onClick={() => setShowShelfMenu(!showShelfMenu)}
@@ -139,6 +140,8 @@ function Bookshelf() {
   const [newShelfName, setNewShelfName] = useState('')
   const [loading, setLoading] = useState(true)
   const [error, setError] = useState('')
+  const [checkingWaiting, setCheckingWaiting] = useState(false)
+  const [updateMessage, setUpdateMessage] = useState('')
 
   // Scroll to top when page loads
   useEffect(() => {
@@ -282,6 +285,84 @@ function Bookshelf() {
   }
 
   const filteredBooks = getFilteredBooks()
+
+  const handleCheckWaitingUpdates = async () => {
+    if (checkingWaiting) return
+    setCheckingWaiting(true)
+    setUpdateMessage('')
+    setError('')
+    const now = new Date().toISOString()
+    try {
+      const waitingBooks = books.filter((b) => b.status === 'waiting')
+      if (waitingBooks.length === 0) {
+        setUpdateMessage('No waiting books to check.')
+        return
+      }
+
+      const updatedIds = new Set()
+
+      const updates = await Promise.all(
+        waitingBooks.map(async (book) => {
+          const url = book.sources?.[0]?.url
+          if (!url) return { bookId: book.id, skipped: 'no_url' }
+
+          const { data: payload, error: fnError } = await supabase.functions.invoke('fetch-latest', {
+            body: { url },
+          })
+
+          if (fnError || !payload) return { bookId: book.id, error: fnError?.message || 'fetch failed' }
+
+          const nextLatest = payload.latest_chapter ?? book.latest_chapter
+          const nextUploaded = payload.last_uploaded_at ?? book.last_uploaded_at
+
+          const hasChange =
+            (nextLatest && nextLatest !== book.latest_chapter) ||
+            (nextUploaded && nextUploaded !== book.last_uploaded_at)
+
+          if (hasChange) {
+            const { error: updateError } = await supabase
+              .from('books')
+              .update({
+                latest_chapter: nextLatest,
+                last_uploaded_at: nextUploaded,
+                last_fetched_at: now,
+              })
+              .eq('id', book.id)
+
+            if (!updateError) {
+              updatedIds.add(book.id)
+            }
+          }
+
+          return { bookId: book.id, payload }
+        })
+      )
+
+      const updatesById = new Map(updates.map((u) => [u.bookId, u]))
+
+      setBooks((prev) =>
+        prev.map((book) => {
+          const result = updatesById.get(book.id)
+          const payload = result?.payload
+          if (payload && updatedIds.has(book.id)) {
+            return {
+              ...book,
+              latest_chapter: payload.latest_chapter ?? book.latest_chapter,
+              last_uploaded_at: payload.last_uploaded_at ?? book.last_uploaded_at,
+              last_fetched_at: now,
+            }
+          }
+          return book
+        })
+      )
+
+      setUpdateMessage(`Checked ${waitingBooks.length} waiting books; updated ${updatedIds.size}.`)
+    } catch (err) {
+      setError(err instanceof Error ? err.message : String(err))
+    } finally {
+      setCheckingWaiting(false)
+    }
+  }
 
   return (
     <div className="page">
@@ -480,16 +561,18 @@ function Bookshelf() {
             {activeShelf === 'waiting' && filteredBooks.length > 0 && (
               <button
                 className="primary"
-                onClick={() => {
-                  // TODO: Connect to edge function to check for new chapters across all waiting books
-                  console.log('Check for new chapters - TODO')
-                }}
+                onClick={handleCheckWaitingUpdates}
                 style={{ fontSize: '0.85rem', padding: '8px 12px' }}
+                disabled={checkingWaiting}
               >
-                Check Updates
+                {checkingWaiting ? 'Checking…' : 'Check Updates'}
               </button>
             )}
           </div>
+
+          {updateMessage && (
+            <p className="muted" style={{ marginBottom: '12px' }}>{updateMessage}</p>
+          )}
 
           {/* Book grid */}
           {filteredBooks.length > 0 ? (
