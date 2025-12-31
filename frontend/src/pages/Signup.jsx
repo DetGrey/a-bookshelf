@@ -8,6 +8,7 @@ function Signup() {
 
   const [email, setEmail] = useState('')
   const [password, setPassword] = useState('')
+  const [passwordConfirm, setPasswordConfirm] = useState('')
   const [loading, setLoading] = useState(false)
   const [error, setError] = useState('')
   const [message, setMessage] = useState('')
@@ -17,6 +18,13 @@ function Signup() {
     setLoading(true)
     setError('')
     setMessage('')
+
+    // Validate passwords match
+    if (password !== passwordConfirm) {
+      setError('Passwords do not match')
+      setLoading(false)
+      return
+    }
 
     const { error: signUpError } = await signUp(email, password)
     setLoading(false)
@@ -28,6 +36,7 @@ function Signup() {
     setMessage('Check your email to confirm your account, then log in.')
     setEmail('')
     setPassword('')
+    setPasswordConfirm('')
     navigate('/login')
   }
 
@@ -58,6 +67,17 @@ function Signup() {
               autoComplete="new-password"
               value={password}
               onChange={(event) => setPassword(event.target.value)}
+              required
+            />
+          </label>
+          <label className="field">
+            <span>Confirm Password</span>
+            <input
+              type="password"
+              name="passwordConfirm"
+              autoComplete="new-password"
+              value={passwordConfirm}
+              onChange={(event) => setPasswordConfirm(event.target.value)}
               required
             />
           </label>

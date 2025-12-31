@@ -20,7 +20,7 @@ const sortOptions = [
   { value: 'status', label: 'Status' },
 ]
 
-function BookCard({ book, onAddToShelf, customShelves, onGenreClick }) {
+function BookCard({ book, onAddToShelf, customShelves, onGenreClick, activeGenres, setActiveGenres }) {
   const [showShelfMenu, setShowShelfMenu] = useState(false)
 
   const handleToggleShelf = (shelfId) => {
@@ -501,6 +501,8 @@ function Bookshelf() {
                   onAddToShelf={handleToggleBookShelf}
                   customShelves={customShelves}
                   onGenreClick={(genre) => setActiveGenres([...activeGenres, genre])}
+                  activeGenres={activeGenres}
+                  setActiveGenres={setActiveGenres}
                 />
               ))}
             </div>
