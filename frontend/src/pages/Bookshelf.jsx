@@ -34,9 +34,9 @@ function BookCard({ book, onAddToShelf, customShelves, onGenreClick }) {
         <Link to={`/book/${book.id}`} style={{ display: 'block' }}>
           <div className="thumb" style={{ backgroundImage: `url(${book.cover_url})`, cursor: 'pointer' }} />
         </Link>
-        <div>
-          <h3>{book.title}</h3>
-          <p className="muted">{truncateText(book.description)}</p>
+        <div style={{ minWidth: 0 }}>
+          <h3 style={{ wordBreak: 'break-word' }}>{book.title}</h3>
+          <p className="muted" style={{ wordBreak: 'break-word' }}>{truncateText(book.description)}</p>
           <div className="pill-row">
             <span className="pill">{STATUS[book.status] ?? book.status}</span>
             {book.original_language && <span className="pill ghost">{book.original_language}</span>}
@@ -52,10 +52,12 @@ function BookCard({ book, onAddToShelf, customShelves, onGenreClick }) {
           </div>
           {book.genres?.length > 0 && (
             <div className="pill-row" style={{ marginTop: '6px' }}>
-              <span className="pill ghost" style={{ fontSize: '0.8rem' }}>
-                {book.genres.map((g, i) => (
+              {book.genres.map((g, i) => {
+                const isActive = activeGenres.includes(g)
+                return (
                   <button
                     key={`${g}-${i}`}
+                    className={isActive ? 'pill' : 'pill ghost'}
                     onClick={() => {
                       const isActive = activeGenres.includes(g)
                       setActiveGenres(isActive 
@@ -63,12 +65,12 @@ function BookCard({ book, onAddToShelf, customShelves, onGenreClick }) {
                         : [...activeGenres, g]
                       )
                     }}
-                    style={{ cursor: 'pointer', background: 'none', border: 'none', color: 'inherit', padding: 0 }}
+                    style={{ cursor: 'pointer', fontSize: '0.8rem', border: 'none', borderRadius: '8px' }}
                   >
-                    {g}{i < book.genres.length - 1 ? ', ' : ''}
+                    {g}
                   </button>
-                ))}
-              </span>
+                )
+              })}
             </div>
           )}
         </div>
@@ -137,6 +139,11 @@ function Bookshelf() {
   const [newShelfName, setNewShelfName] = useState('')
   const [loading, setLoading] = useState(true)
   const [error, setError] = useState('')
+
+  // Scroll to top when page loads
+  useEffect(() => {
+    window.scrollTo(0, 0)
+  }, [])
 
   // Read genre from URL params on mount
   useEffect(() => {
@@ -418,14 +425,14 @@ function Bookshelf() {
                     <button
                       className={genreFilterMode === 'any' ? 'pill' : 'pill ghost'}
                       onClick={() => setGenreFilterMode('any')}
-                      style={{ cursor: 'pointer', fontSize: '0.75rem', padding: '4px 8px' }}
+                      style={{ cursor: 'pointer', fontSize: '0.75rem', borderRadius: '8px' }}
                     >
                       Any
                     </button>
                     <button
                       className={genreFilterMode === 'all' ? 'pill' : 'pill ghost'}
                       onClick={() => setGenreFilterMode('all')}
-                      style={{ cursor: 'pointer', fontSize: '0.75rem', padding: '4px 8px' }}
+                      style={{ cursor: 'pointer', fontSize: '0.75rem', borderRadius: '8px' }}
                     >
                       All
                     </button>
@@ -437,29 +444,28 @@ function Bookshelf() {
                   <button
                     className="pill"
                     onClick={() => setActiveGenres([])}
-                    style={{ cursor: 'pointer' }}
+                    style={{ cursor: 'pointer', borderRadius: '8px' }}
                   >
                     ✕ Clear
                   </button>
                 )}
-                {allGenres.map((genre, index) => {
+                {allGenres.map((genre) => {
                   const isActive = activeGenres.includes(genre)
                   return (
-                    <span key={genre} style={{ display: 'flex', alignItems: 'center', gap: '4px' }}>
-                      <button
-                        className={isActive ? 'pill' : 'pill ghost'}
-                        onClick={() => {
-                          setActiveGenres(isActive 
-                            ? activeGenres.filter(g => g !== genre)
-                            : [...activeGenres, genre]
-                          )
-                        }}
-                        style={{ cursor: 'pointer' }}
-                      >
-                        {genre}
-                      </button>
-                      {index < allGenres.length - 1 && <span style={{ opacity: 0.5 }}>•</span>}
-                    </span>
+                    <button
+                      key={genre}
+                      className={isActive ? 'pill' : 'pill ghost'}
+                      onClick={() => {
+                        const isActive = activeGenres.includes(genre)
+                        setActiveGenres(isActive 
+                          ? activeGenres.filter(g => g !== genre)
+                          : [...activeGenres, genre]
+                        )
+                      }}
+                        style={{ cursor: 'pointer', borderRadius: '8px' }}
+                    >
+                      {genre}
+                    </button>
                   )
                 })}
               </div>
