@@ -52,16 +52,23 @@ function BookCard({ book, onAddToShelf, customShelves, onGenreClick }) {
           </div>
           {book.genres?.length > 0 && (
             <div className="pill-row" style={{ marginTop: '6px' }}>
-              {book.genres.map((g, i) => (
-                <button
-                  key={`${g}-${i}`}
-                  className="pill ghost"
-                  onClick={() => onGenreClick(g)}
-                  style={{ cursor: 'pointer', fontSize: '0.8rem' }}
-                >
-                  {g}
-                </button>
-              ))}
+              <span className="pill ghost" style={{ fontSize: '0.8rem' }}>
+                {book.genres.map((g, i) => (
+                  <button
+                    key={`${g}-${i}`}
+                    onClick={() => {
+                      const isActive = activeGenres.includes(g)
+                      setActiveGenres(isActive 
+                        ? activeGenres.filter(genre => genre !== g)
+                        : [...activeGenres, g]
+                      )
+                    }}
+                    style={{ cursor: 'pointer', background: 'none', border: 'none', color: 'inherit', padding: 0 }}
+                  >
+                    {g}{i < book.genres.length - 1 ? ', ' : ''}
+                  </button>
+                ))}
+              </span>
             </div>
           )}
         </div>
@@ -122,7 +129,8 @@ function Bookshelf() {
   const [books, setBooks] = useState([])
   const [customShelves, setCustomShelves] = useState([])
   const [activeShelf, setActiveShelf] = useState('all')
-  const [activeGenre, setActiveGenre] = useState('')
+  const [activeGenres, setActiveGenres] = useState([])
+  const [genreFilterMode, setGenreFilterMode] = useState('all') // 'any' or 'all'
   const [sortBy, setSortBy] = useState('updated')
   const [searchQuery, setSearchQuery] = useState('')
   const [showNewShelfForm, setShowNewShelfForm] = useState(false)
@@ -135,7 +143,7 @@ function Bookshelf() {
     const params = new URLSearchParams(window.location.search)
     const genreParam = params.get('genre')
     if (genreParam) {
-      setActiveGenre(decodeURIComponent(genreParam))
+      setActiveGenres([decodeURIComponent(genreParam)])
     }
   }, [])
 
@@ -190,9 +198,15 @@ function Bookshelf() {
       }
     }
 
-    // Filter by genre
-    if (activeGenre) {
-      filtered = filtered.filter((book) => book.genres?.includes(activeGenre))
+    // Filter by genres
+    if (activeGenres.length > 0) {
+      if (genreFilterMode === 'all') {
+        // Book must have ALL selected genres
+        filtered = filtered.filter((book) => activeGenres.every(genre => book.genres?.includes(genre)))
+      } else {
+        // Book must have ANY of the selected genres
+        filtered = filtered.filter((book) => activeGenres.some(genre => book.genres?.includes(genre)))
+      }
     }
 
     // Search filter
@@ -397,35 +411,79 @@ function Bookshelf() {
           {/* Genre filter */}
           {allGenres.length > 0 && (
             <div className="block" style={{ marginTop: '12px' }}>
-              <p className="eyebrow" style={{ marginBottom: '8px' }}>Filter by Genre</p>
-              <div className="pill-row">
-                {activeGenre && (
+              <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', marginBottom: '8px' }}>
+                <p className="eyebrow" style={{ margin: 0 }}>Filter by Genre</p>
+                {activeGenres.length > 0 && (
+                  <div style={{ display: 'flex', gap: '4px' }}>
+                    <button
+                      className={genreFilterMode === 'any' ? 'pill' : 'pill ghost'}
+                      onClick={() => setGenreFilterMode('any')}
+                      style={{ cursor: 'pointer', fontSize: '0.75rem', padding: '4px 8px' }}
+                    >
+                      Any
+                    </button>
+                    <button
+                      className={genreFilterMode === 'all' ? 'pill' : 'pill ghost'}
+                      onClick={() => setGenreFilterMode('all')}
+                      style={{ cursor: 'pointer', fontSize: '0.75rem', padding: '4px 8px' }}
+                    >
+                      All
+                    </button>
+                  </div>
+                )}
+              </div>
+              <div style={{ display: 'flex', alignItems: 'center', gap: '4px', flexWrap: 'wrap' }}>
+                {activeGenres.length > 0 && (
                   <button
                     className="pill"
-                    onClick={() => setActiveGenre('')}
+                    onClick={() => setActiveGenres([])}
                     style={{ cursor: 'pointer' }}
                   >
                     ✕ Clear
                   </button>
                 )}
-                {allGenres.map((genre) => (
-                  <button
-                    key={genre}
-                    className={activeGenre === genre ? 'pill' : 'pill ghost'}
-                    onClick={() => setActiveGenre(activeGenre === genre ? '' : genre)}
-                    style={{ cursor: 'pointer' }}
-                  >
-                    {genre}
-                  </button>
-                ))}
+                {allGenres.map((genre, index) => {
+                  const isActive = activeGenres.includes(genre)
+                  return (
+                    <span key={genre} style={{ display: 'flex', alignItems: 'center', gap: '4px' }}>
+                      <button
+                        className={isActive ? 'pill' : 'pill ghost'}
+                        onClick={() => {
+                          setActiveGenres(isActive 
+                            ? activeGenres.filter(g => g !== genre)
+                            : [...activeGenres, genre]
+                          )
+                        }}
+                        style={{ cursor: 'pointer' }}
+                      >
+                        {genre}
+                      </button>
+                      {index < allGenres.length - 1 && <span style={{ opacity: 0.5 }}>•</span>}
+                    </span>
+                  )
+                })}
               </div>
             </div>
           )}
 
-          {/* Results count */}
-          <p className="muted" style={{ marginBottom: '12px' }}>
-            {filteredBooks.length} {filteredBooks.length === 1 ? 'book' : 'books'} found {loading && '(loading...)'}
-          </p>
+          {/* Results count with check updates button for waiting shelf */}
+          <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', marginBottom: '12px' }}>
+            <p className="muted">
+              {filteredBooks.length} {filteredBooks.length === 1 ? 'book' : 'books'} found {loading && '(loading...)'}
+            </p>
+            {activeShelf === 'waiting' && filteredBooks.length > 0 && (
+              <button
+                className="primary"
+                onClick={() => {
+                  // TODO: Connect to edge function to check for new chapters across all waiting books
+                  console.log('Check for new chapters - TODO')
+                }}
+                style={{ fontSize: '0.85rem', padding: '8px 12px' }}
+              >
+                Check Updates
+              </button>
+            )}
+          </div>
 
           {/* Book grid */}
           {filteredBooks.length > 0 ? (
@@ -436,7 +494,7 @@ function Bookshelf() {
                   book={book}
                   onAddToShelf={handleToggleBookShelf}
                   customShelves={customShelves}
-                  onGenreClick={(genre) => setActiveGenre(genre)}
+                  onGenreClick={(genre) => setActiveGenres([...activeGenres, genre])}
                 />
               ))}
             </div>

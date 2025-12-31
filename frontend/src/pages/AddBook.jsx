@@ -217,7 +217,10 @@ function AddBook() {
                 type="text"
                 placeholder="Ch 50"
                 value={form.last_read}
-                onChange={(e) => setForm({ ...form, last_read: e.target.value })}
+                onChange={(e) => {
+                  const val = e.target.value
+                  setForm({ ...form, last_read: val ? val.charAt(0).toUpperCase() + val.slice(1) : val })
+                }}
               />
             </label>
           </div>
