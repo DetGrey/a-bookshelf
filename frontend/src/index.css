@@ -1,6 +1,7 @@
 @import url('https://fonts.googleapis.com/css2?family=Space+Grotesk:wght@400;500;600;700&family=Sora:wght@400;500;600&display=swap');
 
 :root {
+  color-scheme: dark;
   --bg: #06070f;
   --panel: rgba(255, 255, 255, 0.04);
   --panel-strong: rgba(255, 255, 255, 0.07);
@@ -76,7 +77,7 @@ p {
   top: 0;
   backdrop-filter: blur(14px);
   background: rgba(6, 7, 15, 0.95);
-  z-index: 10;
+  z-index: 1000;
 }
 
 .brand {
@@ -188,7 +189,8 @@ p {
 .primary,
 .ghost,
 button.primary,
-button.ghost {
+button.ghost,
+button.pill {
   display: inline-flex;
   align-items: center;
   justify-content: center;
@@ -531,13 +533,20 @@ button.ghost {
 .shelf-delete {
   background: transparent;
   border: none;
-  color: #ff7b7b;
+  color: var(--text-primary);
   font-size: 1.4rem;
   cursor: pointer;
   padding: 4px 8px;
   min-height: 44px;
   display: flex;
   align-items: center;
+  opacity: 0.7;
+  transition: opacity 0.2s ease;
+}
+
+.shelf-delete:hover {
+  opacity: 1;
+  color: #ff7b7b;
 }
 
 .shelf-content {
@@ -557,14 +566,13 @@ button.ghost {
   position: absolute;
   top: calc(100% + 4px);
   right: 0;
-  background: var(--panel);
+  background: var(--bg);
   border: 1px solid var(--border);
   border-radius: 10px;
   padding: 6px;
   min-width: 200px;
   max-width: 90vw;
   box-shadow: 0 12px 32px rgba(0, 0, 0, 0.5);
-  z-index: 1000;
   display: grid;
   gap: 2px;
   backdrop-filter: blur(12px);

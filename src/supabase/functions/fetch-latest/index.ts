@@ -25,36 +25,42 @@ Deno.serve(async (req) => {
     if (!response.ok) throw new Error(`Failed to fetch site: ${response.statusText}`);
 
     const html = await response.text();
-    // specific load check to prevent import compatibility issues
-    const load = cheerio.load || (cheerio.default && cheerio.default.load);
-    const $ = load(html);
+    const $ = cheerio.load(html);
 
-    // 3. Extract ONLY Latest Chapter & Upload Date
-    let latest_chapter = 'Unknown';
-    let last_uploaded_at = null;
+    // 3. Extract ONLY Latest Chapter & Upload Date (match fetch-metadata behaviour)
+    let latest_chapter = '';
+    let last_uploaded_at: string | null = null;
 
     // Target the main chapter list container
     const chapterList = $('.group.flex.flex-col').first();
-    
+
     if (chapterList.length) {
       // The first child is the latest chapter row
       const firstRow = chapterList.children().first();
 
-      // Get Chapter Name
-      // Use the specific selector looking for chapter links
-      const chapterLink = firstRow.find('a[href*="/chapter/"]').first();
-      if (chapterLink.length) {
-        latest_chapter = chapterLink.text().trim();
+      // Support both structures: the row can be the anchor itself or contain it
+      const chapterAnchor = firstRow.is('a')
+        ? firstRow
+        : firstRow.find('a[href*="/chapter/"], a.link-hover').first();
+
+      if (chapterAnchor.length) {
+        latest_chapter = chapterAnchor.text().trim();
       }
 
-      // Get Upload Date
-      // The HTML stores the exact timestamp in the data-time attribute
-      const timeTag = firstRow.find('time');
-      const timestamp = timeTag.attr('data-time');
+      // Prefer time tag closest to the chapter anchor, fallback to the row itself
+      const timeTag = chapterAnchor.find('time').first().length
+        ? chapterAnchor.find('time').first()
+        : firstRow.find('time').first();
+
+      const timestamp = timeTag.attr('data-time') || timeTag.attr('datetime') || timeTag.text();
 
       if (timestamp) {
-        // Convert the Unix timestamp (ms) to ISO string for Supabase
-        last_uploaded_at = new Date(parseInt(timestamp)).toISOString();
+        const numeric = Number(timestamp);
+        const millis = Number.isFinite(numeric) ? (numeric < 1e12 ? numeric * 1000 : numeric) : null;
+        const parsedDate = millis ? new Date(millis) : new Date(timestamp);
+        if (!isNaN(parsedDate.getTime())) {
+          last_uploaded_at = parsedDate.toISOString();
+        }
       }
     }
 

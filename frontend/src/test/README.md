@@ -42,6 +42,7 @@ npm test -- edge-cases.test.js
 - ✅ Imports work (no broken imports)
 - ✅ STATUS object complete (all statuses defined)
 - ✅ Functions exist and work (truncateText, etc.)
+- ✅ Update check guardrails (skip empty payloads, skip unchanged payloads, update on real changes)
 - ✅ Array operations work properly
 - ✅ Null/undefined handling
 - ✅ No accidental mutations

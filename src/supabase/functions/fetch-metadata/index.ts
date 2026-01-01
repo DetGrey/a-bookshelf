@@ -32,7 +32,7 @@ Deno.serve(async (req) => {
     // -- Title --
     const title = $('h3.font-bold a').first().text().trim() || 
                   $('meta[property="og:title"]').attr('content') || 
-                  'Unknown Title';
+                  '';
 
     // -- Description --
     const description = $('.limit-html-p').first().text().trim() || 
@@ -75,7 +75,7 @@ Deno.serve(async (req) => {
     if (langText) original_language = langText
 
     // -- Latest Chapter & Upload Date --
-    let latest_chapter = 'Unknown';
+    let latest_chapter = '';
     let last_uploaded_at = null;
 
     // Target the main chapter list container

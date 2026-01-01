@@ -1,6 +1,7 @@
 import { useState } from 'react'
 import { Link, useNavigate } from 'react-router-dom'
 import { useAuth } from '../context/AuthProvider.jsx'
+import AuthForm from '../components/AuthForm.jsx'
 
 function Signup() {
   const { signUp } = useAuth()
@@ -13,8 +14,7 @@ function Signup() {
   const [error, setError] = useState('')
   const [message, setMessage] = useState('')
 
-  const handleSubmit = async (event) => {
-    event.preventDefault()
+  const handleSubmit = async () => {
     setLoading(true)
     setError('')
     setMessage('')
@@ -40,6 +40,39 @@ function Signup() {
     navigate('/login')
   }
 
+  const handleFieldChange = (field, value) => {
+    if (field === 'email') setEmail(value)
+    if (field === 'password') setPassword(value)
+    if (field === 'passwordConfirm') setPasswordConfirm(value)
+  }
+
+  const fields = [
+    {
+      name: 'email',
+      label: 'Email',
+      type: 'email',
+      value: email,
+      autoComplete: 'email',
+      required: true,
+    },
+    {
+      name: 'password',
+      label: 'Password',
+      type: 'password',
+      value: password,
+      autoComplete: 'new-password',
+      required: true,
+    },
+    {
+      name: 'passwordConfirm',
+      label: 'Confirm Password',
+      type: 'password',
+      value: passwordConfirm,
+      autoComplete: 'new-password',
+      required: true,
+    },
+  ]
+
   return (
     <div className="auth">
       <div className="auth-card">
@@ -47,40 +80,26 @@ function Signup() {
         <h1>Start your shelf</h1>
         <p className="muted">Sign up with email and password. Supabase handles auth.</p>
 
-        <form className="stack" onSubmit={handleSubmit}>
-          <label className="field">
-            <span>Email</span>
-            <input
-              type="email"
-              name="email"
-              autoComplete="email"
-              value={email}
-              onChange={(event) => setEmail(event.target.value)}
-              required
-            />
-          </label>
-          <label className="field">
-            <span>Password</span>
-            <input
-              type="password"
-              name="password"
-              autoComplete="new-password"
-              value={password}
-              onChange={(event) => setPassword(event.target.value)}
-              required
-            />
-          </label>
-          <label className="field">
-            <span>Confirm Password</span>
-            <input
-              type="password"
-              name="passwordConfirm"
-              autoComplete="new-password"
-              value={passwordConfirm}
-              onChange={(event) => setPasswordConfirm(event.target.value)}
-              required
-            />
-          </label>
+        <form
+          className="stack"
+          onSubmit={(e) => {
+            e.preventDefault()
+            handleSubmit()
+          }}
+        >
+          {fields.map((field) => (
+            <label key={field.name} className="field">
+              <span>{field.label}</span>
+              <input
+                type={field.type}
+                name={field.name}
+                autoComplete={field.autoComplete}
+                value={field.value}
+                onChange={(e) => handleFieldChange(field.name, e.target.value)}
+                required
+              />
+            </label>
+          ))}
           <button type="submit" className="primary" disabled={loading}>
             {loading ? 'Creating...' : 'Create account'}
           </button>

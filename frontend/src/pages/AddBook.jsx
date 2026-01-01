@@ -2,7 +2,10 @@ import { useState, useEffect } from 'react'
 import { useNavigate } from 'react-router-dom'
 import { supabase } from '../lib/supabaseClient.js'
 import { useAuth } from '../context/AuthProvider.jsx'
-import { createBook, addLink, getShelves, toggleBookShelf, STATUS, STATUS_KEYS } from '../lib/db.js'
+import { createBook, addLink, getShelves, toggleBookShelf, STATUS_KEYS, STATUS } from '../lib/db.js'
+import BookFormFields from '../components/BookFormFields.jsx'
+import MetadataFetcher from '../components/MetadataFetcher.jsx'
+import ShelfSelector from '../components/ShelfSelector.jsx'
 
 function AddBook() {
   const { user } = useAuth()
@@ -13,8 +16,42 @@ function AddBook() {
   const [loading, setLoading] = useState(false)
   const [customShelves, setCustomShelves] = useState([])
   const [selectedShelves, setSelectedShelves] = useState([])
+  const [error, setError] = useState('')
+  const [success, setSuccess] = useState('')
+  const [saving, setSaving] = useState(false)
 
-  // Helper to convert ISO string to datetime-local format
+  const [form, setForm] = useState({
+    title: '',
+    description: '',
+    cover_url: '',
+    genres: '',
+    original_language: '',
+    status: STATUS_KEYS[0],
+    last_read: '',
+    notes: '',
+    latest_chapter: '',
+    last_uploaded_at: '',
+  })
+
+  // Load custom shelves
+  useEffect(() => {
+    let mounted = true
+    async function loadShelves() {
+      if (!user) return
+      try {
+        const shelves = await getShelves(user.id)
+        if (mounted) setCustomShelves(shelves)
+      } catch (err) {
+        console.error('Failed to load shelves:', err)
+      }
+    }
+    loadShelves()
+    return () => {
+      mounted = false
+    }
+  }, [user])
+
+  // Format ISO string to datetime-local format
   const formatDatetimeLocal = (isoString) => {
     if (!isoString) return ''
     try {
@@ -29,38 +66,8 @@ function AddBook() {
       return ''
     }
   }
-  const [error, setError] = useState('')
-  const [success, setSuccess] = useState('')
-  const [saving, setSaving] = useState(false)
 
-  const [form, setForm] = useState({
-    title: '',
-    description: '',
-    cover_url: '',
-    genres: '', // comma-separated input; convert to array on save
-    original_language: '',
-    status: STATUS_KEYS[0],
-    last_read: '',
-    notes: '',
-    latest_chapter: '',
-    last_uploaded_at: '', // ISO string or empty
-  })
-
-  useEffect(() => {
-    let mounted = true
-    async function loadShelves() {
-      if (!user) return
-      try {
-        const shelves = await getShelves(user.id)
-        if (mounted) setCustomShelves(shelves)
-      } catch (err) {
-        console.error('Failed to load shelves:', err)
-      }
-    }
-    loadShelves()
-    return () => { mounted = false }
-  }, [user])
-
+  // Fetch metadata from URL
   const handleFetch = async (event) => {
     event.preventDefault()
     setError('')
@@ -76,7 +83,6 @@ function AddBook() {
       if (fnError) throw fnError
       if (data?.error) throw new Error(data.error)
 
-      // SUCCESS: Auto-fill the form
       if (data?.metadata) {
         const m = data.metadata
         setMetadata(m)
@@ -101,6 +107,7 @@ function AddBook() {
     }
   }
 
+  // Save book to library
   const handleSave = async () => {
     if (!user) return
     setSaving(true)
@@ -125,14 +132,13 @@ function AddBook() {
 
       const bookId = await createBook(user.id, payload)
       if (url) await addLink(bookId, 'Source', url)
-      
+
       // Add to selected shelves
       for (const shelfId of selectedShelves) {
         await toggleBookShelf(bookId, shelfId)
       }
-      
+
       setSuccess('Saved to your library!')
-      // Redirect to bookshelf after short delay
       setTimeout(() => navigate('/bookshelf'), 800)
     } catch (err) {
       setError(err.message)
@@ -156,6 +162,9 @@ function AddBook() {
       <form className="stack" onSubmit={handleFetch}>
         <label className="field">
           <span>Source URL</span>
+          <p className="muted">
+            Right now it only works with bato pages.
+          </p>
           <div style={{ display: 'flex', gap: '8px' }}>
             <input
               style={{ flex: 1 }}
@@ -181,139 +190,19 @@ function AddBook() {
       <section className="card" style={{ marginTop: '16px' }}>
         <div className="stack">
           <p className="eyebrow">Book Details</p>
-          <label className="field">
-            <span>Title</span>
-            <input
-              type="text"
-              value={form.title}
-              onChange={(e) => setForm({ ...form, title: e.target.value })}
-            />
-          </label>
-          <label className="field">
-            <span>Description</span>
-            <textarea
-              rows="3"
-              value={form.description}
-              onChange={(e) => setForm({ ...form, description: e.target.value })}
-            />
-          </label>
-          <div className="grid-2">
-            <label className="field">
-              <span>Status</span>
-              <select
-                value={form.status}
-                onChange={(e) => setForm({ ...form, status: e.target.value })}
-              >
-                {STATUS_KEYS.map((key) => (
-                  <option key={key} value={key}>
-                    {STATUS[key]}
-                  </option>
-                ))}
-              </select>
-            </label>
-            <label className="field">
-              <span>Last Read</span>
-              <input
-                type="text"
-                placeholder="Ch 50"
-                value={form.last_read}
-                onChange={(e) => {
-                  const val = e.target.value
-                  setForm({ ...form, last_read: val ? val.charAt(0).toUpperCase() + val.slice(1) : val })
-                }}
-              />
-            </label>
-          </div>
+          <BookFormFields form={form} onChange={setForm} />
 
-          <div className="grid-2">
-            <label className="field">
-              <span>Cover Image URL</span>
-              <input
-                type="url"
-                placeholder="https://..."
-                value={form.cover_url}
-                onChange={(e) => setForm({ ...form, cover_url: e.target.value })}
-              />
-            </label>
-            <label className="field">
-              <span>Original Language</span>
-              <input
-                type="text"
-                placeholder="Japanese, Korean, English..."
-                value={form.original_language}
-                onChange={(e) => setForm({ ...form, original_language: e.target.value })}
-              />
-            </label>
-          </div>
-
-          <div className="grid-2">
-            <label className="field">
-              <span>Genres</span>
-              <input
-                type="text"
-                placeholder="Action, Romance, Fantasy"
-                value={form.genres}
-                onChange={(e) => setForm({ ...form, genres: e.target.value })}
-              />
-            </label>
-            <label className="field">
-              <span>Latest Chapter (site)</span>
-              <input
-                type="text"
-                value={form.latest_chapter}
-                onChange={(e) => {
-                  const val = e.target.value
-                  setForm({ ...form, latest_chapter: val ? val.charAt(0).toUpperCase() + val.slice(1) : val })
-                }}
-              />
-            </label>
-          </div>
-
-          <label className="field">
-            <span>Last Uploaded At (site)</span>
-            <input
-              type="datetime-local"
-              value={form.last_uploaded_at || ''}
-              onChange={(e) => setForm({ ...form, last_uploaded_at: e.target.value })}
-            />
-          </label>
-
-          <label className="field">
-            <span>Notes</span>
-            <textarea
-              rows="3"
-              placeholder="What to remember next time you open this link..."
-              value={form.notes}
-              onChange={(e) => setForm({ ...form, notes: e.target.value })}
-            />
-          </label>
-
-          {customShelves.length > 0 && (
-            <label className="field">
-              <span>Add to Shelves (optional)</span>
-              <div className="pill-row" style={{ marginTop: '4px' }}>
-                {customShelves.map((shelf) => {
-                  const isSelected = selectedShelves.includes(shelf.id)
-                  return (
-                    <button
-                      key={shelf.id}
-                      type="button"
-                      className={isSelected ? 'pill' : 'pill ghost'}
-                      onClick={() => {
-                        setSelectedShelves(isSelected 
-                          ? selectedShelves.filter(id => id !== shelf.id)
-                          : [...selectedShelves, shelf.id]
-                        )
-                      }}
-                      style={{ cursor: 'pointer' }}
-                    >
-                      {isSelected ? '✓ ' : ''}{shelf.name}
-                    </button>
-                  )
-                })}
-              </div>
-            </label>
-          )}
+          <ShelfSelector
+            customShelves={customShelves}
+            selectedShelves={selectedShelves}
+            onToggleShelf={(shelfId) => {
+              setSelectedShelves(
+                selectedShelves.includes(shelfId)
+                  ? selectedShelves.filter((id) => id !== shelfId)
+                  : [...selectedShelves, shelfId]
+              )
+            }}
+          />
 
           <div style={{ display: 'flex', gap: '8px' }}>
             <button type="button" className="ghost" disabled={saving} onClick={handleSave}>

@@ -57,44 +57,8 @@
 
 ## Next Steps
 
-### Immediate Priority (Deploy)
-1. **Enable Supabase Auth:**
-   - Log into Supabase dashboard → Authentication → Providers
-   - Ensure Email/Password is enabled
-   - Test sign-up and login flows
-
-2. **Deploy Edge Function:**
-   ```bash
-   cd supabase
-   supabase functions deploy fetch-metadata
-   ```
-   - Verifies Deno syntax and deploys to your project
-   - Test via AddBook form with a manga/book URL
-
-3. **Deploy to GitHub Pages:**
-   - Push all changes to `main` branch
-   - GitHub Actions workflow builds frontend and publishes to gh-pages
-   - Verify live site at `https://<username>.github.io/a-bookshelf/`
-
-4. **Test End-to-End:**
-   - Sign up with test account
-   - Add a book via Smart Add (paste manga/book URL)
-   - Verify metadata fetch and Supabase record creation
-   - Test shelf creation, filtering, and book editing
-   - Check mobile responsiveness on phone
-
 ### Future Enhancements
-- Add image upload functionality for custom covers
-- Implement bulk actions (mark multiple books completed)
+- Add score (1-10) option to books
 - Add advanced search and filtering by genre, language
 - Add reading statistics (books read this year, avg rating)
-- Add social sharing (favorite books, reading lists)
-- Add notifications for new chapters
 - Optimize Edge Function for more sites (AniList, Goodreads, etc.)
-- Add dark mode toggle
-- Implement offline mode with service workers
-
-
-# Additional
-
-- Multiple source links might not work correctly, idk?

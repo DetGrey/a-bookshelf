@@ -39,3 +39,9 @@ Routes live in `src/main.jsx` using `react-router-dom`:
 - `src/pages/*` – dashboard, Smart Add, auth, and book detail views
 - `src/components/*` – navigation and protected-route gate
 - `src/data/sampleBooks.js` – sample data used until Supabase queries are added
+
+## Waiting Shelf Updates
+
+- The Bookshelf page can batch-check all `waiting` books via the "Check Updates" button.
+- It calls the `fetch-latest` Edge Function; if the function returns empty data or values identical to the book, the row is skipped and not overwritten.
+- A collapsible error panel shows per-book failures without cluttering the main status line.

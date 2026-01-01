@@ -49,6 +49,7 @@ What it tests:
 - ✅ All imports work and files exist
 - ✅ STATUS object has all required statuses (reading, completed, waiting, etc.)
 - ✅ truncateText function works correctly
+- ✅ Update check guardrails (skip empty payloads, skip unchanged payloads, update when either latest chapter or upload time changes)
 - ✅ Array methods work properly (`.some()`, `.every()`, `.filter()`, `.includes()`)
 - ✅ Optional chaining and null safety
 - ✅ Array immutability (not mutating original data)

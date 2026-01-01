@@ -1,44 +1,8 @@
 import { useEffect, useState } from 'react'
 import { Link } from 'react-router-dom'
 import { useAuth } from '../context/AuthProvider.jsx'
-import { getBooks, STATUS, truncateText } from '../lib/db.js'
-
-function BookCard({ book }) {
-  return (
-    <article className="card">
-      <div className="card-head">
-        <Link to={`/book/${book.id}`} style={{ display: 'block' }}>
-          <div className="thumb" style={{ backgroundImage: `url(${book.cover_url})`, cursor: 'pointer' }} />
-        </Link>
-        <div>
-          <h3>{book.title}</h3>
-          <p className="muted">{truncateText(book.description)}</p>
-          <div className="pill-row">
-            <span className="pill">{STATUS[book.status] ?? book.status}</span>
-            {book.original_language && <span className="pill ghost">{book.original_language}</span>}
-            {book.last_read && <span className="pill ghost">Last read: {book.last_read}</span>}
-          </div>
-        </div>
-      </div>
-      <div className="card-footer">
-        <div>
-          <p className="muted">Latest chapter</p>
-          <p>{book.latest_chapter || '—'}</p>
-        </div>
-        <div className="card-links">
-          {book.sources.slice(0, 2).map((source) => (
-            <a key={source.url} href={source.url} target="_blank" rel="noreferrer" className="ghost">
-              {source.label}
-            </a>
-          ))}
-          <Link to={`/book/${book.id}`} className="primary">
-            Details
-          </Link>
-        </div>
-      </div>
-    </article>
-  )
-}
+import { getBooks, STATUS } from '../lib/db.js'
+import BookCard from '../components/BookCard.jsx'
 
 function Dashboard() {
   const { user } = useAuth()
@@ -108,14 +72,17 @@ function Dashboard() {
         return (
           <section key={key} className="block">
             <div className="block-head">
-              <div>
-                <p className="eyebrow">{STATUS[key]}</p>
-                <h2>{key === 'reading' ? 'Currently reading' : STATUS[key]}</h2>
-              </div>
+              <h2 style={{ color: 'var(--accent)', margin: 0 }}>
+                {key === 'reading' ? 'Currently reading' : STATUS[key]}
+              </h2>
             </div>
             <div className="card-grid">
               {sectionBooks.map((book) => (
-                <BookCard key={book.id} book={book} />
+                <BookCard
+                  key={book.id}
+                  book={book}
+                  compact
+                />
               ))}
             </div>
           </section>

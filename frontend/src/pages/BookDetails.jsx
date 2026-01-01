@@ -1,7 +1,10 @@
 import { useEffect, useState } from 'react'
 import { Link, useNavigate, useParams } from 'react-router-dom'
 import { supabase } from '../lib/supabaseClient.js'
-import { getBook, updateBook, addLink, deleteLink, deleteBook, STATUS, STATUS_KEYS } from '../lib/db.js'
+import { getBook, updateBook, addLink, deleteLink, deleteBook, STATUS } from '../lib/db.js'
+import BookFormFields from '../components/BookFormFields.jsx'
+import MetadataFetcher from '../components/MetadataFetcher.jsx'
+import SourceManager from '../components/SourceManager.jsx'
 
 function BookDetails() {
   const { bookId } = useParams()
@@ -204,211 +207,30 @@ function BookDetails() {
       {isEditing ? (
         <div className="stack">
           <h1>Edit Book</h1>
-          <section className="card" style={{ marginBottom: '16px' }}>
-            <p className="eyebrow">Fetch Metadata</p>
-            <form onSubmit={handleFetch} className="stack">
-              <label className="field">
-                <span>Source URL</span>
-                <div style={{ display: 'flex', gap: '8px' }}>
-                  <input
-                    style={{ flex: 1 }}
-                    type="url"
-                    value={fetchUrl}
-                    onChange={(e) => setFetchUrl(e.target.value)}
-                    placeholder="https://example.com/title-page"
-                  />
-                  <button type="submit" className="ghost" disabled={fetchLoading}>
-                    {fetchLoading ? 'Fetching…' : 'Fetch'}
-                  </button>
-                </div>
-              </label>
-              {fetchError && <p className="error">{fetchError}</p>}
-              {fetchSuccess && <p className="success">{fetchSuccess}</p>}
-            </form>
-            {fetchedMetadata && (
-              <div className="metadata-preview" style={{ marginTop: '8px' }}>
-                <div className="thumb" style={{ backgroundImage: `url(${fetchedMetadata.image})` }} />
-                <div className="stack">
-                  <strong>{fetchedMetadata.title}</strong>
-                  <p className="muted" style={{ margin: 0 }}>{fetchedMetadata.description}</p>
-                  {fetchedMetadata.genres?.length > 0 && (
-                    <div className="pill-row" style={{ marginTop: '8px' }}>
-                      {fetchedMetadata.genres.map((g, i) => (
-                        <span key={`${g}-${i}`} className="pill ghost">{g}</span>
-                      ))}
-                    </div>
-                  )}
-                  <div style={{ display: 'flex', gap: '8px', marginTop: '8px' }}>
-                    <button className="ghost" onClick={applyFetched}>Apply to fields</button>
-                  </div>
-                </div>
-              </div>
-            )}
-          </section>
-          
-          <label className="field">
-            <span>Title</span>
-            <input
-              type="text"
-              value={editForm.title}
-              onChange={(e) => setEditForm({ ...editForm, title: e.target.value })}
-            />
-          </label>
+          <MetadataFetcher
+            fetchUrl={fetchUrl}
+            onFetchUrlChange={setFetchUrl}
+            onFetch={handleFetch}
+            loading={fetchLoading}
+            error={fetchError}
+            success={fetchSuccess}
+            fetchedMetadata={fetchedMetadata}
+            onApply={applyFetched}
+            compact={true}
+          />
 
-          <label className="field">
-            <span>Description</span>
-            <textarea
-              rows="3"
-              value={editForm.description}
-              onChange={(e) => setEditForm({ ...editForm, description: e.target.value })}
-            />
-          </label>
+          <BookFormFields form={editForm} onChange={setEditForm} />
 
-          <div className="grid-2">
-            <label className="field">
-              <span>Status</span>
-              <select
-                value={editForm.status}
-                onChange={(e) => setEditForm({ ...editForm, status: e.target.value })}
-              >
-                {STATUS_KEYS.map((key) => (
-                  <option key={key} value={key}>
-                    {STATUS[key]}
-                  </option>
-                ))}
-              </select>
-            </label>
-
-            <label className="field">
-              <span>Original Language</span>
-              <input
-                type="text"
-                value={editForm.original_language}
-                onChange={(e) => setEditForm({ ...editForm, original_language: e.target.value })}
-                placeholder="Japanese, Korean, English..."
-              />
-            </label>
-
-            <label className="field">
-              <span>Last Read</span>
-              <input
-                type="text"
-                value={editForm.last_read}
-                onChange={(e) => {
-                  const val = e.target.value
-                  setEditForm({ ...editForm, last_read: val ? val.charAt(0).toUpperCase() + val.slice(1) : val })
-                }}
-                placeholder="Ch 50"
-              />
-            </label>
-          </div>
-
-          <div className="grid-2">
-            <label className="field">
-              <span>Cover Image URL</span>
-              <input
-                type="url"
-                value={editForm.cover_url}
-                onChange={(e) => setEditForm({ ...editForm, cover_url: e.target.value })}
-                placeholder="https://..."
-              />
-            </label>
-
-            <label className="field">
-              <span>Genres</span>
-              <input
-                type="text"
-                value={editForm.genres}
-                onChange={(e) => setEditForm({ ...editForm, genres: e.target.value })}
-                placeholder="Action, Romance, Fantasy"
-              />
-            </label>
-          </div>
-
-          <label className="field">
-            <span>Latest Chapter (site)</span>
-            <input
-              type="text"
-              value={editForm.latest_chapter}
-              onChange={(e) => setEditForm({ ...editForm, latest_chapter: e.target.value })}
-            />
-          </label>
-
-          <label className="field">
-            <span>Last Uploaded At (site)</span>
-            <input
-              type="datetime-local"
-              value={editForm.last_uploaded_at || ''}
-              onChange={(e) => setEditForm({ ...editForm, last_uploaded_at: e.target.value })}
-            />
-          </label>
-
-          <label className="field">
-            <span>Last Fetched At</span>
-            <input
-              type="datetime-local"
-              value={editForm.last_fetched_at || ''}
-              onChange={(e) => setEditForm({ ...editForm, last_fetched_at: e.target.value })}
-            />
-          </label>
-
-          <label className="field">
-            <span>Notes</span>
-            <textarea
-              rows="4"
-              value={editForm.notes}
-              onChange={(e) => setEditForm({ ...editForm, notes: e.target.value })}
-              placeholder="Your personal thoughts, reminders, or reading notes..."
-            />
-          </label>
-
-          <h3>Source Links</h3>
-          <div className="source-grid">
-            {sources.map((source, index) => (
-              <div key={index} className="card source-card">
-                <div>
-                  <strong>{source.label}</strong>
-                  <p className="muted" style={{ fontSize: '0.85rem', wordBreak: 'break-all' }}>
-                    {source.url}
-                  </p>
-                </div>
-                <button
-                  className="ghost"
-                  style={{ color: '#ff7b7b' }}
-                  onClick={() => handleRemoveSource(index)}
-                >
-                  Remove
-                </button>
-              </div>
-            ))}
-          </div>
-
-          <form className="stack" onSubmit={handleAddSource}>
-            <p className="eyebrow">Add New Source</p>
-            <div className="grid-2">
-              <label className="field">
-                <span>Label</span>
-                <input
-                  type="text"
-                  value={newSourceLabel}
-                  onChange={(e) => setNewSourceLabel(e.target.value)}
-                  placeholder="Official, Scanlation A..."
-                />
-              </label>
-              <label className="field">
-                <span>URL</span>
-                <input
-                  type="url"
-                  value={newSourceUrl}
-                  onChange={(e) => setNewSourceUrl(e.target.value)}
-                  placeholder="https://..."
-                />
-              </label>
-            </div>
-            <button type="submit" className="ghost">
-              + Add Source
-            </button>
-          </form>
+          <SourceManager
+            sources={sources}
+            onRemoveSource={handleRemoveSource}
+            newSourceLabel={newSourceLabel}
+            onSourceLabelChange={setNewSourceLabel}
+            newSourceUrl={newSourceUrl}
+            onSourceUrlChange={setNewSourceUrl}
+            onAddSource={handleAddSource}
+            isEditing={true}
+          />
 
           <div style={{ display: 'flex', gap: '8px', marginTop: '12px' }}>
             <button className="primary" onClick={handleSave}>
@@ -482,29 +304,11 @@ function BookDetails() {
             </section>
           )}
 
-          <section>
-            <div className="block-head">
-              <p className="eyebrow">Source Links</p>
-            </div>
-            <div className="source-grid">
-              {sources.map((source, index) => (
-                <a
-                  key={index}
-                  href={source.url}
-                  target="_blank"
-                  rel="noreferrer"
-                  className="card source-card"
-                >
-                  <div>
-                    <strong>{source.label}</strong>
-                    <p className="muted" style={{ fontSize: '0.85rem' }}>
-                      Open in new tab →
-                    </p>
-                  </div>
-                </a>
-              ))}
-            </div>
-          </section>
+          <SourceManager
+            sources={sources}
+            onRemoveSource={handleRemoveSource}
+            isEditing={false}
+          />
         </div>
       )}
     </div>
