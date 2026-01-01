@@ -1,5 +1,11 @@
 @import url('https://fonts.googleapis.com/css2?family=Space+Grotesk:wght@400;500;600;700&family=Sora:wght@400;500;600&display=swap');
 
+@font-face {
+  font-family: 'NotoColorEmojiLimited';
+  unicode-range: U+1F1E6-1F1FF;
+  src: url('https://raw.githack.com/googlefonts/noto-emoji/main/fonts/NotoColorEmoji.ttf');
+}
+
 :root {
   color-scheme: dark;
   --bg: #06070f;
@@ -183,6 +189,10 @@ p {
 .muted {
   color: var(--text-muted);
   font-size: 0.9rem;
+}
+
+.emoji-text {
+  font-family: 'NotoColorEmojiLimited', 'Apple Color Emoji', 'Segoe UI Emoji', 'Noto Color Emoji', 'Segoe UI', sans-serif;
 }
 
 /* Mobile-first buttons with larger touch targets */

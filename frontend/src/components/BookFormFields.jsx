@@ -1,4 +1,4 @@
-import { STATUS, STATUS_KEYS } from '../lib/db.js'
+import { STATUS, STATUS_KEYS, SCORE_OPTIONS } from '../lib/db.js'
 
 /**
  * BookFormFields Component
@@ -50,6 +50,20 @@ function BookFormFields({ form, onChange }) {
           </select>
         </label>
         <label className="field">
+          <span>Score</span>
+          <select
+            value={form.score ?? 0}
+            onChange={(e) => handleChange('score', Number(e.target.value))}
+          >
+            {SCORE_OPTIONS.map((opt) => (
+              <option key={opt.value} value={opt.value}>{opt.label}</option>
+            ))}
+          </select>
+        </label>
+      </div>
+
+      <div className="grid-2">
+        <label className="field">
           <span>Last Read</span>
           <input
             type="text"
@@ -59,9 +73,6 @@ function BookFormFields({ form, onChange }) {
             onChange={(e) => handleChange('last_read', capitalizeFirst(e.target.value))}
           />
         </label>
-      </div>
-
-      <div className="grid-2">
         <label className="field">
           <span>Cover Image URL</span>
           <input

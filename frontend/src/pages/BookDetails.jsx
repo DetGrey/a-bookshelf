@@ -1,7 +1,7 @@
 import { useEffect, useState } from 'react'
 import { Link, useNavigate, useParams } from 'react-router-dom'
 import { supabase } from '../lib/supabaseClient.js'
-import { getBook, updateBook, addLink, deleteLink, deleteBook, STATUS } from '../lib/db.js'
+import { getBook, updateBook, addLink, deleteLink, deleteBook, STATUS, scoreToLabel, SCORE_OPTIONS } from '../lib/db.js'
 import BookFormFields from '../components/BookFormFields.jsx'
 import MetadataFetcher from '../components/MetadataFetcher.jsx'
 import SourceManager from '../components/SourceManager.jsx'
@@ -19,6 +19,7 @@ function BookDetails() {
     description: '',
     status: 'reading',
     original_language: '',
+    score: 0,
     last_read: '',
     latest_chapter: '',
     notes: '',
@@ -36,6 +37,20 @@ function BookDetails() {
   const [fetchSuccess, setFetchSuccess] = useState('')
   const [fetchedMetadata, setFetchedMetadata] = useState(null)
 
+  const formatDatetimeLocal = (isoString) => {
+    if (!isoString) return ''
+    const d = new Date(isoString)
+    if (Number.isNaN(d.getTime())) return ''
+    const pad = (n) => String(n).padStart(2, '0')
+    return `${d.getFullYear()}-${pad(d.getMonth() + 1)}-${pad(d.getDate())}T${pad(d.getHours())}:${pad(d.getMinutes())}`
+  }
+
+  const toIsoOrNull = (localValue) => {
+    if (!localValue) return null
+    const d = new Date(localValue)
+    return Number.isNaN(d.getTime()) ? null : d.toISOString()
+  }
+
   useEffect(() => {
     let mounted = true
     async function load() {
@@ -51,13 +66,14 @@ function BookDetails() {
           description: b.description ?? '',
           status: b.status ?? 'reading',
           original_language: b.original_language ?? '',
+          score: b.score ?? 0,
           last_read: b.last_read ?? '',
           latest_chapter: b.latest_chapter ?? '',
           notes: b.notes ?? '',
           cover_url: b.cover_url ?? '',
           genres: (b.genres ?? []).join(', '),
-          last_uploaded_at: b.last_uploaded_at ?? '',
-          last_fetched_at: b.last_fetched_at ?? '',
+          last_uploaded_at: formatDatetimeLocal(b.last_uploaded_at),
+          last_fetched_at: formatDatetimeLocal(b.last_fetched_at),
         })
       } catch (err) {
         if (mounted) setError(err.message)
@@ -106,11 +122,21 @@ function BookDetails() {
   }
 
   const handleSave = async () => {
+    const parsedScore = (() => {
+      const n = Number(editForm.score)
+      if (!Number.isFinite(n)) return 0
+      if (n < 0 || n > 10) return 0
+      return Math.round(n)
+    })()
+
     const payload = {
       ...editForm,
       genres: editForm.genres
         ? editForm.genres.split(',').map((g) => g.trim()).filter(Boolean)
         : [],
+      score: parsedScore,
+      last_uploaded_at: toIsoOrNull(editForm.last_uploaded_at),
+      last_fetched_at: toIsoOrNull(editForm.last_fetched_at),
     }
     await updateBook(book.id, payload)
     setBook({ ...book, ...payload })
@@ -182,8 +208,10 @@ function BookDetails() {
       genres: (fetchedMetadata.genres ?? []).join(', '),
       original_language: fetchedMetadata.original_language ?? prev.original_language,
       latest_chapter: fetchedMetadata.latest_chapter ?? prev.latest_chapter,
-      last_uploaded_at: fetchedMetadata.last_uploaded_at ?? prev.last_uploaded_at,
-      last_fetched_at: now,
+      last_uploaded_at: fetchedMetadata.last_uploaded_at
+        ? formatDatetimeLocal(fetchedMetadata.last_uploaded_at)
+        : prev.last_uploaded_at,
+      last_fetched_at: formatDatetimeLocal(now),
     }))
     setFetchSuccess('Applied metadata to fields. Remember to Save Changes.')
   }
@@ -261,6 +289,10 @@ function BookDetails() {
                 <div className="stat">
                   <p className="muted">Status</p>
                   <strong>{STATUS[book.status] ?? book.status}</strong>
+                </div>
+                <div className="stat">
+                  <p className="muted">Score</p>
+                  <strong>{book.score === 0 ? '0 — N/A' : (scoreToLabel(book.score) || '—')}</strong>
                 </div>
                 <div className="stat">
                   <p className="muted">Original Language</p>

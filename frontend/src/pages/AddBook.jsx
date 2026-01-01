@@ -31,6 +31,7 @@ function AddBook() {
     notes: '',
     latest_chapter: '',
     last_uploaded_at: '',
+    score: 0,
   })
 
   // Load custom shelves
@@ -114,6 +115,13 @@ function AddBook() {
     setError('')
     setSuccess('')
     try {
+      const parsedScore = (() => {
+        const n = Number(form.score)
+        if (!Number.isFinite(n)) return 0
+        if (n < 0 || n > 10) return 0
+        return Math.round(n)
+      })()
+
       const payload = {
         title: form.title || 'Untitled',
         description: form.description || '',
@@ -128,6 +136,7 @@ function AddBook() {
         latest_chapter: form.latest_chapter || '',
         last_uploaded_at: form.last_uploaded_at || null,
         last_fetched_at: fetchedAt || null,
+        score: parsedScore,
       }
 
       const bookId = await createBook(user.id, payload)

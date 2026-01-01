@@ -11,6 +11,26 @@ export const STATUS = {
 }
 export const STATUS_KEYS = Object.keys(STATUS)
 
+export const SCORE_OPTIONS = [
+  { value: 10, label: '10 — Masterpiece' },
+  { value: 9, label: '9 — Great' },
+  { value: 8, label: '8 — Very Good' },
+  { value: 7, label: '7 — Good' },
+  { value: 6, label: '6 — Fine' },
+  { value: 5, label: '5 — Average' },
+  { value: 4, label: '4 — Bad' },
+  { value: 3, label: '3 — Very Bad' },
+  { value: 2, label: '2 — Horrible' },
+  { value: 1, label: '1 — Appalling' },
+  { value: 0, label: '0 — N/A' },
+]
+
+export function scoreToLabel(score) {
+  if (score === null || score === undefined) return null
+  const option = SCORE_OPTIONS.find((o) => o.value === Number(score))
+  return option ? option.label : null
+}
+
 // Helper to truncate text to first N words
 export function truncateText(text, maxWords = 15) {
   if (!text) return ''
@@ -25,7 +45,7 @@ export async function getBooks(userId) {
   const { data, error } = await supabase
     .from('books')
     .select(
-      'id,user_id,title,description,cover_url,genres,original_language,status,last_read,notes,latest_chapter,last_fetched_at,last_uploaded_at,created_at,updated_at,book_links(id,site_name,url,created_at),shelf_books(shelf_id)'
+      'id,user_id,title,description,cover_url,genres,original_language,score,status,last_read,notes,latest_chapter,last_fetched_at,last_uploaded_at,created_at,updated_at,book_links(id,site_name,url,created_at),shelf_books(shelf_id)'
     )
     .eq('user_id', userId)
     .order('updated_at', { ascending: false })
@@ -38,6 +58,7 @@ export async function getBooks(userId) {
     cover_url: b.cover_url ?? '',
     genres: b.genres ?? [],
     original_language: b.original_language ?? '',
+    score: b.score ?? null,
     status: b.status, // lowercase key
     last_read: b.last_read ?? '',
     notes: b.notes ?? '',
@@ -55,7 +76,7 @@ export async function getBook(bookId) {
   const { data, error } = await supabase
     .from('books')
     .select(
-      'id,user_id,title,description,cover_url,genres,original_language,status,last_read,notes,latest_chapter,last_fetched_at,last_uploaded_at,created_at,updated_at,book_links(id,site_name,url,created_at),shelf_books(shelf_id)'
+      'id,user_id,title,description,cover_url,genres,original_language,score,status,last_read,notes,latest_chapter,last_fetched_at,last_uploaded_at,created_at,updated_at,book_links(id,site_name,url,created_at),shelf_books(shelf_id)'
     )
     .eq('id', bookId)
     .single()
@@ -68,6 +89,7 @@ export async function getBook(bookId) {
     cover_url: data.cover_url ?? '',
     genres: data.genres ?? [],
     original_language: data.original_language ?? '',
+    score: data.score ?? null,
     status: data.status,
     last_read: data.last_read ?? '',
     notes: data.notes ?? '',
@@ -88,6 +110,7 @@ export async function updateBook(bookId, patch) {
     cover_url: patch.cover_url,
     genres: patch.genres,
     original_language: patch.original_language,
+    score: patch.score,
     status: patch.status, // expect lowercase key
     last_read: patch.last_read,
     notes: patch.notes,
@@ -108,6 +131,7 @@ export async function createBook(userId, book) {
     cover_url: book.cover_url ?? book.image ?? '',
     genres: book.genres ?? [],
     original_language: book.original_language ?? '',
+    score: book.score ?? null,
     status: book.status ?? 'reading',
     last_read: book.last_read ?? '',
     notes: book.notes ?? '',

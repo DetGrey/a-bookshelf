@@ -17,6 +17,7 @@ create table public.books (
   cover_url text,
   genres text[], -- Array: ['Action', 'Romance'] - easy to filter
   original_language text, -- e.g. "Japanese"
+  score integer check (score >= 0 and score <= 10), -- 0 = N/A, 1-10 as scale
   
   -- Progress
   status text check (status in ('reading', 'plan_to_read', 'completed', 'waiting', 'dropped', 'on_hold')) default 'reading',

@@ -34,6 +34,8 @@ function Dashboard() {
   const sectionKeys = ['reading', 'plan_to_read', 'waiting', 'completed', 'dropped']
   const lastUpdated = books[0]?.updated_at
 
+  const waitingCount = books.filter((b) => b.status === 'waiting').length
+
   return (
     <div className="page">
       <div className="page-head">
@@ -53,12 +55,12 @@ function Dashboard() {
           <strong>{loading ? '—' : books.length}</strong>
         </div>
         <div className="stat">
-          <p className="muted">Active reads</p>
-          <strong>{loading ? '—' : books.filter((b) => b.status === 'reading').length}</strong>
-        </div>
-        <div className="stat">
           <p className="muted">Completed</p>
           <strong>{loading ? '—' : books.filter((b) => b.status === 'completed').length}</strong>
+        </div>
+        <div className="stat">
+          <p className="muted">Waiting for updates</p>
+          <strong>{loading ? '—' : waitingCount}</strong>
         </div>
         <div className="stat">
           <p className="muted">Last updated</p>

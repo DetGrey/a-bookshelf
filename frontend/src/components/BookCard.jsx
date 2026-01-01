@@ -1,6 +1,6 @@
 import { useState } from 'react'
 import { Link } from 'react-router-dom'
-import { STATUS, truncateText } from '../lib/db.js'
+import { STATUS, truncateText, scoreToLabel } from '../lib/db.js'
 
 /**
  * BookCard Component
@@ -29,6 +29,26 @@ function BookCard({
   compact = false,
 }) {
   const [showShelfMenu, setShowShelfMenu] = useState(false)
+
+  const scoreColor = (score) => {
+    const n = Number(score)
+    if (!Number.isFinite(n)) return 'var(--text)'
+    if (n >= 9) return '#b34ad3ff'   // great/masterpiece
+    if (n >= 7) return '#0ba360'   // good/very good
+    if (n >= 5) return '#c6a700'   // average/fine
+    if (n >= 3) return '#d97706'   // bad/very bad
+    if (n >= 1) return '#d14343'   // appalling/horrible
+    return '#ffffff'               // 0 / N/A
+  }
+
+  const languageFlag = (lang) => {
+    if (!lang) return null
+    const lower = lang.toLowerCase()
+    if (lower.startsWith('jap') || lower === 'jp' || lower === 'ja' || lower === 'jpn') return '🇯🇵'
+    if (lower.startsWith('kor') || lower === 'kr' || lower === 'ko') return '🇰🇷'
+    if (lower.startsWith('chi') || lower.includes('mandarin') || lower === 'cn' || lower === 'zh') return '🇨🇳'
+    return null
+  }
 
   const handleToggleShelf = (shelfId) => {
     if (onAddToShelf) {
@@ -59,7 +79,20 @@ function BookCard({
           </p>
           <div className="pill-row">
             <span className="pill">{STATUS[book.status] ?? book.status}</span>
-            {book.original_language && <span className="pill ghost">{book.original_language}</span>}
+            {book.score !== undefined && book.score !== null ? (
+              <span
+                className="pill ghost"
+                style={{ color: scoreColor(book.score), borderColor: scoreColor(book.score) }}
+              >
+                {scoreToLabel(book.score) || `Score: ${book.score}`}
+              </span>
+            ) : null}
+            {book.original_language && (
+              <span className="pill ghost emoji-text">
+                {languageFlag(book.original_language) ? `${languageFlag(book.original_language)} ` : ''}
+                {book.original_language}
+              </span>
+            )}
             {book.last_read && <span className="pill ghost">Last: {book.last_read}</span>}
             {!compact &&
               book.shelves?.map((shelfId) => {
@@ -86,7 +119,7 @@ function BookCard({
                         )
                       }
                     }}
-                    style={{ cursor: 'pointer', fontSize: '0.8rem' }}
+                    style={{ cursor: 'pointer', fontSize: '0.75rem', padding: '4px 6px' }}
                   >
                     {g}
                   </button>
