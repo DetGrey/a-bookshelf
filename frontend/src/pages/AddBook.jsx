@@ -52,20 +52,40 @@ function AddBook() {
     }
   }, [user])
 
-  // Format ISO string to datetime-local format
+  // Format ISO string to datetime-local (YYYY-MM-DDTHH:mm)
+  // detailed safe version to prevent "Dec 31" timezone shifts
   const formatDatetimeLocal = (isoString) => {
     if (!isoString) return ''
+    
+    // 1. Try to slice the string directly (Best for 'T12:00:00Z' or 'T00:00:00Z')
+    // Matches YYYY-MM-DD
+    const simpleMatch = isoString.match(/^(\d{4})-(\d{2})-(\d{2})/)
+    if (simpleMatch) {
+      // Returns "2026-01-01T12:00" (or T00:00 if you prefer midnight)
+      // We force T12:00 to keep it middle-of-day in the input too
+      return `${simpleMatch[1]}-${simpleMatch[2]}-${simpleMatch[3]}T12:00`
+    }
+
+    // 2. Fallback for other formats (using UTC methods to avoid local shift)
     try {
       const date = new Date(isoString)
-      const year = date.getFullYear()
-      const month = String(date.getMonth() + 1).padStart(2, '0')
-      const day = String(date.getDate()).padStart(2, '0')
-      const hours = String(date.getHours()).padStart(2, '0')
-      const minutes = String(date.getMinutes()).padStart(2, '0')
-      return `${year}-${month}-${day}T${hours}:${minutes}`
+      const year = date.getUTCFullYear()
+      const month = String(date.getUTCMonth() + 1).padStart(2, '0')
+      const day = String(date.getUTCDate()).padStart(2, '0')
+      return `${year}-${month}-${day}T12:00`
     } catch {
       return ''
     }
+  }
+
+  const getErrorMessage = (err) => {
+    if (!err) return 'Unable to fetch metadata right now.'
+    if (typeof err === 'string') return err
+    if (err.message) return err.message
+    if (err.error) return err.error
+    if (err.description) return err.description
+    if (err.context?.response?.statusText) return err.context.response.statusText
+    return 'Unable to fetch metadata right now.'
   }
 
   // Fetch metadata from URL
@@ -81,7 +101,7 @@ function AddBook() {
         body: { url },
       })
 
-      if (fnError) throw fnError
+      if (fnError) throw new Error(getErrorMessage(fnError))
       if (data?.error) throw new Error(data.error)
 
       if (data?.metadata) {
@@ -94,7 +114,7 @@ function AddBook() {
           title: m.title || prev.title,
           description: m.description || prev.description,
           cover_url: m.image || prev.cover_url,
-          genres: Array.isArray(m.genres) ? m.genres.join(', ') : (m.genres || prev.genres),
+          genres: Array.isArray(m.genres) && m.genres.length > 0 ? m.genres.join(', ') : prev.genres,
           original_language: m.original_language || prev.original_language,
           latest_chapter: m.latest_chapter || prev.latest_chapter,
           last_uploaded_at: formatDatetimeLocal(m.last_uploaded_at) || prev.last_uploaded_at,
@@ -102,7 +122,7 @@ function AddBook() {
       }
       setSuccess('Metadata fetched. Review or edit fields below, then save.')
     } catch (err) {
-      setError(err?.message ?? 'Unable to fetch metadata right now.')
+      setError(getErrorMessage(err))
     } finally {
       setLoading(false)
     }
@@ -129,7 +149,7 @@ function AddBook() {
         genres: form.genres
           ? form.genres.split(',').map((g) => g.trim()).filter(Boolean)
           : [],
-        original_language: form.original_language || '',
+        original_language: form.original_language || null,
         status: form.status,
         last_read: form.last_read || '',
         notes: form.notes || '',

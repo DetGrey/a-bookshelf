@@ -12,8 +12,14 @@ function GenreFilter({
   onGenreChange,
   genreFilterMode,
   onGenreFilterModeChange,
+  isOpen = false,
+  onOpenChange,
 }) {
-  const [isOpen, setIsOpen] = useState(false)
+  const [isOpenLocal, setIsOpenLocal] = useState(isOpen)
+  
+  const isControlled = onOpenChange !== undefined
+  const open = isControlled ? isOpen : isOpenLocal
+  const setOpen = isControlled ? onOpenChange : setIsOpenLocal
   
   if (allGenres.length === 0) {
     return null
@@ -29,10 +35,10 @@ function GenreFilter({
           marginBottom: '8px',
           cursor: 'pointer',
         }}
-        onClick={() => setIsOpen(!isOpen)}
+        onClick={() => setOpen(!open)}
       >
         <p className="eyebrow" style={{ margin: 0 }}>
-          Filter by Genre {isOpen ? '▼' : '▶'}
+          Filter by Genre {open ? '▼' : '▶'}
         </p>
         {activeGenres.length > 0 && (
           <div style={{ display: 'flex', gap: '4px' }}>
@@ -53,7 +59,7 @@ function GenreFilter({
           </div>
         )}
       </div>
-      {isOpen && <div style={{ display: 'flex', alignItems: 'center', gap: '4px', flexWrap: 'wrap' }}>
+      {open && <div style={{ display: 'flex', alignItems: 'center', gap: '4px', flexWrap: 'wrap' }}>
         {activeGenres.length > 0 && (
           <button
             className="pill"

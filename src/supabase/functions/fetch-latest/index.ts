@@ -22,49 +22,152 @@ Deno.serve(async (req) => {
       }
     });
 
-    if (!response.ok) throw new Error(`Failed to fetch site: ${response.statusText}`);
+    if (!response.ok) throw new Error(`Failed to fetch site: ${response.status} ${response.statusText}`);
 
     const html = await response.text();
     const $ = cheerio.load(html);
 
-    // 3. Extract ONLY Latest Chapter & Upload Date (match fetch-metadata behaviour)
+    // 3. Determine website and extract accordingly
+    const urlObj = new URL(url);
+    const hostname = urlObj.hostname;
+
     let latest_chapter = '';
     let last_uploaded_at: string | null = null;
 
-    // Target the main chapter list container
-    const chapterList = $('.group.flex.flex-col').first();
+    // --------------------------------------------- WEBTOONS
+    if (hostname === 'www.webtoons.com') {
+      const latestEpisode = $('ul#_listUl li._episodeItem').first();
+      if (latestEpisode.length) {
+        const episodeText = latestEpisode.find('span.subj span, span.subj').first().text().trim();
+        if (episodeText) {
+          latest_chapter = episodeText;
+        }
 
-    if (chapterList.length) {
-      // The first child is the latest chapter row
-      const firstRow = chapterList.children().first();
+        // -- Upload Date: Add +1 Day Hack --
+        const dateText = latestEpisode.find('span.date').text().trim();
+        if (dateText) {
+          try {
+            const parts = dateText.match(/(\w+)\s+(\d+),?\s+(\d{4})/);
+            if (parts) {
+              const monthNames = ['January', 'February', 'March', 'April', 'May', 'June',
+                                  'July', 'August', 'September', 'October', 'November', 'December'];
+              const monthIndex = monthNames.findIndex((m) => m.toLowerCase().startsWith(parts[1].toLowerCase()));
+              
+              if (monthIndex !== -1) {
+                const day = parseInt(parts[2], 10);
+                const year = parseInt(parts[3], 10);
 
-      // Support both structures: the row can be the anchor itself or contain it
-      const chapterAnchor = firstRow.is('a')
-        ? firstRow
-        : firstRow.find('a[href*="/chapter/"], a.link-hover').first();
+                // 1. Create the date object in UTC
+                const dateObj = new Date(Date.UTC(year, monthIndex, day));
 
-      if (chapterAnchor.length) {
-        latest_chapter = chapterAnchor.text().trim();
+                // 2. Add +1 Day (The Hack)
+                // This pushes "Jan 1" to "Jan 2". 
+                // When your frontend subtracts hours for your timezone, "Jan 2" rolls back to "Jan 1".
+                dateObj.setUTCDate(dateObj.getUTCDate() + 1);
+
+                // 3. Set to Noon UTC for maximum stability
+                dateObj.setUTCHours(12, 0, 0, 0);
+
+                last_uploaded_at = dateObj.toISOString();
+              }
+            }
+          } catch {
+            // Date parsing failed, skip
+          }
+        }
+      }
+    }
+    // --------------------------------------------- BATO.SI / BATO.ING
+    else if (hostname === 'bato.ing' || hostname === 'bato.si') {
+      const chapterList = $('.group.flex.flex-col').first();
+
+      if (chapterList.length) {
+        const firstRow = chapterList.children().first();
+
+        // 1. Get Chapter Name
+        const chapterLink = firstRow.find('a.link-hover').first();
+        if (chapterLink.length) {
+          latest_chapter = chapterLink.text().trim();
+        }
+
+        // 2. Get Upload Date - check time attribute first (ISO format), then data-time
+        const timeTag = firstRow.find('time').first();
+        const ts = timeTag.attr('time') || timeTag.attr('data-time') || timeTag.attr('datetime');
+
+        if (ts) {
+          const millis = Number(ts);
+          if (!Number.isNaN(millis)) {
+            last_uploaded_at = new Date(millis).toISOString();
+          } else {
+            const iso = new Date(ts);
+            if (!Number.isNaN(iso.getTime())) {
+              last_uploaded_at = iso.toISOString();
+            }
+          }
+        }
+      }
+    }
+    // --------------------------------------------- DEFAULT (BATO V3 STYLE)
+    else {
+      // Find chapter rows and pick the one with the newest timestamp
+      const chapterCandidates = $('[name="chapter-list"] .group a, .scrollable-panel a').filter((_: any, el: any) => {
+        const text = $(el).text().toLowerCase();
+        return text.includes('chapter');
+      }).toArray();
+
+      let best = { text: '', ts: -Infinity } as { text: string; ts: number };
+
+      chapterCandidates.forEach((el: any) => {
+        const row = $(el).closest('div');
+        const timeTag = row.find('time').first();
+        // Check time attribute first (ISO format), then data-time, then datetime
+        const tsAttr = timeTag.attr('time') || timeTag.attr('data-time') || timeTag.attr('datetime');
+        let tsNum = Number.NEGATIVE_INFINITY;
+        if (tsAttr) {
+          const maybeNum = Number(tsAttr);
+          if (!Number.isNaN(maybeNum)) {
+            tsNum = maybeNum;
+          } else {
+            const d = new Date(tsAttr);
+            if (!Number.isNaN(d.getTime())) tsNum = d.getTime();
+          }
+        }
+
+        if (tsNum > best.ts) {
+          best = { text: $(el).text().trim(), ts: tsNum };
+        }
+      });
+
+      if (best.text) {
+        latest_chapter = best.text;
+      } else if (chapterCandidates.length) {
+        // If no timestamps, take the last link (often the newest in reversed lists)
+        const lastLink = chapterCandidates[chapterCandidates.length - 1];
+        latest_chapter = $(lastLink).text().trim();
       }
 
-      // Prefer time tag closest to the chapter anchor, fallback to the row itself
-      const timeTag = chapterAnchor.find('time').first().length
-        ? chapterAnchor.find('time').first()
-        : firstRow.find('time').first();
-
-      const timestamp = timeTag.attr('data-time') || timeTag.attr('datetime') || timeTag.text();
-
-      if (timestamp) {
-        const numeric = Number(timestamp);
-        const millis = Number.isFinite(numeric) ? (numeric < 1e12 ? numeric * 1000 : numeric) : null;
-        const parsedDate = millis ? new Date(millis) : new Date(timestamp);
-        if (!isNaN(parsedDate.getTime())) {
-          last_uploaded_at = parsedDate.toISOString();
+      // -- Upload Date --
+      if (best.ts !== -Infinity) {
+        last_uploaded_at = new Date(best.ts).toISOString();
+      } else {
+        // Fallback: try any time tag
+        const timeTag = $('[name="chapter-list"] time, .scrollable-panel time, time').last();
+        if (timeTag.length) {
+          const ts = timeTag.attr('time') || timeTag.attr('data-time') || timeTag.attr('datetime');
+          if (ts) {
+            const millis = Number(ts);
+            if (!Number.isNaN(millis)) {
+              last_uploaded_at = new Date(millis).toISOString();
+            } else {
+              const iso = new Date(ts);
+              if (!Number.isNaN(iso.getTime())) last_uploaded_at = iso.toISOString();
+            }
+          }
         }
       }
     }
 
-    // 4. Return simplified JSON
+    // 4. Return JSON
     return new Response(
       JSON.stringify({
         latest_chapter,
@@ -74,8 +177,8 @@ Deno.serve(async (req) => {
     );
 
   } catch (error) {
-    const msg = error instanceof Error ? error.message : String(error);
-    return new Response(JSON.stringify({ error: msg }), {
+    const message = error instanceof Error ? error.message : 'Unknown error';
+    return new Response(JSON.stringify({ error: message }), {
       headers: { ...corsHeaders, 'Content-Type': 'application/json' },
       status: 400,
     });

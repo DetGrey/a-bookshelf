@@ -319,7 +319,7 @@ function BookDetails() {
                       key={`${g}-${i}`}
                       className="pill ghost"
                       onClick={() => navigate(`/bookshelf?genre=${encodeURIComponent(g)}`)}
-                      style={{ cursor: 'pointer', border: 'none', background: 'inherit', padding: '5px 10px' }}
+                      style={{ cursor: 'pointer', fontSize: '0.75rem', padding: '0 8px' }}
                     >
                       {g}
                     </button>

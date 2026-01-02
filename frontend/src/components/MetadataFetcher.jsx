@@ -28,6 +28,7 @@ function MetadataFetcher({
               value={fetchUrl}
               onChange={(e) => onFetchUrlChange(e.target.value)}
               placeholder="https://example.com/title-page"
+              autoComplete="off"
             />
             <button
               type="submit"

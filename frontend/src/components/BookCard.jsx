@@ -34,9 +34,9 @@ function BookCard({
     const n = Number(score)
     if (!Number.isFinite(n)) return 'var(--text)'
     if (n >= 9) return '#b34ad3ff'   // great/masterpiece
-    if (n >= 7) return '#0ba360'   // good/very good
+    if (n >= 7) return '#0ba360'   // good/pretty good
     if (n >= 5) return '#c6a700'   // average/fine
-    if (n >= 3) return '#d97706'   // bad/very bad
+    if (n >= 3) return '#d97706'   // bad/pretty bad
     if (n >= 1) return '#d14343'   // appalling/horrible
     return '#ffffff'               // 0 / N/A
   }
@@ -79,7 +79,7 @@ function BookCard({
           </p>
           <div className="pill-row">
             <span className="pill">{STATUS[book.status] ?? book.status}</span>
-            {book.score !== undefined && book.score !== null ? (
+            {book.score !== undefined && book.score !== null && book.score !== 0 ? (
               <span
                 className="pill ghost"
                 style={{ color: scoreColor(book.score), borderColor: scoreColor(book.score) }}
@@ -93,7 +93,7 @@ function BookCard({
                 {book.original_language}
               </span>
             )}
-            {book.last_read && <span className="pill ghost">Last: {book.last_read}</span>}
+            {book.last_read && book.status !== 'completed' && <span className="pill ghost">Last: {book.last_read}</span>}
             {!compact &&
               book.shelves?.map((shelfId) => {
                 const shelf = customShelves.find((s) => s.id === shelfId)
@@ -104,6 +104,11 @@ function BookCard({
                 ) : null
               })}
           </div>
+          {!compact && book.notes && (
+            <p className="muted" style={{ marginTop: '8px', fontSize: '0.9rem', fontStyle: 'italic' }}>
+              📝 {book.notes}
+            </p>
+          )}
           {!compact && book.genres?.length > 0 && (
             <div className="pill-row" style={{ marginTop: '6px' }}>
               {book.genres.map((g, i) => {
@@ -119,7 +124,7 @@ function BookCard({
                         )
                       }
                     }}
-                    style={{ cursor: 'pointer', fontSize: '0.75rem', padding: '4px 6px' }}
+                    style={{ cursor: 'pointer', fontSize: '0.75rem', padding: '4px 8px' }}
                   >
                     {g}
                   </button>
@@ -133,6 +138,11 @@ function BookCard({
         <div>
           <p className="muted">Latest chapter</p>
           <p>{book.latest_chapter || '—'}</p>
+          {!compact && book.last_uploaded_at && (
+            <p className="muted" style={{ fontSize: '0.85rem', marginTop: '4px' }}>
+              {new Date(book.last_uploaded_at).toLocaleDateString('en-US', { month: 'short', day: 'numeric', year: 'numeric' })}
+            </p>
+          )}
         </div>
         <div className="card-links">
           {book.sources.slice(0, compact ? 2 : 1).map((source) => (

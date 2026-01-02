@@ -33,7 +33,9 @@ function Bookshelf() {
   const [activeShelf, setActiveShelf] = useState('all')
   const [activeGenres, setActiveGenres] = useState([])
   const [genreFilterMode, setGenreFilterMode] = useState('all')
+  const [genreFilterOpen, setGenreFilterOpen] = useState(false)
   const [sortBy, setSortBy] = useState('created')
+  const [sortDirection, setSortDirection] = useState('desc')
   const [searchQuery, setSearchQuery] = useState('')
   const [loading, setLoading] = useState(true)
   const [error, setError] = useState('')
@@ -47,12 +49,20 @@ function Bookshelf() {
     window.scrollTo(0, 0)
   }, [])
 
+  // Clear update messages when shelf or filters change
+  useEffect(() => {
+    setUpdateMessage('')
+    setErrorDetails([])
+    setShowErrors(false)
+  }, [activeShelf, activeGenres, genreFilterMode, searchQuery])
+
   // Read genre from URL params on mount
   useEffect(() => {
     const params = new URLSearchParams(window.location.search)
     const genreParam = params.get('genre')
     if (genreParam) {
       setActiveGenres([decodeURIComponent(genreParam)])
+      setGenreFilterOpen(true)
     }
   }, [])
 
@@ -139,7 +149,7 @@ function Bookshelf() {
         break
       case 'updated':
         filtered.sort(
-          (a, b) => new Date(b.updated_at ?? b.updatedAt) - new Date(a.updated_at ?? a.updatedAt)
+          (a, b) => new Date(b.last_uploaded_at ?? 0) - new Date(a.last_uploaded_at ?? 0)
         )
         break
       case 'created':
@@ -148,6 +158,11 @@ function Bookshelf() {
           (a, b) => new Date(b.created_at) - new Date(a.created_at)
         )
         break
+    }
+
+    // Apply direction
+    if (sortDirection === 'asc') {
+      filtered.reverse()
     }
 
     return filtered
@@ -233,15 +248,21 @@ function Bookshelf() {
             return { bookId: book.id, title: book.title, payload, skipped: 'empty_payload' }
           }
 
+          // Compare latest chapter: normalize both strings and check if they differ
           const normalizedPayloadLatest = latestHasText ? String(payloadLatest).trim() : ''
           const normalizedCurrentLatest = (book.latest_chapter ?? '').trim()
           const hasLatestChange = latestHasText && normalizedPayloadLatest !== normalizedCurrentLatest
 
+          // Compare upload dates: only count as change if dates are different days (ignore time of day)
           const parsedPayloadUpload = uploadHasValue ? new Date(payloadUploaded) : null
           const parsedCurrentUpload = book.last_uploaded_at ? new Date(book.last_uploaded_at) : null
           const payloadUploadMs = parsedPayloadUpload && !isNaN(parsedPayloadUpload) ? parsedPayloadUpload.getTime() : null
           const currentUploadMs = parsedCurrentUpload && !isNaN(parsedCurrentUpload) ? parsedCurrentUpload.getTime() : null
-          const hasUploadChange = uploadHasValue && payloadUploadMs !== currentUploadMs
+          const payloadUploadDate = payloadUploadMs ? new Date(payloadUploadMs).toISOString().split('T')[0] : null
+          const currentUploadDate = currentUploadMs ? new Date(currentUploadMs).toISOString().split('T')[0] : null
+          const hasUploadChange = uploadHasValue && payloadUploadDate !== currentUploadDate
+
+          // Determine if any field changed (latest chapter or upload date)
           const hasChange = hasLatestChange || hasUploadChange
 
           if (!hasChange) {
@@ -373,6 +394,14 @@ function Bookshelf() {
                 ))}
               </select>
             </label>
+            <button
+              className="ghost"
+              onClick={() => setSortDirection(sortDirection === 'desc' ? 'asc' : 'desc')}
+              title={sortDirection === 'desc' ? 'Descending' : 'Ascending'}
+              style={{ padding: '8px 12px', fontSize: '0.9rem', height: 'fit-content', alignSelf: 'flex-end' }}
+            >
+              {sortDirection === 'desc' ? '↓' : '↑'}
+            </button>
           </div>
 
           {/* Genre filter */}
@@ -382,6 +411,8 @@ function Bookshelf() {
             onGenreChange={setActiveGenres}
             genreFilterMode={genreFilterMode}
             onGenreFilterModeChange={setGenreFilterMode}
+            isOpen={genreFilterOpen}
+            onOpenChange={setGenreFilterOpen}
           />
 
           {/* Results count with check updates button for waiting shelf */}
