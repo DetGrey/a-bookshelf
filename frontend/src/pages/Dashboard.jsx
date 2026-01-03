@@ -16,6 +16,7 @@ function Dashboard() {
   const [dupeLoading, setDupeLoading] = useState(false)
   const [dupeResults, setDupeResults] = useState([])
   const [dupeMessage, setDupeMessage] = useState('')
+  const [genreMoreExpanded, setGenreMoreExpanded] = useState(false)
   const fileInputRef = useRef(null)
 
   usePageTitle('Dashboard')
@@ -154,37 +155,27 @@ function Dashboard() {
     : null
   const perfectScoreCount = books.filter((b) => Number(b.score) === 10).length
 
-  // Genre breakdown
+  // Genre breakdown - count books that have each genre (not total genre occurrences)
   const IGNORE_GENRES = new Set(['manhwa', 'manhua', 'webtoon', 'manga', 'full color'])
-  const genreCounts = books.reduce((acc, book) => {
+  const booksWithGenre = new Map() // Map of genre -> Set of book IDs
+  books.forEach((book) => {
     (book.genres ?? []).forEach((g) => {
       const key = g.trim()
       if (!key) return
       if (IGNORE_GENRES.has(key.toLowerCase())) return
-      acc[key] = (acc[key] || 0) + 1
+      if (!booksWithGenre.has(key)) {
+        booksWithGenre.set(key, new Set())
+      }
+      booksWithGenre.get(key).add(book.id)
     })
-    return acc
-  }, {})
-  const genreEntriesRaw = Object.entries(genreCounts).sort((a, b) => b[1] - a[1])
-  const totalGenres = genreEntriesRaw.reduce((sum, [, count]) => sum + count, 0)
-  const topLimit = 5
-  const topGenres = genreEntriesRaw.slice(0, topLimit)
-  const otherCount = genreEntriesRaw.slice(topLimit).reduce((sum, [, count]) => sum + count, 0)
-  const genreEntries = otherCount > 0 ? [...topGenres, ['Other', otherCount]] : topGenres
+  })
+  // Convert to counts and sort
+  const genreCountMap = new Map(
+    Array.from(booksWithGenre.entries()).map(([genre, bookSet]) => [genre, bookSet.size])
+  )
+  const genreEntriesRaw = Array.from(genreCountMap.entries()).sort((a, b) => b[1] - a[1])
+  const totalBooks = books.length
   const palette = ['#7c83ff', '#ff8ba7', '#22c55e', '#f6aa1c', '#4cc9f0', '#a855f7', '#ef4444', '#0ea5e9']
-  const genrePieStyle = () => {
-    if (!totalGenres) return { background: 'var(--panel, #f5f5f5)' }
-    let offset = 0
-    // eslint-disable-next-line no-unused-vars
-    const stops = genreEntries.map(([_genre, count], idx) => {
-      const pct = (count / totalGenres) * 100
-      const start = offset
-      const end = offset + pct
-      offset = end
-      return `${palette[idx % palette.length]} ${start}% ${end}%`
-    })
-    return { background: `conic-gradient(${stops.join(', ')})` }
-  }
 
   return (
     <div className="page">
@@ -231,37 +222,73 @@ function Dashboard() {
         <div className="block-head dashboard-section-header">
           <h2>Genre breakdown</h2>
           <p className="muted">
-            {totalGenres ? 'Share of genres across your library' : 'No genre data yet'}
+            {totalBooks ? 'Books by genre (% of your library) — books can have multiple genres' : 'No genre data yet'}
           </p>
         </div>
-        {totalGenres ? (
-          <div className="genre-breakdown">
-            <div
-              className="genre-pie"
-              style={genrePieStyle()}
-            />
-            <div className="stack genre-legend">
-              {genreEntries.slice(0, 8).map(([genre, count], idx) => {
-                const percent = ((count / totalGenres) * 100).toFixed(0)
-                return (
-                  <div key={genre} className="genre-legend-item">
-                    <span
-                      className="genre-legend-indicator"
+        {totalBooks > 0 && genreEntriesRaw.length > 0 ? (
+          <div className="genre-list-container">
+            {/* Top 5 genres - always visible */}
+            {genreEntriesRaw.slice(0, 5).map(([genre, count], idx) => {
+              const percent = ((count / totalBooks) * 100).toFixed(1)
+              const barWidth = Math.min((count / totalBooks) * 100, 100)
+              return (
+                <div key={genre} className="genre-bar-item">
+                  <div className="genre-bar-header">
+                    <span className="genre-bar-name">{genre}</span>
+                    <span className="muted genre-bar-stats">{percent}% ({count})</span>
+                  </div>
+                  <div className="genre-bar-track">
+                    <div
+                      className="genre-bar-fill"
                       style={{
+                        width: `${barWidth}%`,
                         background: palette[idx % palette.length],
                       }}
                     />
-                    <span className="genre-legend-label">{genre}</span>
-                    <span className="muted">{percent}%</span>
                   </div>
-                )
-              })}
-              {genreEntries.length > 8 && (
-                <p className="muted genre-legend-more">
-                  + {genreEntries.length - 8} more
-                </p>
-              )}
-            </div>
+                </div>
+              )
+            })}
+            
+            {/* Remaining genres - collapsible */}
+            {genreEntriesRaw.length > 5 && (
+              <div>
+                <button
+                  type="button"
+                  className="ghost genre-more-button"
+                  onClick={() => setGenreMoreExpanded(!genreMoreExpanded)}
+                >
+                  <span>{genreMoreExpanded ? '▼' : '▶'}</span>
+                  <span>+ {genreEntriesRaw.length - 5} more genres</span>
+                </button>
+                
+                {genreMoreExpanded && (
+                  <div className="mt-8">
+                    {genreEntriesRaw.slice(5).map(([genre, count], idx) => {
+                      const percent = ((count / totalBooks) * 100).toFixed(1)
+                      const barWidth = Math.min((count / totalBooks) * 100, 100)
+                      return (
+                        <div key={genre} className="genre-bar-item">
+                          <div className="genre-bar-header">
+                            <span className="genre-bar-name">{genre}</span>
+                            <span className="muted genre-bar-stats">{percent}% ({count})</span>
+                          </div>
+                          <div className="genre-bar-track">
+                            <div
+                              className="genre-bar-fill"
+                              style={{
+                                width: `${barWidth}%`,
+                                background: palette[(5 + idx) % palette.length],
+                              }}
+                            />
+                          </div>
+                        </div>
+                      )
+                    })}
+                  </div>
+                )}
+              </div>
+            )}
           </div>
         ) : (
           <p className="muted">Add genres to your books to see the breakdown.</p>

@@ -151,7 +151,7 @@ function BookCard({
               <p>{book.last_read}</p>
             </>
           )}
-          <p className="muted" style={book.last_read && book.status !== 'completed' ? { marginTop: '8px' } : undefined}>Latest chapter</p>
+          <p className={`muted ${book.last_read && book.status !== 'completed' ? 'mt-8' : ''}`}>Latest chapter</p>
           <p>{book.latest_chapter || '—'}</p>
           {!compact && book.last_uploaded_at && (
             <p className="muted upload-date">

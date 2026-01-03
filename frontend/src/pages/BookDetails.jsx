@@ -253,7 +253,12 @@ function BookDetails() {
     setPendingRelatedBooks(pendingRelatedBooks.filter((r) => r.tempId !== tempId))
   }
 
-  const handleRemoveExistingRelated = (relationshipId) => {
+  const handleRemoveExistingRelated = (relationshipId, isReverse) => {
+    // Reverse relations cannot be deleted from this side
+    if (isReverse) {
+      alert('This link was created from the other book. Remove it from there instead.')
+      return
+    }
     // Mark existing related book for deletion
     if (!confirm('Remove this book link?')) return
     setDeletedRelatedBookIds([...deletedRelatedBookIds, relationshipId])
@@ -447,7 +452,13 @@ function BookDetails() {
         <Link to="/" className="ghost">← Back to Library</Link>
         {!isEditing && (
           <div className="flex gap-8">
-            <button className="ghost" onClick={() => setIsEditing(true)}>
+            <button className="ghost" onClick={() => {
+              setIsEditing(true)
+              // Pre-fill fetchUrl with first source URL when entering edit mode
+              if (sources.length > 0 && !fetchUrl) {
+                setFetchUrl(sources[0].url)
+              }
+            }}>
               Edit
             </button>
             <button className="ghost delete-action-button" onClick={handleDelete}>
@@ -634,7 +645,7 @@ function BookDetails() {
                       <small>
                         {rel.book?.language && <span>{rel.book.language}</span>}
                         {rel.book?.language && rel.relationshipType && <span> • </span>}
-                        {rel.relationshipType && <span>{rel.relationshipType}</span>}
+                        {rel.relationshipType && <span>{rel.relationshipType}{rel.isReverse ? ' (links here)' : ''}</span>}
                       </small>
                     </div>
                   </Link>

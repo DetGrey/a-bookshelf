@@ -18,7 +18,7 @@ function MetadataFetcher({
   compact = false,
 }) {
   return (
-    <section className={compact ? undefined : 'card'} style={compact ? { marginBottom: '16px' } : { marginBottom: '16px' }}>
+    <section className={`${compact ? '' : 'card'} mb-16`}>
       <p className="eyebrow">Fetch Metadata</p>
       <form onSubmit={onFetch} className="stack">
         <label className="field">

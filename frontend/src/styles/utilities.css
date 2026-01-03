@@ -950,3 +950,87 @@ button:disabled {
   margin: 0;
 }
 
+.mt-8 {
+  margin-top: 8px;
+}
+
+.mb-16 {
+  margin-bottom: 16px;
+}
+
+/* Collapsible Section Header */
+.collapsible-header {
+  display: flex;
+  justify-content: space-between !important;
+  align-items: center;
+  width: 100%;
+  padding: 0;
+  margin-bottom: 0;
+  cursor: pointer;
+  border: none;
+  background: none;
+}
+
+.collapsible-header.expanded {
+  margin-bottom: 8px;
+}
+
+.collapsible-header .eyebrow {
+  margin: 0;
+}
+
+.collapsible-arrow {
+  font-size: 1.2em;
+}
+
+/* Genre Breakdown */
+.genre-list-container {
+  margin-top: 12px;
+}
+
+.genre-bar-item {
+  margin-bottom: 8px;
+}
+
+.genre-bar-header {
+  display: flex;
+  justify-content: space-between;
+  margin-bottom: 4px;
+  align-items: center;
+}
+
+.genre-bar-name {
+  font-size: 0.9em;
+  font-weight: 500;
+}
+
+.genre-bar-stats {
+  font-size: 0.85em;
+  font-weight: 600;
+}
+
+.genre-bar-track {
+  height: 6px;
+  background: var(--panel);
+  border-radius: 3px;
+  overflow: hidden;
+}
+
+.genre-bar-fill {
+  height: 100%;
+  border-radius: 3px;
+  transition: width 0.3s ease;
+}
+
+.genre-more-button {
+  display: flex;
+  align-items: center;
+  gap: 6px;
+  padding: 4px 0;
+  font-size: 0.9em;
+  cursor: pointer;
+  border: none;
+  background: none;
+  color: var(--accent);
+  margin-top: 12px;
+}

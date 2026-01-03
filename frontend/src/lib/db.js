@@ -344,16 +344,26 @@ export async function toggleBookShelf(bookId, shelfId) {
 
 // Related Books (for linking books like language versions)
 export async function getRelatedBooks(bookId) {
-  const { data, error } = await supabase
+  // Get forward relations (this book -> other books)
+  const { data: forward, error: forwardError } = await supabase
     .from('related_books')
     .select('id,related_book_id,relationship_type,created_at,books!related_books_related_book_id_fkey(id,title,language,cover_url,status)')
     .eq('book_id', bookId)
-  if (error) throw error
-  return (data ?? []).map((r) => ({
+  if (forwardError) throw forwardError
+
+  // Get reverse relations (other books -> this book)
+  const { data: reverse, error: reverseError } = await supabase
+    .from('related_books')
+    .select('id,book_id,relationship_type,created_at,books!related_books_book_id_fkey(id,title,language,cover_url,status)')
+    .eq('related_book_id', bookId)
+  if (reverseError) throw reverseError
+
+  const forwardMapped = (forward ?? []).map((r) => ({
     id: r.id,
     relatedBookId: r.related_book_id,
     relationshipType: r.relationship_type,
     createdAt: r.created_at,
+    isReverse: false,
     book: r.books ? {
       id: r.books.id,
       title: r.books.title,
@@ -362,6 +372,23 @@ export async function getRelatedBooks(bookId) {
       status: r.books.status,
     } : null,
   }))
+
+  const reverseMapped = (reverse ?? []).map((r) => ({
+    id: r.id,
+    relatedBookId: r.book_id,
+    relationshipType: r.relationship_type,
+    createdAt: r.created_at,
+    isReverse: true,
+    book: r.books ? {
+      id: r.books.id,
+      title: r.books.title,
+      language: normalizeLanguageName(r.books.language),
+      coverUrl: r.books.cover_url ?? '',
+      status: r.books.status,
+    } : null,
+  }))
+
+  return [...forwardMapped, ...reverseMapped]
 }
 
 export async function addRelatedBook(bookId, relatedBookId, relationshipType = 'related') {

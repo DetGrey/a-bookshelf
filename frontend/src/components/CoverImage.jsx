@@ -50,7 +50,7 @@ function CoverImage({ src, title, alt, className = '', style = {}, lazy = true }
           src={src}
           alt={alt || title || 'Cover image'}
           onError={() => setErrored(true)}
-          style={style}
+          {...(Object.keys(style).length > 0 && { style })}
           loading="lazy"
         />
       ) : (
