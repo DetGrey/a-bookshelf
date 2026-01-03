@@ -91,7 +91,8 @@ Deno.serve(async (req) => {
       language: null,
       original_language: null,
       latest_chapter: '',
-      last_uploaded_at: null
+      last_uploaded_at: null,
+      chapter_count: null,
     };
 
     // --------------------------------------------- WEBTOONS
@@ -182,6 +183,22 @@ Deno.serve(async (req) => {
           }
         }
       }
+
+      const episodeNodes = $('ul#_listUl li._episodeItem');
+      const mobileNodes = $('ul#_episodeList li.item');
+      const episodeCount = episodeNodes.length || mobileNodes.length;
+      const episodeNoAttr = latestEpisode.attr('data-episode-no');
+      let episodeNo = episodeNoAttr ? parseInt(episodeNoAttr, 10) : NaN;
+      if (Number.isNaN(episodeNo)) {
+        const txText = latestEpisode.find('span.tx').first().text(); // e.g. "#210"
+        const match = txText.match(/#?(\d+)/);
+        if (match) {
+          episodeNo = parseInt(match[1], 10);
+        }
+      }
+
+      const bestCount = [episodeCount, episodeNo].filter((n) => Number.isFinite(n)).reduce((a, b) => Math.max(a, b), 0);
+      metadata.chapter_count = bestCount > 0 ? bestCount : null;
     }
     // --------------------------------------------- BATO.SI / BATO.ING
     else if (hostname === 'bato.ing' || hostname === 'bato.si') {
@@ -257,6 +274,20 @@ Deno.serve(async (req) => {
       
       if (chapterList.length) {
         const firstRow = chapterList.children().first();
+
+        const count = chapterList.children().length;
+        if (count > 0) {
+          metadata.chapter_count = count;
+        }
+
+        if (!metadata.chapter_count) {
+          const headingCountText = $('b#chapters').next('span').text() || $('b:contains("Chapters")').next('span').text();
+          const match = headingCountText.match(/(\d+)/);
+          if (match) {
+            const parsed = parseInt(match[1], 10);
+            if (Number.isFinite(parsed) && parsed > 0) metadata.chapter_count = parsed;
+          }
+        }
 
         // 1. Get Chapter Name
         const chapterLink = firstRow.find('a.link-hover').first()
@@ -363,6 +394,24 @@ Deno.serve(async (req) => {
           return text.length > 0 && /\/title\//.test(href);
         })
         .toArray();
+
+      const uniqueChapterKeys = new Set<string>();
+      chapterCandidates.forEach((el: any) => {
+        const href = $(el).attr('href') || '';
+        const label = $(el).text().trim();
+        const key = href || label;
+        if (key) uniqueChapterKeys.add(key);
+      });
+      metadata.chapter_count = uniqueChapterKeys.size > 0 ? uniqueChapterKeys.size : null;
+
+      if (!metadata.chapter_count) {
+        const headingCountText = $('b:contains("Chapters")').next('span').text();
+        const match = headingCountText.match(/(\d+)/);
+        if (match) {
+          const parsed = parseInt(match[1], 10);
+          if (Number.isFinite(parsed) && parsed > 0) metadata.chapter_count = parsed;
+        }
+      }
 
       let best = { text: '', ts: -Infinity } as { text: string; ts: number };
 

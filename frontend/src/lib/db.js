@@ -26,6 +26,12 @@ const normalizeLanguageName = (value) => {
   return trimmed
 }
 
+const normalizeTimesRead = (value) => {
+  const n = Number(value)
+  if (!Number.isFinite(n) || n < 1) return 1
+  return Math.round(n)
+}
+
 // Helpers for status mapping (DB uses lowercase snake_case)
 export const STATUS = {
   reading: 'Reading',
@@ -71,7 +77,7 @@ export async function getBooks(userId) {
   const { data, error } = await supabase
     .from('books')
     .select(
-      'id,user_id,title,description,cover_url,genres,language,original_language,score,status,last_read,notes,latest_chapter,last_fetched_at,last_uploaded_at,created_at,updated_at,book_links(id,site_name,url,created_at),shelf_books(shelf_id)'
+      'id,user_id,title,description,cover_url,genres,language,original_language,score,status,last_read,notes,latest_chapter,last_fetched_at,last_uploaded_at,times_read,chapter_count,created_at,updated_at,book_links(id,site_name,url,created_at),shelf_books(shelf_id)'
     )
     .eq('user_id', userId)
     .order('updated_at', { ascending: false })
@@ -92,6 +98,8 @@ export async function getBooks(userId) {
     latest_chapter: b.latest_chapter ?? '',
     last_fetched_at: b.last_fetched_at ?? null,
     last_uploaded_at: b.last_uploaded_at ?? null,
+    times_read: b.times_read ?? 1,
+    chapter_count: b.chapter_count ?? null,
     created_at: b.created_at,
     updated_at: b.updated_at,
     sources: (b.book_links ?? []).map((l) => ({ id: l.id, label: l.site_name ?? 'Source', url: l.url })),
@@ -103,7 +111,7 @@ export async function getBook(bookId) {
   const { data, error } = await supabase
     .from('books')
     .select(
-      'id,user_id,title,description,cover_url,genres,language,original_language,score,status,last_read,notes,latest_chapter,last_fetched_at,last_uploaded_at,created_at,updated_at,book_links(id,site_name,url,created_at),shelf_books(shelf_id)'
+      'id,user_id,title,description,cover_url,genres,language,original_language,score,status,last_read,notes,latest_chapter,last_fetched_at,last_uploaded_at,times_read,chapter_count,created_at,updated_at,book_links(id,site_name,url,created_at),shelf_books(shelf_id)'
     )
     .eq('id', bookId)
     .single()
@@ -124,6 +132,8 @@ export async function getBook(bookId) {
     latest_chapter: data.latest_chapter ?? '',
     last_fetched_at: data.last_fetched_at ?? null,
     last_uploaded_at: data.last_uploaded_at ?? null,
+    times_read: data.times_read ?? 1,
+    chapter_count: data.chapter_count ?? null,
     created_at: data.created_at,
     updated_at: data.updated_at,
     sources: (data.book_links ?? []).map((l) => ({ id: l.id, label: l.site_name ?? 'Source', url: l.url })),
@@ -132,6 +142,7 @@ export async function getBook(bookId) {
 }
 
 export async function updateBook(bookId, patch) {
+  const timesRead = normalizeTimesRead(patch.times_read)
   const payload = {
     title: patch.title,
     description: patch.description,
@@ -146,6 +157,8 @@ export async function updateBook(bookId, patch) {
     latest_chapter: patch.latest_chapter,
     last_fetched_at: patch.last_fetched_at,
     last_uploaded_at: patch.last_uploaded_at,
+    times_read: timesRead,
+    chapter_count: patch.chapter_count,
     updated_at: new Date().toISOString(),
   }
   const { error } = await supabase.from('books').update(payload).eq('id', bookId)
@@ -153,6 +166,7 @@ export async function updateBook(bookId, patch) {
 }
 
 export async function createBook(userId, book) {
+  const timesRead = normalizeTimesRead(book.times_read)
   const payload = {
     user_id: userId,
     title: book.title,
@@ -168,6 +182,8 @@ export async function createBook(userId, book) {
     latest_chapter: book.latest_chapter ?? '',
     last_fetched_at: book.last_fetched_at ?? null,
     last_uploaded_at: book.last_uploaded_at ?? null,
+    times_read: timesRead,
+    chapter_count: book.chapter_count ?? null,
     created_at: new Date().toISOString(),
     updated_at: new Date().toISOString(),
   }

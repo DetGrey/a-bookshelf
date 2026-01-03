@@ -136,6 +136,7 @@ export function BooksProvider({ children }) {
         shelves,
         loading,
         error,
+        setBooks,
         refetch: () => fetchBooksAndShelves(true),
         updateCache: () => fetchBooksAndShelves(false),
       }}

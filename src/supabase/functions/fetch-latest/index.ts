@@ -15,12 +15,27 @@ Deno.serve(async (req) => {
     const { url } = await req.json();
     if (!url) throw new Error('No URL provided');
 
-    // 2. Fetch HTML
-    const response = await fetch(url, {
+    // 2. Fetch HTML (with dto.to -> bato.ing fallback)
+    const urlObj = new URL(url);
+    let hostname = urlObj.hostname;
+
+    let response = await fetch(url, {
       headers: {
         'User-Agent': 'Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/119.0.0.0 Safari/537.36'
       }
     });
+
+    if (!response.ok && response.status === 404 && hostname === 'dto.to') {
+      const fallbackUrl = url.replace('dto.to', 'bato.ing');
+      response = await fetch(fallbackUrl, {
+        headers: {
+          'User-Agent': 'Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/119.0.0.0 Safari/537.36'
+        }
+      });
+      if (response.ok) {
+        hostname = 'bato.ing';
+      }
+    }
 
     if (!response.ok) throw new Error(`Failed to fetch site: ${response.status} ${response.statusText}`);
 
@@ -28,11 +43,11 @@ Deno.serve(async (req) => {
     const $ = cheerio.load(html);
 
     // 3. Determine website and extract accordingly
-    const urlObj = new URL(url);
-    const hostname = urlObj.hostname;
+    // hostname already derived (may be updated after fallback)
 
     let latest_chapter = '';
     let last_uploaded_at: string | null = null;
+  let chapter_count: number | null = null;
 
     // --------------------------------------------- WEBTOONS
     if (hostname === 'www.webtoons.com') {
@@ -41,6 +56,15 @@ Deno.serve(async (req) => {
         const episodeText = latestEpisode.find('span.subj span, span.subj').first().text().trim();
         if (episodeText) {
           latest_chapter = episodeText;
+        }
+
+        // Prefer explicit episode number for count; fall back to list length
+        const episodeNoAttr = latestEpisode.attr('data-episode-no');
+        let episodeNo = episodeNoAttr ? parseInt(episodeNoAttr, 10) : NaN;
+        if (Number.isNaN(episodeNo)) {
+          const txText = latestEpisode.find('span.tx').first().text();
+          const match = txText.match(/#?(\d+)/);
+          if (match) episodeNo = parseInt(match[1], 10);
         }
 
         // -- Upload Date: Add +1 Day Hack --
@@ -75,6 +99,12 @@ Deno.serve(async (req) => {
             // Date parsing failed, skip
           }
         }
+
+        const episodeNodes = $('ul#_listUl li._episodeItem');
+        const mobileNodes = $('ul#_episodeList li.item');
+        const episodeCount = episodeNodes.length || mobileNodes.length;
+        const bestCount = [episodeCount, episodeNo].filter((n) => Number.isFinite(n)).reduce((a, b) => Math.max(a, b), 0);
+        chapter_count = bestCount > 0 ? bestCount : null;
       }
     }
     // --------------------------------------------- BATO.SI / BATO.ING
@@ -104,6 +134,20 @@ Deno.serve(async (req) => {
               last_uploaded_at = iso.toISOString();
             }
           }
+        }
+
+        // Count from visible list
+        const count = chapterList.children().length;
+        if (count > 0) chapter_count = count;
+      }
+
+      // Heading-based count fallback ("Chapters (50)")
+      if (!chapter_count) {
+        const headingCountText = $('b#chapters').next('span').text() || $('b:contains("Chapters")').next('span').text();
+        const match = headingCountText.match(/(\d+)/);
+        if (match) {
+          const parsed = parseInt(match[1], 10);
+          if (Number.isFinite(parsed) && parsed > 0) chapter_count = parsed;
         }
       }
     }
@@ -151,6 +195,16 @@ Deno.serve(async (req) => {
         latest_chapter = $(lastLink).text().trim();
       }
 
+      // Count unique chapter links
+      const uniqueChapterKeys = new Set<string>();
+      chapterCandidates.forEach((el: any) => {
+        const href = $(el).attr('href') || '';
+        const label = $(el).text().trim();
+        const key = href || label;
+        if (key) uniqueChapterKeys.add(key);
+      });
+      if (uniqueChapterKeys.size > 0) chapter_count = uniqueChapterKeys.size;
+
       // -- Upload Date --
       if (best.ts !== -Infinity) {
         last_uploaded_at = new Date(best.ts).toISOString();
@@ -170,13 +224,24 @@ Deno.serve(async (req) => {
           }
         }
       }
+
+      // Heading-based count fallback ("Chapters (50)")
+      if (!chapter_count) {
+        const headingCountText = $('b:contains("Chapters")').next('span').text();
+        const match = headingCountText.match(/(\d+)/);
+        if (match) {
+          const parsed = parseInt(match[1], 10);
+          if (Number.isFinite(parsed) && parsed > 0) chapter_count = parsed;
+        }
+      }
     }
 
     // 4. Return JSON
     return new Response(
       JSON.stringify({
         latest_chapter,
-        last_uploaded_at
+        last_uploaded_at,
+        chapter_count,
       }),
       { headers: { ...corsHeaders, 'Content-Type': 'application/json' } }
     );

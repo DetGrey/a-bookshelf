@@ -35,6 +35,8 @@ function AddBook() {
     notes: '',
     latest_chapter: '',
     last_uploaded_at: '',
+    times_read: 1,
+    chapter_count: null,
     score: 0,
   })
 
@@ -126,6 +128,7 @@ function AddBook() {
           original_language: m.original_language ?? null,
           latest_chapter: m.latest_chapter || prev.latest_chapter,
           last_uploaded_at: formatDatetimeLocal(m.last_uploaded_at) || prev.last_uploaded_at,
+          chapter_count: m.chapter_count ?? prev.chapter_count,
         }))
       }
       setSuccess('Metadata fetched. Review or edit fields below, then save.')
@@ -165,6 +168,8 @@ function AddBook() {
         latest_chapter: form.latest_chapter || '',
         last_uploaded_at: form.last_uploaded_at || null,
         last_fetched_at: fetchedAt || null,
+        times_read: form.times_read || 1,
+        chapter_count: form.chapter_count ?? null,
         score: parsedScore,
       }
 

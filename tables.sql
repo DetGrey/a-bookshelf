@@ -21,6 +21,8 @@ create table public.books (
   score integer check (score >= 0 and score <= 10), -- 0 = N/A, 1-10 as scale
   
   -- Progress
+  times_read integer not null check (times_read >= 1) default 1,
+  chapter_count integer check (chapter_count >= 1),
   status text check (status in ('reading', 'plan_to_read', 'completed', 'waiting', 'dropped', 'on_hold')) default 'reading',
   last_read text,         -- Your progress (e.g. "Ch 50")
   notes text,

@@ -30,7 +30,7 @@ const sortOptions = [
 
 function Bookshelf() {
   const { user } = useAuth()
-  const { books, loading: contextLoading } = useBooks()
+  const { books, loading: contextLoading, setBooks } = useBooks()
   usePageTitle('Bookshelf')
   const [customShelves, setCustomShelves] = useState([])
   const [activeShelf, setActiveShelf] = useState('all')
@@ -48,6 +48,16 @@ function Bookshelf() {
   const [errorDetails, setErrorDetails] = useState([])
   const [showErrors, setShowErrors] = useState(false)
   const [waitingProgress, setWaitingProgress] = useState({ current: 0, total: 0 })
+  const [updateDetails, setUpdateDetails] = useState([])
+
+  const subtleBoxStyle = {
+    marginBottom: '12px',
+    border: '1px solid var(--border-strong, var(--border))',
+    borderRadius: '12px',
+    padding: '12px',
+    background: 'var(--panel)',
+    boxShadow: '0 6px 18px rgba(0, 0, 0, 0.15)',
+  }
 
   // Scroll to top when page loads
   useEffect(() => {
@@ -233,7 +243,17 @@ function Bookshelf() {
     setError('')
     setErrorDetails([])
     setShowErrors(false)
+    setUpdateDetails([])
     setWaitingProgress({ current: 0, total: 0 })
+    const normalizeCount = (val) => {
+      const n = Number(val)
+      if (!Number.isFinite(n) || n <= 0) return null
+      return Math.round(n)
+    }
+    const normalizeText = (val) => {
+      if (val === null || val === undefined) return ''
+      return String(val).trim()
+    }
     const now = new Date().toISOString()
     const batchSize = 3
     const delayMs = 1000
@@ -251,8 +271,8 @@ function Bookshelf() {
 
       for (let i = 0; i < waitingBooks.length; i += batchSize) {
         const batch = waitingBooks.slice(i, i + batchSize)
-        const batchResults = await Promise.all(
-          batch.map(async (book) => {
+            const batchResults = await Promise.all(
+              batch.map(async (book) => {
             const url = book.sources?.[0]?.url
             if (!url) return { bookId: book.id, title: book.title, skipped: 'no_url' }
 
@@ -262,21 +282,22 @@ function Bookshelf() {
 
             if (fnError || !payload) return { bookId: book.id, title: book.title, error: fnError?.message || 'fetch failed' }
 
-            const payloadLatest = payload.latest_chapter
+            const payloadLatest = normalizeText(payload.latest_chapter)
             const payloadUploaded = payload.last_uploaded_at
+            const payloadCount = normalizeCount(payload.chapter_count)
 
-            const latestHasText = typeof payloadLatest === 'string' ? payloadLatest.trim() !== '' : Boolean(payloadLatest)
+            const latestHasText = payloadLatest !== ''
             const uploadHasValue = Boolean(payloadUploaded)
-            const emptyPayload = !latestHasText && !uploadHasValue
+            const countHasValue = payloadCount !== null
+            const emptyPayload = !latestHasText && !uploadHasValue && !countHasValue
 
             if (emptyPayload) {
               return { bookId: book.id, title: book.title, payload, skipped: 'empty_payload' }
             }
 
             // Compare latest chapter: normalize both strings and check if they differ
-            const normalizedPayloadLatest = latestHasText ? String(payloadLatest).trim() : ''
-            const normalizedCurrentLatest = (book.latest_chapter ?? '').trim()
-            const hasLatestChange = latestHasText && normalizedPayloadLatest !== normalizedCurrentLatest
+            const normalizedCurrentLatest = normalizeText(book.latest_chapter)
+            const hasLatestChange = latestHasText && payloadLatest !== normalizedCurrentLatest
 
             // Compare upload dates: only count as change if dates are different days (ignore time of day)
             const parsedPayloadUpload = uploadHasValue ? new Date(payloadUploaded) : null
@@ -287,8 +308,11 @@ function Bookshelf() {
             const currentUploadDate = currentUploadMs ? new Date(currentUploadMs).toISOString().split('T')[0] : null
             const hasUploadChange = uploadHasValue && payloadUploadDate !== currentUploadDate
 
-            // Determine if any field changed (latest chapter or upload date)
-            const hasChange = hasLatestChange || hasUploadChange
+            const currentCount = normalizeCount(book.chapter_count)
+            const hasCountChange = countHasValue && payloadCount !== currentCount
+
+            // Determine if any field changed (latest chapter, upload date, or chapter count)
+            const hasChange = hasLatestChange || hasUploadChange || hasCountChange
 
             if (!hasChange) {
               return { bookId: book.id, title: book.title, payload, skipped: 'no_change' }
@@ -300,6 +324,7 @@ function Bookshelf() {
                 .update({
                   latest_chapter: hasLatestChange ? payloadLatest : book.latest_chapter,
                   last_uploaded_at: hasUploadChange ? payloadUploaded : book.last_uploaded_at,
+                  chapter_count: hasCountChange ? payloadCount : book.chapter_count,
                   last_fetched_at: now,
                 })
                 .eq('id', book.id)
@@ -309,7 +334,12 @@ function Bookshelf() {
               }
             }
 
-            return { bookId: book.id, title: book.title, payload }
+            const changes = []
+            if (hasLatestChange) changes.push(`Latest: ${normalizedCurrentLatest || '—'} → ${payloadLatest || '—'}`)
+            if (hasUploadChange) changes.push(`Upload: ${book.last_uploaded_at ? new Date(book.last_uploaded_at).toLocaleString() : '—'} → ${payloadUploaded ? new Date(payloadUploaded).toLocaleString() : '—'}`)
+            if (hasCountChange) changes.push(`Chapters: ${book.chapter_count ?? '—'} → ${payloadCount}`)
+
+            return { bookId: book.id, title: book.title, payload, updated: hasChange, changes }
           })
         )
 
@@ -323,6 +353,9 @@ function Bookshelf() {
       }
 
       const updatesById = new Map(updates.map((u) => [u.bookId, u]))
+      const updatedDetails = updates
+        .filter((u) => u.updated && u.changes?.length)
+        .map((u) => ({ title: u.title, changes: u.changes }))
 
       const emptyPayloadCount = updates.filter((u) => u.skipped === 'empty_payload').length
       const noChangeCount = updates.filter((u) => u.skipped === 'no_change').length
@@ -347,12 +380,15 @@ function Bookshelf() {
           if (payload && updatedIds.has(book.id)) {
             const payloadLatest = payload.latest_chapter
             const payloadUploaded = payload.last_uploaded_at
+              const payloadCount = normalizeCount(payload.chapter_count)
             const hasLatestChange = payloadLatest && payloadLatest !== book.latest_chapter
             const hasUploadChange = payloadUploaded && payloadUploaded !== book.last_uploaded_at
+              const hasCountChange = payloadCount !== null && payloadCount !== book.chapter_count
             return {
               ...book,
               latest_chapter: hasLatestChange ? payloadLatest : book.latest_chapter,
               last_uploaded_at: hasUploadChange ? payloadUploaded : book.last_uploaded_at,
+                chapter_count: hasCountChange ? payloadCount : book.chapter_count,
               last_fetched_at: now,
             }
           }
@@ -371,6 +407,7 @@ function Bookshelf() {
       if (errorCount) summaryParts.push(`errors ${errorCount}`)
 
       setUpdateMessage(summaryParts.join('; ') + '.')
+      setUpdateDetails(updatedDetails)
     } catch (err) {
       setError(err instanceof Error ? err.message : String(err))
     } finally {
@@ -502,10 +539,28 @@ function Bookshelf() {
             </p>
           )}
 
+          {updateDetails.length > 0 && (
+            <div className="notice" style={subtleBoxStyle}>
+              <p className="success" style={{ margin: 0, fontWeight: 600 }}>Updates</p>
+              <ul className="muted" style={{ margin: '8px 0 0', paddingLeft: '18px', lineHeight: 1.5 }}>
+                {updateDetails.map((item, idx) => (
+                  <li key={`${item.title}-${idx}`} style={{ marginBottom: '6px' }}>
+                    <strong style={{ color: 'var(--text)' }}>{item.title || 'Untitled'}</strong>
+                    <ul style={{ margin: '4px 0 0 14px', paddingLeft: '14px', listStyle: 'disc' }}>
+                      {item.changes.map((change, cidx) => (
+                        <li key={cidx}>{change}</li>
+                      ))}
+                    </ul>
+                  </li>
+                ))}
+              </ul>
+            </div>
+          )}
+
           {errorDetails.length > 0 && (
-            <div className="notice" style={{ marginBottom: '12px', border: '1px solid var(--border)', borderRadius: '8px', padding: '12px', background: 'var(--bg-subtle, #fafafa)' }}>
+            <div className="notice" style={subtleBoxStyle}>
               <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', gap: '12px' }}>
-                <p className="error" style={{ margin: 0 }}>
+                <p className="error" style={{ margin: 0, fontWeight: 600 }}>
                   {errorDetails.length} error{errorDetails.length === 1 ? '' : 's'} during update
                 </p>
                 <button
@@ -518,10 +573,10 @@ function Bookshelf() {
                 </button>
               </div>
               {showErrors && (
-                <ul className="muted" style={{ margin: '8px 0 0', paddingLeft: '18px' }}>
+                <ul className="muted" style={{ margin: '8px 0 0', paddingLeft: '18px', lineHeight: 1.5 }}>
                   {errorDetails.map((err) => (
                     <li key={err.bookId} style={{ marginBottom: '4px' }}>
-                      <strong>{err.title || 'Untitled'}</strong>: {err.message}
+                      <strong style={{ color: 'var(--text)' }}>{err.title || 'Untitled'}</strong>: {err.message}
                     </li>
                   ))}
                 </ul>

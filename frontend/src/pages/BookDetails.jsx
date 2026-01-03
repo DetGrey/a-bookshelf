@@ -7,10 +7,12 @@ import CoverImage from '../components/CoverImage.jsx'
 import BookFormFields from '../components/BookFormFields.jsx'
 import MetadataFetcher from '../components/MetadataFetcher.jsx'
 import SourceManager from '../components/SourceManager.jsx'
+import { useBooks } from '../context/BooksProvider.jsx'
 
 function BookDetails() {
   const { bookId } = useParams()
   const navigate = useNavigate()
+  const { refetch } = useBooks()
 
   const [book, setBook] = useState(null)
   const [loading, setLoading] = useState(true)
@@ -30,6 +32,8 @@ function BookDetails() {
     genres: '', // comma-separated for editing
     last_uploaded_at: '',
     last_fetched_at: '',
+    times_read: 1,
+    chapter_count: null,
   })
   const [newSourceLabel, setNewSourceLabel] = useState('')
   const [newSourceUrl, setNewSourceUrl] = useState('')
@@ -42,6 +46,7 @@ function BookDetails() {
   const [latestLoading, setLatestLoading] = useState(false)
   const [latestMessage, setLatestMessage] = useState('')
   const [latestStatus, setLatestStatus] = useState(null) // 'updated' | 'skipped' | 'error'
+  const [latestDetails, setLatestDetails] = useState([])
 
   usePageTitle(book?.title ? `${book.title}` : 'Book')
 
@@ -83,6 +88,8 @@ function BookDetails() {
           genres: (b.genres ?? []).join(', '),
           last_uploaded_at: formatDatetimeLocal(b.last_uploaded_at),
           last_fetched_at: formatDatetimeLocal(b.last_fetched_at),
+          times_read: b.times_read ?? 1,
+          chapter_count: b.chapter_count ?? null,
         })
       } catch (err) {
         if (mounted) setError(err.message)
@@ -138,6 +145,12 @@ function BookDetails() {
       return Math.round(n)
     })()
 
+    const timesRead = (() => {
+      const n = Number(editForm.times_read)
+      if (!Number.isFinite(n) || n < 1) return 1
+      return Math.round(n)
+    })()
+
     const payload = {
       ...editForm,
       genres: editForm.genres
@@ -147,9 +160,13 @@ function BookDetails() {
       language: editForm.language || null,
       last_uploaded_at: toIsoOrNull(editForm.last_uploaded_at),
       last_fetched_at: toIsoOrNull(editForm.last_fetched_at),
+      times_read: timesRead,
+      chapter_count: editForm.chapter_count ?? null,
     }
     await updateBook(book.id, payload)
-    setBook({ ...book, ...payload })
+    setBook({ ...book, ...payload, times_read: timesRead })
+    setEditForm((prev) => ({ ...prev, times_read: timesRead }))
+    refetch()
     setIsEditing(false)
   }
 
@@ -223,6 +240,7 @@ function BookDetails() {
         ? formatDatetimeLocal(fetchedMetadata.last_uploaded_at)
         : prev.last_uploaded_at,
       last_fetched_at: formatDatetimeLocal(now),
+      chapter_count: fetchedMetadata.chapter_count ?? prev.chapter_count,
     }))
     setFetchSuccess('Applied metadata to fields. Remember to Save Changes.')
   }
@@ -230,6 +248,7 @@ function BookDetails() {
   const handleFetchLatest = async () => {
     setLatestMessage('')
     setLatestStatus(null)
+    setLatestDetails([])
     setLatestLoading(true)
 
     const url = sources?.[0]?.url
@@ -241,6 +260,10 @@ function BookDetails() {
     }
 
     try {
+      const prevLatest = (book.latest_chapter ?? '').trim()
+      const prevUpload = book.last_uploaded_at
+      const prevCount = normalizeCount(book.chapter_count)
+
       const { data: payload, error: fnError } = await supabase.functions.invoke('fetch-latest', {
         body: { url },
       })
@@ -249,16 +272,25 @@ function BookDetails() {
         throw new Error(fnError?.message || 'Failed to fetch latest')
       }
 
+      const normalizeCount = (val) => {
+        const n = Number(val)
+        if (!Number.isFinite(n) || n <= 0) return null
+        return Math.round(n)
+      }
+
       const payloadLatest = payload.latest_chapter
       const payloadUploaded = payload.last_uploaded_at
+      const payloadCount = normalizeCount(payload.chapter_count)
 
       const latestHasText = typeof payloadLatest === 'string' ? payloadLatest.trim() !== '' : Boolean(payloadLatest)
       const uploadHasValue = Boolean(payloadUploaded)
-      const emptyPayload = !latestHasText && !uploadHasValue
+      const countHasValue = payloadCount !== null
+      const emptyPayload = !latestHasText && !uploadHasValue && !countHasValue
 
       if (emptyPayload) {
         setLatestMessage('No chapter data found.')
         setLatestStatus('skipped')
+        setLatestDetails([])
         setLatestLoading(false)
         return
       }
@@ -275,11 +307,15 @@ function BookDetails() {
       const currentUploadDate = currentUploadMs ? new Date(currentUploadMs).toISOString().split('T')[0] : null
       const hasUploadChange = uploadHasValue && payloadUploadDate !== currentUploadDate
 
-      const hasChange = hasLatestChange || hasUploadChange
+      const currentCount = normalizeCount(book.chapter_count)
+      const hasCountChange = countHasValue && payloadCount !== currentCount
+
+      const hasChange = hasLatestChange || hasUploadChange || hasCountChange
 
       if (!hasChange) {
         setLatestMessage('No changes found (already up to date).')
         setLatestStatus('skipped')
+        setLatestDetails([])
         setLatestLoading(false)
         return
       }
@@ -290,6 +326,7 @@ function BookDetails() {
         .update({
           latest_chapter: hasLatestChange ? payloadLatest : book.latest_chapter,
           last_uploaded_at: hasUploadChange ? payloadUploaded : book.last_uploaded_at,
+          chapter_count: hasCountChange ? payloadCount : book.chapter_count,
           last_fetched_at: now,
         })
         .eq('id', book.id)
@@ -301,20 +338,37 @@ function BookDetails() {
         ...prev,
         latest_chapter: hasLatestChange ? payloadLatest : prev.latest_chapter,
         last_uploaded_at: hasUploadChange ? payloadUploaded : prev.last_uploaded_at,
+        chapter_count: hasCountChange ? payloadCount : prev.chapter_count,
         last_fetched_at: now,
       }))
       setEditForm((prev) => ({
         ...prev,
         latest_chapter: hasLatestChange ? payloadLatest : prev.latest_chapter,
         last_uploaded_at: hasUploadChange ? formatDatetimeLocal(payloadUploaded) : prev.last_uploaded_at,
+        chapter_count: hasCountChange ? payloadCount : prev.chapter_count,
         last_fetched_at: formatDatetimeLocal(now),
       }))
 
+      // Force context refresh so other views see the updated data immediately
+      refetch()
+
+      const details = []
+      const fmtDate = (val) => {
+        if (!val) return '—'
+        const d = new Date(val)
+        return Number.isNaN(d.getTime()) ? '—' : d.toLocaleString()
+      }
+      if (hasLatestChange) details.push(`Latest chapter: ${prevLatest || '—'} → ${normalizedPayloadLatest || '—'}`)
+      if (hasUploadChange) details.push(`Last upload: ${fmtDate(prevUpload)} → ${fmtDate(payloadUploaded)}`)
+      if (hasCountChange) details.push(`Chapter count: ${prevCount ?? '—'} → ${payloadCount}`)
+
       setLatestMessage('Updated successfully.')
       setLatestStatus('updated')
+      setLatestDetails(details)
     } catch (err) {
       setLatestMessage(err?.message || 'Failed to fetch latest chapter.')
       setLatestStatus('error')
+      setLatestDetails([])
     } finally {
       setLatestLoading(false)
     }
@@ -418,6 +472,14 @@ function BookDetails() {
                   <p className="muted">Last Upload</p>
                   <strong>{book.last_uploaded_at ? new Date(book.last_uploaded_at).toLocaleString() : '—'}</strong>
                 </div>
+                <div className="stat">
+                  <p className="muted">Times Read</p>
+                  <strong>{book.times_read ?? 1}</strong>
+                </div>
+                <div className="stat">
+                  <p className="muted">Chapter Count</p>
+                  <strong>{book.chapter_count ?? '—'}</strong>
+                </div>
               </div>
 
               <div style={{ marginTop: '16px' }}>
@@ -437,6 +499,13 @@ function BookDetails() {
                     {latestStatus === 'error'}{latestStatus === 'updated'}{latestStatus === 'skipped'}
                     {latestMessage}
                   </p>
+                )}
+                {latestDetails.length > 0 && (
+                  <ul className="muted" style={{ marginTop: '6px', textAlign: 'center', paddingLeft: 0, listStyle: 'none' }}>
+                    {latestDetails.map((d, idx) => (
+                      <li key={idx}>{d}</li>
+                    ))}
+                  </ul>
                 )}
               </div>
 

@@ -64,6 +64,31 @@ function BookFormFields({ form, onChange }) {
 
       <div className="grid-2">
         <label className="field">
+          <span>Times Read</span>
+          <input
+            type="number"
+            min="1"
+            value={form.times_read ?? 1}
+            onChange={(e) => handleChange('times_read', Math.max(1, Number(e.target.value) || 1))}
+          />
+        </label>
+        <label className="field">
+          <span>Chapter Count</span>
+          <input
+            type="number"
+            min="0"
+            placeholder="Auto-filled when available"
+            value={form.chapter_count ?? ''}
+            onChange={(e) => {
+              const val = e.target.value;
+              handleChange('chapter_count', val === '' ? null : Math.max(0, Number(val) || 0))
+            }}
+          />
+        </label>
+      </div>
+
+      <div className="grid-2">
+        <label className="field">
           <span>Last Read</span>
           <input
             type="text"

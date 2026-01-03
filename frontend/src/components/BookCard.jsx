@@ -106,6 +106,12 @@ function BookCard({
               </span>
             )}
             {book.last_read && book.status !== 'completed' && <span className="pill ghost">Last: {book.last_read}</span>}
+            {book.times_read !== undefined && book.times_read !== null && book.times_read > 1 && (
+              <span className="pill ghost">Reads: {book.times_read}</span>
+            )}
+            {book.chapter_count !== undefined && book.chapter_count !== null && (
+              <span className="pill ghost">Ch: {book.chapter_count}</span>
+            )}
             {!compact &&
               book.shelves?.map((shelfId) => {
                 const shelf = customShelves.find((s) => s.id === shelfId)

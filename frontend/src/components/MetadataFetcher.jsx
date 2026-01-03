@@ -62,6 +62,14 @@ function MetadataFetcher({
                 ))}
               </div>
             )}
+            <div className="pill-row" style={{ marginTop: '4px' }}>
+              {fetchedMetadata.latest_chapter && (
+                <span className="pill ghost">Latest: {fetchedMetadata.latest_chapter}</span>
+              )}
+              {fetchedMetadata.chapter_count !== null && fetchedMetadata.chapter_count !== undefined && (
+                <span className="pill ghost">Chapters: {fetchedMetadata.chapter_count}</span>
+              )}
+            </div>
             <div style={{ display: 'flex', gap: '8px', marginTop: '8px' }}>
               <button className="ghost" onClick={onApply}>
                 Apply to fields
