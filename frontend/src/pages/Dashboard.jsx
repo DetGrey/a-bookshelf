@@ -3,6 +3,7 @@ import { Link } from 'react-router-dom'
 import { useAuth } from '../context/AuthProvider.jsx'
 import { useBooks } from '../context/BooksProvider.jsx'
 import { getBackup, restoreBackup, STATUS } from '../lib/db.js'
+import { supabase } from '../lib/supabaseClient.js'
 import { usePageTitle } from '../lib/usePageTitle.js'
 import BookCard from '../components/BookCard.jsx'
 
@@ -114,21 +115,61 @@ function Dashboard() {
     return (2 * overlap) / (aBigrams.length + bBigrams.length)
   }
 
-  const handleFindDuplicates = () => {
+  const handleFindDuplicates = async () => {
     setDupeLoading(true)
     setDupeResults([])
     setDupeMessage('')
 
-    const normalized = books.map((b) => ({
-      ...b,
-      norm: normalizeTitle(b.title || ''),
-    })).filter((b) => b.norm.length > 0)
+    // Build a set of related pairs so we can skip known intentional links
+    const bookIds = books.map((b) => b.id)
+    if (bookIds.length === 0) {
+      setDupeMessage('No books to check.')
+      setDupeLoading(false)
+      return
+    }
+    const relatedPairs = new Set()
+
+    try {
+      const { data: forward, error: forwardError } = await supabase
+        .from('related_books')
+        .select('book_id, related_book_id')
+        .in('book_id', bookIds)
+      if (forwardError) throw forwardError
+
+      const { data: reverse, error: reverseError } = await supabase
+        .from('related_books')
+        .select('book_id, related_book_id')
+        .in('related_book_id', bookIds)
+      if (reverseError) throw reverseError
+
+      ;[...(forward ?? []), ...(reverse ?? [])].forEach((r) => {
+        if (!r.book_id || !r.related_book_id) return
+        const [a, b] = r.book_id < r.related_book_id ? [r.book_id, r.related_book_id] : [r.related_book_id, r.book_id]
+        relatedPairs.add(`${a}-${b}`)
+      })
+    } catch (err) {
+      setDupeMessage(err instanceof Error ? err.message : 'Failed to check duplicates')
+      setDupeLoading(false)
+      return
+    }
+
+    const normalized = books
+      .map((b) => ({
+        ...b,
+        norm: normalizeTitle(b.title || ''),
+      }))
+      .filter((b) => b.norm.length > 0)
 
     const pairs = []
     for (let i = 0; i < normalized.length; i += 1) {
       for (let j = i + 1; j < normalized.length; j += 1) {
         const a = normalized[i]
         const b = normalized[j]
+
+        // Skip if the books are already linked as related
+        const key = a.id < b.id ? `${a.id}-${b.id}` : `${b.id}-${a.id}`
+        if (relatedPairs.has(key)) continue
+
         const sim = diceSimilarity(a.norm, b.norm)
         const contains = a.norm.includes(b.norm) || b.norm.includes(a.norm)
         if (sim >= 0.7 || contains) {
