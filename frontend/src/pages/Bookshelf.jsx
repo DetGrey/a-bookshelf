@@ -53,7 +53,7 @@ function Bookshelf() {
   const [waitingProgress, setWaitingProgress] = useState({ current: 0, total: 0 })
   const [updateDetails, setUpdateDetails] = useState([])
   const [currentPage, setCurrentPage] = useState(1)
-  const booksPerPage = 50
+  const booksPerPage = 20
 
   // Scroll to top when page loads
   useEffect(() => {
@@ -162,17 +162,45 @@ function Bookshelf() {
       })
     }
 
-    // Search filter
+    // Search filter with relevance scoring
     if (searchQuery) {
       const query = searchQuery.toLowerCase()
-      // Split query into words and check if all words exist in title or description
       const queryWords = query.split(/\s+/).filter((w) => w.length > 0)
+      
+      // Filter books that have all query words
       filtered = filtered.filter((book) => {
         const titleLower = book.title.toLowerCase()
         const descLower = book.description.toLowerCase()
         const combinedText = `${titleLower} ${descLower}`
-        // All words must be found in the combined text (in any order)
         return queryWords.every((word) => combinedText.includes(word))
+      })
+      
+      // Score and sort by relevance (title matches weighted higher)
+      filtered.sort((a, b) => {
+        const titleLowerA = a.title.toLowerCase()
+        const descLowerA = (a.description || '').toLowerCase()
+        const titleLowerB = b.title.toLowerCase()
+        const descLowerB = (b.description || '').toLowerCase()
+        
+        let scoreA = 0
+        let scoreB = 0
+        
+        // Score each query word: title matches worth more than description matches
+        queryWords.forEach((word) => {
+          if (titleLowerA.includes(word)) scoreA += 10
+          if (descLowerA.includes(word)) scoreA += 2
+          if (titleLowerB.includes(word)) scoreB += 10
+          if (descLowerB.includes(word)) scoreB += 2
+        })
+        
+        // Bonus: if all query words appear in title, give significant boost
+        const allWordsInTitleA = queryWords.every((word) => titleLowerA.includes(word))
+        const allWordsInTitleB = queryWords.every((word) => titleLowerB.includes(word))
+        if (allWordsInTitleA) scoreA += 50
+        if (allWordsInTitleB) scoreB += 50
+        
+        // Return higher score first
+        return scoreB - scoreA
       })
     }
 
