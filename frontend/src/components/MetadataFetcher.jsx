@@ -23,9 +23,9 @@ function MetadataFetcher({
       <form onSubmit={onFetch} className="stack">
         <label className="field">
           <span>Source URL</span>
-          <div style={{ display: 'flex', gap: '8px' }}>
+          <div className="flex gap-8">
             <input
-              style={{ flex: 1 }}
+              className="flex-1"
               type="url"
               value={fetchUrl}
               onChange={(e) => onFetchUrlChange(e.target.value)}
@@ -46,15 +46,15 @@ function MetadataFetcher({
       </form>
 
       {fetchedMetadata && (
-          <div className="metadata-preview" style={{ marginTop: '8px' }}>
+          <div className="metadata-preview">
             <CoverImage className="thumb" src={fetchedMetadata.image} title={fetchedMetadata.title} />
           <div className="stack">
             <strong>{fetchedMetadata.title}</strong>
-            <p className="muted" style={{ margin: 0 }}>
+            <p className="muted m-0">
               {fetchedMetadata.description}
             </p>
             {fetchedMetadata.genres?.length > 0 && (
-              <div className="pill-row" style={{ marginTop: '8px' }}>
+              <div className="pill-row mt-8">
                 {fetchedMetadata.genres.map((g, i) => (
                   <span key={`${g}-${i}`} className="pill ghost">
                     {g}
@@ -62,7 +62,7 @@ function MetadataFetcher({
                 ))}
               </div>
             )}
-            <div className="pill-row" style={{ marginTop: '4px' }}>
+            <div className="pill-row mt-4">
               {fetchedMetadata.latest_chapter && (
                 <span className="pill ghost">Latest: {fetchedMetadata.latest_chapter}</span>
               )}
@@ -70,7 +70,7 @@ function MetadataFetcher({
                 <span className="pill ghost">Chapters: {fetchedMetadata.chapter_count}</span>
               )}
             </div>
-            <div style={{ display: 'flex', gap: '8px', marginTop: '8px' }}>
+            <div className="flex gap-8 mt-8">
               <button className="ghost" onClick={onApply}>
                 Apply to fields
               </button>

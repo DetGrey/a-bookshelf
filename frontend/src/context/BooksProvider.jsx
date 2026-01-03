@@ -1,3 +1,4 @@
+/* eslint-disable react-refresh/only-export-components */
 import { createContext, useContext, useEffect, useState, useCallback, useRef } from 'react'
 import { useAuth } from './AuthProvider.jsx'
 import { getBooks, getShelves } from '../lib/db.js'
@@ -146,10 +147,14 @@ export function BooksProvider({ children }) {
   )
 }
 
-export function useBooks() {
+function useBooks() {
   const context = useContext(BooksContext)
   if (!context) {
     throw new Error('useBooks must be used within BooksProvider')
   }
   return context
 }
+
+export default BooksProvider
+export { useBooks }
+

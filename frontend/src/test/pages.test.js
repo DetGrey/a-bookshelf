@@ -1,4 +1,4 @@
-import { describe, it, expect, vi, beforeEach } from 'vitest'
+import { describe, it, expect, vi } from 'vitest'
 import { mockBooks, STATUS, truncateText } from './mocks'
 
 /**
@@ -151,7 +151,7 @@ describe('Page Component Tests', () => {
     })
 
     it('should allow shelf pre-selection', () => {
-      const shelves = [
+      const _shelves = [
         { id: '1', name: 'Favorites' },
         { id: '2', name: 'Reading' },
       ]
@@ -241,7 +241,7 @@ describe('Page Component Tests', () => {
     })
 
     it('should allow delete with confirmation', () => {
-      const bookId = '1'
+      const _bookId = '1'
       const confirmed = true
       
       if (confirmed) {

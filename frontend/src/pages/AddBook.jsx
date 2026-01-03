@@ -257,9 +257,9 @@ function AddBook() {
           <p className="muted">
             Right now it only works with bato pages.
           </p>
-          <div style={{ display: 'flex', gap: '8px' }}>
+          <div className="flex gap-8">
             <input
-              style={{ flex: 1 }}
+              className="flex-1"
               type="url"
               name="url"
               placeholder="https://example.com/volume-12"
@@ -279,7 +279,7 @@ function AddBook() {
         )}
       </form>
 
-      <section className="card" style={{ marginTop: '16px' }}>
+      <section className="card mt-16">
         <div className="stack">
           <p className="eyebrow">Book Details</p>
           <BookFormFields form={form} onChange={setForm} />
@@ -316,7 +316,7 @@ function AddBook() {
             }}
           />
 
-          <div style={{ display: 'flex', gap: '8px' }}>
+          <div className="flex gap-8">
             <button type="button" className="ghost" disabled={saving} onClick={handleSave}>
               {saving ? 'Saving…' : 'Save to Library'}
             </button>
@@ -336,7 +336,7 @@ function AddBook() {
               {form.last_read && <span className="pill ghost">Last: {form.last_read}</span>}
             </div>
             {form.genres && (
-              <div className="pill-row" style={{ marginTop: '8px' }}>
+              <div className="pill-row mt-8">
                 {form.genres.split(',').map((g, i) => (
                   <span key={`${g}-${i}`} className="pill ghost">{g.trim()}</span>
                 ))}

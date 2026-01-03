@@ -9,7 +9,6 @@ import BookCard from '../components/BookCard.jsx'
 function Dashboard() {
   const { user } = useAuth()
   const { books, loading } = useBooks()
-  const [error, setError] = useState('')
   const [backupLoading, setBackupLoading] = useState(false)
   const [backupError, setBackupError] = useState('')
   const [restoreLoading, setRestoreLoading] = useState(false)
@@ -176,7 +175,8 @@ function Dashboard() {
   const genrePieStyle = () => {
     if (!totalGenres) return { background: 'var(--panel, #f5f5f5)' }
     let offset = 0
-    const stops = genreEntries.map(([_, count], idx) => {
+    // eslint-disable-next-line no-unused-vars
+    const stops = genreEntries.map(([_genre, count], idx) => {
       const pct = (count / totalGenres) * 100
       const start = offset
       const end = offset + pct
@@ -197,7 +197,6 @@ function Dashboard() {
           <Link to="/add" className="primary">Smart Add</Link>
       </div>
 
-      {error && <p className="error">{error}</p>}
       {backupError && <p className="error">{backupError}</p>}
       {restoreMessage && <p className="muted">{restoreMessage}</p>}
 
@@ -228,45 +227,37 @@ function Dashboard() {
         </div>
       </section>
 
-      <section className="card" style={{ marginTop: '16px' }}>
-        <div className="block-head" style={{ marginBottom: '8px' }}>
-          <h2 style={{ margin: 0 }}>Genre breakdown</h2>
-          <p className="muted" style={{ margin: 0 }}>
+      <section className="card dashboard-section">
+        <div className="block-head dashboard-section-header">
+          <h2>Genre breakdown</h2>
+          <p className="muted">
             {totalGenres ? 'Share of genres across your library' : 'No genre data yet'}
           </p>
         </div>
         {totalGenres ? (
-          <div style={{ display: 'flex', gap: '16px', flexWrap: 'wrap', alignItems: 'center' }}>
+          <div className="genre-breakdown">
             <div
-              style={{
-                width: '140px',
-                height: '140px',
-                borderRadius: '50%',
-                border: '1px solid var(--border)',
-                ...genrePieStyle(),
-              }}
+              className="genre-pie"
+              style={genrePieStyle()}
             />
-            <div className="stack" style={{ minWidth: '220px', flex: 1 }}>
+            <div className="stack genre-legend">
               {genreEntries.slice(0, 8).map(([genre, count], idx) => {
                 const percent = ((count / totalGenres) * 100).toFixed(0)
                 return (
-                  <div key={genre} style={{ display: 'flex', alignItems: 'center', gap: '8px' }}>
+                  <div key={genre} className="genre-legend-item">
                     <span
+                      className="genre-legend-indicator"
                       style={{
-                        display: 'inline-block',
-                        width: '12px',
-                        height: '12px',
-                        borderRadius: '4px',
                         background: palette[idx % palette.length],
                       }}
                     />
-                    <span style={{ flex: 1 }}>{genre}</span>
+                    <span className="genre-legend-label">{genre}</span>
                     <span className="muted">{percent}%</span>
                   </div>
                 )
               })}
               {genreEntries.length > 8 && (
-                <p className="muted" style={{ marginTop: '4px' }}>
+                <p className="muted genre-legend-more">
                   + {genreEntries.length - 8} more
                 </p>
               )}
@@ -286,7 +277,7 @@ function Dashboard() {
         return (
           <section key={key} className="block">
             <div className="block-head">
-              <h2 style={{ color: 'var(--accent)', margin: 0 }}>
+              <h2 className="section-heading">
                 {key === 'reading' ? 'Currently reading' : STATUS[key]}
               </h2>
             </div>
@@ -303,38 +294,37 @@ function Dashboard() {
         )
       })}
 
-      <section className="card" style={{ marginTop: '12px' }}>
-        <div className="block-head" style={{ marginBottom: '8px', alignItems: 'center' }}>
+      <section className="card quality-check-section">
+        <div className="block-head quality-check-header">
           <div>
-            <p className="eyebrow" style={{ margin: 0 }}>Quality check</p>
-            <h2 style={{ margin: 0 }}>Find possible duplicate titles</h2>
+            <p className="eyebrow m-0">Quality check</p>
+            <h2 className="m-0">Find possible duplicate titles</h2>
           </div>
           <button
-            className="ghost"
+            className="ghost quality-check-button"
             onClick={handleFindDuplicates}
             disabled={dupeLoading || loading || books.length === 0}
-            style={{ padding: '10px 14px', fontSize: '0.95rem' }}
           >
             {dupeLoading ? 'Scanning…' : 'Scan for duplicates'}
           </button>
         </div>
-        {dupeMessage && <p className="muted" style={{ marginTop: 4 }}>{dupeMessage}</p>}
+        {dupeMessage && <p className="muted mt-4">{dupeMessage}</p>}
         {dupeResults.length > 0 && (
-          <div className="stack" style={{ marginTop: '8px', gap: '10px' }}>
+          <div className="stack duplicate-results">
             {dupeResults.map(({ a, b, score }) => (
-              <div key={`${a.id}-${b.id}`} className="card" style={{ padding: '10px', background: 'var(--panel)' }}>
-                <div style={{ display: 'flex', justifyContent: 'space-between', gap: '12px', alignItems: 'center', flexWrap: 'wrap' }}>
-                  <div style={{ flex: 1, minWidth: '220px' }}>
-                    <div style={{ display: 'flex', flexDirection: 'column', gap: '4px' }}>
+              <div key={`${a.id}-${b.id}`} className="card duplicate-item-card">
+                <div className="duplicate-comparison">
+                  <div className="duplicate-titles-wrapper">
+                    <div className="duplicate-titles-list">
                       <Link to={`/book/${a.id}`} target="_blank" rel="noreferrer">
                         <strong>{a.title}</strong>
                       </Link>
-                      <Link to={`/book/${b.id}`} target="_blank" rel="noreferrer" className="muted" style={{ margin: 0 }}>
+                      <Link to={`/book/${b.id}`} target="_blank" rel="noreferrer" className="muted duplicate-vs-link">
                         vs. {b.title}
                       </Link>
                     </div>
                   </div>
-                  <span className="pill ghost" style={{ fontSize: '0.85rem' }}>Similarity {(score * 100).toFixed(0)}%</span>
+                  <span className="pill ghost similarity-percentage">Similarity {(score * 100).toFixed(0)}%</span>
                 </div>
               </div>
             ))}
@@ -342,25 +332,23 @@ function Dashboard() {
         )}
       </section>
 
-      <section className="card" style={{ marginTop: '12px', display: 'flex', alignItems: 'center', justifyContent: 'space-between', gap: '12px' }}>
+      <section className="card data-portability-section">
           <div>
-            <p className="eyebrow" style={{ margin: 0 }}>Data portability</p>
-            <p className="muted" style={{ margin: 0 }}>Download or upload all your data as JSON (books, shelves, links).</p>
+            <p className="eyebrow m-0">Data portability</p>
+            <p className="muted m-0">Download or upload all your data as JSON (books, shelves, links).</p>
           </div>
-          <div style={{ display: 'flex', gap: '8px', alignItems: 'center' }}>
+          <div className="data-portability-buttons">
             <button
-              className="ghost"
+              className="ghost quality-check-button"
               onClick={handleUploadClick}
               disabled={restoreLoading}
-              style={{ padding: '10px 14px', fontSize: '0.95rem' }}
             >
               {restoreLoading ? 'Importing…' : 'Upload JSON'}
             </button>
             <button
-              className="ghost"
+              className="ghost quality-check-button"
               onClick={handleDownloadBackup}
               disabled={backupLoading}
-              style={{ padding: '10px 14px', fontSize: '0.95rem' }}
             >
               {backupLoading ? 'Preparing…' : 'Download Backup'}
             </button>
@@ -368,7 +356,7 @@ function Dashboard() {
               ref={fileInputRef}
               type="file"
               accept="application/json"
-              style={{ display: 'none' }}
+              className="hidden-file-input"
               onChange={handleRestore}
             />
           </div>

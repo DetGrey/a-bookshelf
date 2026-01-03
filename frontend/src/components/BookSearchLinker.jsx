@@ -60,7 +60,7 @@ function BookSearchLinker({ currentBookId, existingRelatedBooks = [], pendingRel
     setShowResults(false)
   }
 
-  const handleUnlink = (pendingId) => {
+  const _handleUnlinkRelated = (pendingId) => {
     if (!confirm('Remove this book link?')) return
     onRemoveRelated(pendingId)
   }
@@ -70,13 +70,11 @@ function BookSearchLinker({ currentBookId, existingRelatedBooks = [], pendingRel
   }
 
   return (
-    <div className="book-search-linker">
-      <label>
-        <strong>Related Books</strong>
-        <small style={{ display: 'block', marginTop: '0.25rem' }}>
-          Link language versions or related books
-        </small>
-      </label>
+    <section className="card">
+      <p className="eyebrow">Related Books</p>
+      <p className="muted text-small mt-8">
+        Link language versions or related books
+      </p>
 
       {(existingRelatedBooks.length > 0 || pendingRelatedBooks.length > 0) && (
         <div className="linked-books">
@@ -108,7 +106,7 @@ function BookSearchLinker({ currentBookId, existingRelatedBooks = [], pendingRel
                   </button>
                 )}
                 {!onRemoveExistingRelated && (
-                  <span style={{ fontSize: '0.75rem', color: 'var(--text-muted)', marginLeft: 'auto', paddingRight: '0.5rem' }}>
+                  <span className="muted text-tiny mr-auto pr-8">
                     (saved)
                   </span>
                 )}
@@ -146,8 +144,8 @@ function BookSearchLinker({ currentBookId, existingRelatedBooks = [], pendingRel
         </div>
       )}
 
-      <div ref={searchRef} style={{ position: 'relative', marginTop: '0.75rem' }}>
-        <div style={{ display: 'grid', gridTemplateColumns: '1fr auto', gap: '0.75rem', marginBottom: '0.75rem' }}>
+      <div ref={searchRef} className="book-search-container">
+        <div className="book-search-fields">
           <label className="field">
             <span>Search</span>
             <input
@@ -183,17 +181,17 @@ function BookSearchLinker({ currentBookId, existingRelatedBooks = [], pendingRel
                   className="search-result-item"
                   onClick={() => handleLink(book)}
                 >
-                  <div style={{ display: 'flex', alignItems: 'center', gap: '0.75rem' }}>
+                  <div className="flex items-center gap-12">
                     {book.coverUrl && (
                       <img
                         src={book.coverUrl}
                         alt={book.title}
-                        style={{ width: '30px', height: '45px', objectFit: 'cover', borderRadius: '6px' }}
+                        className="search-result-image"
                       />
                     )}
-                    <div style={{ flex: 1, textAlign: 'left' }}>
-                      <div style={{ fontWeight: 500 }}>{book.title}</div>
-                      {book.language && <div style={{ fontSize: '0.875rem', color: 'var(--text-muted)' }}>{book.language}</div>}
+                    <div className="flex-1 text-center">
+                      <div className="search-result-title">{book.title}</div>
+                      {book.language && <div className="search-result-subtitle">{book.language}</div>}
                     </div>
                   </div>
                 </button>
@@ -201,7 +199,7 @@ function BookSearchLinker({ currentBookId, existingRelatedBooks = [], pendingRel
           </div>
         )}
       </div>
-    </div>
+    </section>
   )
 }
 

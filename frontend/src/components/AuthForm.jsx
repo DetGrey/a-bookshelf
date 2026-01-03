@@ -6,7 +6,6 @@
  */
 function AuthForm({
   title,
-  subtitle,
   description,
   fields,
   onFieldChange,

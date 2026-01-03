@@ -45,39 +45,31 @@ function ChapterCountFilter({
   const activeCount = chapterFilter.value !== null ? 1 : 0
 
   return (
-    <div className="block" style={{ marginTop: '12px' }}>
+    <div className="block mt-12">
       <div
-        style={{
-          display: 'flex',
-          justifyContent: 'space-between',
-          alignItems: 'center',
-          marginBottom: '8px',
-          cursor: 'pointer',
-        }}
+        className="flex justify-between items-center mb-8 cursor-pointer"
         onClick={() => onOpenChange(!isOpen)}
       >
-        <p className="eyebrow" style={{ margin: 0 }}>
+        <p className="eyebrow m-0">
           Filter by Chapter Count {isOpen ? '▼' : '▶'}
         </p>
         {chapterFilter.value !== null && (
-          <div style={{ display: 'flex', gap: '4px' }}>
+          <div className="flex gap-4">
             <button
-              className={chapterFilter.mode === 'max' ? 'pill' : 'pill ghost'}
+              className={`${chapterFilter.mode === 'max' ? 'pill' : 'pill ghost'} filter-toggle-button`}
               onClick={(e) => {
                 e.stopPropagation()
                 handleModeChange('max')
               }}
-              style={{ cursor: 'pointer', fontSize: '0.75rem', borderRadius: '8px' }}
             >
               Max
             </button>
             <button
-              className={chapterFilter.mode === 'min' ? 'pill' : 'pill ghost'}
+              className={`${chapterFilter.mode === 'min' ? 'pill' : 'pill ghost'} filter-toggle-button`}
               onClick={(e) => {
                 e.stopPropagation()
                 handleModeChange('min')
               }}
-              style={{ cursor: 'pointer', fontSize: '0.75rem', borderRadius: '8px' }}
             >
               Min
             </button>
@@ -85,12 +77,11 @@ function ChapterCountFilter({
         )}
       </div>
       {isOpen && (
-        <div style={{ display: 'flex', alignItems: 'center', gap: '4px', flexWrap: 'wrap' }}>
+        <div className="flex items-center gap-4 flex-wrap">
           {activeCount > 0 && (
             <button
-              className="pill"
+              className="pill radius-8 cursor-pointer"
               onClick={handleClear}
-              style={{ cursor: 'pointer', borderRadius: '8px' }}
             >
               ✕ Clear
             </button>
@@ -100,9 +91,8 @@ function ChapterCountFilter({
             return (
               <button
                 key={option.value}
-                className={isActive ? 'pill' : 'pill ghost'}
+                className={`${isActive ? 'pill' : 'pill ghost'} radius-8 cursor-pointer`}
                 onClick={() => handlePresetClick(option.value)}
-                style={{ cursor: 'pointer', borderRadius: '8px' }}
               >
                 {option.label}
               </button>

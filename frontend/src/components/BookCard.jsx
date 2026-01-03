@@ -61,26 +61,19 @@ function BookCard({
   }
 
   return (
-    <article
-      className="card"
-      style={{
-        zIndex: showShelfMenu ? 50 : 0,
-        position: 'relative',
-      }}
-    >
+    <article className="card" style={{ zIndex: showShelfMenu ? 50 : 0 }}>
       <div className="card-head">
-        <Link to={`/book/${book.id}`} style={{ display: 'block' }}>
+        <Link to={`/book/${book.id}`} className="cover-link">
           <CoverImage
-            className="thumb"
+            className="thumb cursor-pointer"
             src={book.cover_url}
             title={book.title}
             alt={book.title}
-            style={{ cursor: 'pointer' }}
           />
         </Link>
-        <div style={compact ? undefined : { minWidth: 0 }}>
-          <h3 style={{ wordBreak: 'break-word' }}>{book.title}</h3>
-          <p className="muted" style={{ wordBreak: 'break-word' }}>
+        <div className={!compact ? 'title-container' : ''}>
+          <h3 className="title-text">{book.title}</h3>
+          <p className="muted text-break">
             {truncateText(book.description)}
           </p>
           <div className="pill-row">
@@ -94,13 +87,13 @@ function BookCard({
               </span>
             ) : null}
             {!compact && book.language && (
-              <span className="pill ghost emoji-text" title="Reading Language" style={{ color: '#4ade80', borderColor: '#4ade80' }}>
+              <span className="pill ghost emoji-text language-pill" title="Reading Language">
                 {languageFlag(book.language) ? `${languageFlag(book.language)} ` : ''}
                 {book.language}
               </span>
             )}
             {book.original_language && (
-              <span className="pill ghost emoji-text" title="Original Language" style={{ color: '#a78bfa', borderColor: '#a78bfa' }}>
+              <span className="pill ghost emoji-text original-language-pill" title="Original Language">
                 {languageFlag(book.original_language) ? `${languageFlag(book.original_language)} ` : ''}
                 {book.original_language}
               </span>
@@ -115,25 +108,25 @@ function BookCard({
               book.shelves?.map((shelfId) => {
                 const shelf = customShelves.find((s) => s.id === shelfId)
                 return shelf ? (
-                  <span key={shelfId} className="pill" style={{ fontSize: '0.8rem' }}>
+                  <span key={shelfId} className="pill shelf-indicator">
                     📚 {shelf.name}
                   </span>
                 ) : null
               })}
           </div>
           {!compact && book.notes && (
-            <p className="muted" style={{ marginTop: '8px', fontSize: '0.9rem', fontStyle: 'italic' }}>
+            <p className="muted notes-text">
               📝 {book.notes}
             </p>
           )}
           {!compact && book.genres?.length > 0 && (
-            <div className="pill-row" style={{ marginTop: '6px' }}>
+            <div className="pill-row genre-pills">
               {book.genres.map((g, i) => {
                 const isActive = activeGenres.includes(g)
                 return (
                   <button
                     key={`${g}-${i}`}
-                    className={isActive ? 'pill' : 'pill ghost'}
+                    className={isActive ? 'pill' : 'pill ghost pill-small'}
                     onClick={() => {
                       if (setActiveGenres) {
                         setActiveGenres(
@@ -141,7 +134,6 @@ function BookCard({
                         )
                       }
                     }}
-                    style={{ cursor: 'pointer', fontSize: '0.75rem', padding: '4px 8px' }}
                   >
                     {g}
                   </button>
@@ -162,7 +154,7 @@ function BookCard({
           <p className="muted" style={book.last_read && book.status !== 'completed' ? { marginTop: '8px' } : undefined}>Latest chapter</p>
           <p>{book.latest_chapter || '—'}</p>
           {!compact && book.last_uploaded_at && (
-            <p className="muted" style={{ fontSize: '0.85rem', marginTop: '4px' }}>
+            <p className="muted upload-date">
               {new Date(book.last_uploaded_at).toLocaleDateString('en-US', { month: 'short', day: 'numeric', year: 'numeric' })}
             </p>
           )}
@@ -180,12 +172,11 @@ function BookCard({
             </a>
           ))}
           {!compact && customShelves.length > 0 && (
-            <div style={{ position: 'relative', zIndex: 1000 }}>
-                <div style={{ display: 'flex', alignItems: 'center', height: '100%' }}>
+            <div className="shelf-menu-container">
+                <div className="shelf-button-wrapper">
               <button
-                className="ghost"
+                className="ghost shelf-button"
                 onClick={() => setShowShelfMenu(!showShelfMenu)}
-                style={{ fontSize: '0.85rem', height: '100%' }}
               >
                 + Shelf
               </button>

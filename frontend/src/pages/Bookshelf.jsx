@@ -53,15 +53,6 @@ function Bookshelf() {
   const [waitingProgress, setWaitingProgress] = useState({ current: 0, total: 0 })
   const [updateDetails, setUpdateDetails] = useState([])
 
-  const subtleBoxStyle = {
-    marginBottom: '12px',
-    border: '1px solid var(--border-strong, var(--border))',
-    borderRadius: '12px',
-    padding: '12px',
-    background: 'var(--panel)',
-    boxShadow: '0 6px 18px rgba(0, 0, 0, 0.15)',
-  }
-
   // Scroll to top when page loads
   useEffect(() => {
     window.scrollTo(0, 0)
@@ -360,7 +351,7 @@ function Bookshelf() {
         )
 
         updates.push(...batchResults)
-        setWaitingProgress((prev) => ({ current: Math.min(waitingBooks.length, (i + batch.length)), total: waitingBooks.length }))
+        setWaitingProgress({ current: Math.min(waitingBooks.length, (i + batch.length)), total: waitingBooks.length })
 
         // Throttle between batches (skip after last batch)
         if (i + batchSize < waitingBooks.length) {
@@ -463,7 +454,7 @@ function Bookshelf() {
         <div className="shelf-content">
           {/* Filters and search */}
           <div className="shelf-controls">
-            <label className="field" style={{ flex: 1 }}>
+            <label className="field shelf-search">
               <span>Search</span>
               <input
                 type="text"
@@ -472,35 +463,36 @@ function Bookshelf() {
                 onChange={(e) => setSearchQuery(e.target.value)}
               />
             </label>
-            <label className="field" style={{ minWidth: '180px' }}>
-              <span>Sort by</span>
-              <select value={sortBy} onChange={(e) => setSortBy(e.target.value)}>
-                {sortOptions.map((option) => (
-                  <option key={option.value} value={option.value}>
-                    {option.label}
-                  </option>
-                ))}
-              </select>
-            </label>
-            <label className="field" style={{ minWidth: '160px' }}>
-              <span>Language</span>
-              <select value={languageFilter} onChange={(e) => setLanguageFilter(e.target.value)}>
-                <option value="all">All languages</option>
-                {allLanguages.map((lang) => (
-                  <option key={lang} value={lang}>
-                    {lang}
-                  </option>
-                ))}
-              </select>
-            </label>
-            <button
-              className="ghost"
-              onClick={() => setSortDirection(sortDirection === 'desc' ? 'asc' : 'desc')}
-              title={sortDirection === 'desc' ? 'Descending' : 'Ascending'}
-              style={{ padding: '8px 12px', fontSize: '0.9rem', height: 'fit-content', alignSelf: 'flex-end' }}
-            >
-              {sortDirection === 'desc' ? '↓' : '↑'}
-            </button>
+            <div className="shelf-controls-row">
+              <label className="field min-w-180">
+                <span>Sort by</span>
+                <select value={sortBy} onChange={(e) => setSortBy(e.target.value)}>
+                  {sortOptions.map((option) => (
+                    <option key={option.value} value={option.value}>
+                      {option.label}
+                    </option>
+                  ))}
+                </select>
+              </label>
+              <button
+                className="ghost sort-direction-button"
+                onClick={() => setSortDirection(sortDirection === 'desc' ? 'asc' : 'desc')}
+                title={sortDirection === 'desc' ? 'Descending' : 'Ascending'}
+              >
+                {sortDirection === 'desc' ? '↓' : '↑'}
+              </button>
+              <label className="field min-w-160">
+                <span>Language</span>
+                <select value={languageFilter} onChange={(e) => setLanguageFilter(e.target.value)}>
+                  <option value="all">All languages</option>
+                  {allLanguages.map((lang) => (
+                    <option key={lang} value={lang}>
+                      {lang}
+                    </option>
+                  ))}
+                </select>
+              </label>
+            </div>
           </div>
 
           {/* Genre filter */}
@@ -523,16 +515,15 @@ function Bookshelf() {
           />
 
           {/* Results count with check updates button for waiting shelf */}
-          <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', marginBottom: '12px' }}>
+          <div className="results-header">
             <p className="muted">
               {filteredBooks.length} {filteredBooks.length === 1 ? 'book' : 'books'} found{' '}
               {loading && '(loading...)'}
             </p>
             {activeShelf === 'waiting' && filteredBooks.length > 0 && (
               <button
-                className="primary"
+                className="primary text-small"
                 onClick={handleCheckWaitingUpdates}
-                style={{ fontSize: '0.85rem', padding: '8px 12px' }}
                 disabled={checkingWaiting}
               >
                 {checkingWaiting ? 'Checking…' : 'Check Updates'}
@@ -541,11 +532,11 @@ function Bookshelf() {
           </div>
 
           {checkingWaiting && waitingProgress.total > 0 && (
-            <div className="notice" style={{ marginBottom: '12px', padding: '8px 12px' }}>
-              <p className="muted" style={{ margin: 0 }}>
+            <div className="notice mb-12">
+              <p className="muted m-0">
                 Checking {waitingProgress.current}/{waitingProgress.total} (throttled)
               </p>
-              <div style={{ marginTop: '6px', height: '6px', background: 'var(--panel)', borderRadius: '999px', overflow: 'hidden' }}>
+              <div className="progress-container">
                 <div
                   style={{
                     width: `${Math.round((waitingProgress.current / waitingProgress.total) * 100)}%`,
@@ -558,19 +549,19 @@ function Bookshelf() {
           )}
 
           {updateMessage && (
-            <p className="muted" style={{ marginBottom: '12px' }}>
+            <p className="muted mb-12">
               {updateMessage}
             </p>
           )}
 
           {updateDetails.length > 0 && (
-            <div className="notice" style={subtleBoxStyle}>
-              <p className="success" style={{ margin: 0, fontWeight: 600 }}>Updates</p>
-              <ul className="muted" style={{ margin: '8px 0 0', paddingLeft: '18px', lineHeight: 1.5 }}>
+            <div className="notice">
+              <p className="success m-0 font-semibold">Updates</p>
+              <ul className="muted update-list">
                 {updateDetails.map((item, idx) => (
-                  <li key={`${item.title}-${idx}`} style={{ marginBottom: '6px' }}>
-                    <strong style={{ color: 'var(--text)' }}>{item.title || 'Untitled'}</strong>
-                    <ul style={{ margin: '4px 0 0 14px', paddingLeft: '14px', listStyle: 'disc' }}>
+                  <li key={`${item.title}-${idx}`}>
+                    <strong>{item.title || 'Untitled'}</strong>
+                    <ul className="nested-list">
                       {item.changes.map((change, cidx) => (
                         <li key={cidx}>{change}</li>
                       ))}
@@ -582,25 +573,24 @@ function Bookshelf() {
           )}
 
           {errorDetails.length > 0 && (
-            <div className="notice" style={subtleBoxStyle}>
-              <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', gap: '12px' }}>
-                <p className="error" style={{ margin: 0, fontWeight: 600 }}>
+            <div className="notice">
+              <div className="flex justify-between items-center gap-12">
+                <p className="error m-0 font-semibold">
                   {errorDetails.length} error{errorDetails.length === 1 ? '' : 's'} during update
                 </p>
                 <button
                   type="button"
-                  className="secondary"
+                  className="secondary text-small"
                   onClick={() => setShowErrors((v) => !v)}
-                  style={{ fontSize: '0.85rem', padding: '6px 10px' }}
                 >
                   {showErrors ? 'Hide errors' : 'Show errors'}
                 </button>
               </div>
               {showErrors && (
-                <ul className="muted" style={{ margin: '8px 0 0', paddingLeft: '18px', lineHeight: 1.5 }}>
+                <ul className="muted error-list">
                   {errorDetails.map((err) => (
-                    <li key={err.bookId} style={{ marginBottom: '4px' }}>
-                      <strong style={{ color: 'var(--text)' }}>{err.title || 'Untitled'}</strong>: {err.message}
+                    <li key={err.bookId} className="error-item">
+                      <strong>{err.title || 'Untitled'}</strong>: {err.message}
                     </li>
                   ))}
                 </ul>

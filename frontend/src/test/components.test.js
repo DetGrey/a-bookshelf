@@ -1,4 +1,4 @@
-import { describe, it, expect, vi, beforeEach } from 'vitest'
+import { describe, it, expect, vi } from 'vitest'
 import { mockBooks, STATUS, truncateText } from './mocks'
 
 // Mock the AuthContext
@@ -239,14 +239,14 @@ describe('Bug Prevention Tests', () => {
 
   describe('Card Overflow Tests', () => {
     it('title should handle long text with word-break', () => {
-      const longTitle = 'This is a Very Long Book Title That Should Break and Not Overflow the Card'
+      const _longTitle = 'This is a Very Long Book Title That Should Break and Not Overflow the Card'
       const wordBreak = 'break-word'
       
       expect(wordBreak).toBe('break-word')
     })
 
     it('description should handle long text with word-break', () => {
-      const longDesc = 'A very long description text that should not overflow and should instead break into multiple lines when displayed in the card'
+      const _longDesc = 'A very long description text that should not overflow and should instead break into multiple lines when displayed in the card'
       const wordBreak = 'break-word'
       
       expect(wordBreak).toBe('break-word')

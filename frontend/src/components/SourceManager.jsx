@@ -13,28 +13,26 @@ function SourceManager({
   onSourceUrlChange,
   onAddSource,
   isEditing = false,
-  compact = false,
 }) {
   if (!isEditing && sources.length === 0) {
     return null
   }
 
   return (
-    <>
-      <h3>Source Links</h3>
+    <section className="card">
+      <p className="eyebrow">Source Links</p>
       <div className="source-grid">
         {sources.map((source, index) =>
           isEditing ? (
-            <div key={index} className="card source-card">
+            <div key={index} className="source-card">
               <div>
                 <strong>{source.label}</strong>
-                <p className="muted" style={{ fontSize: '0.85rem', wordBreak: 'break-all' }}>
+                <p className="muted text-small word-break-all">
                   {source.url}
                 </p>
               </div>
               <button
-                className="ghost"
-                style={{ color: '#ff7b7b' }}
+                className="ghost text-danger"
                 onClick={() => onRemoveSource(index)}
               >
                 Remove
@@ -46,11 +44,11 @@ function SourceManager({
               href={source.url}
               target="_blank"
               rel="noreferrer"
-              className="card source-card"
+              className="source-card"
             >
               <div>
                 <strong>{source.label}</strong>
-                <p className="muted" style={{ fontSize: '0.85rem' }}>
+                <p className="muted text-small">
                   Open in new tab →
                 </p>
               </div>
@@ -60,7 +58,7 @@ function SourceManager({
       </div>
 
       {isEditing && (
-        <form className="stack" onSubmit={onAddSource}>
+        <form className="stack mt-16" onSubmit={onAddSource}>
           <p className="eyebrow">Add New Source</p>
           <div className="grid-2">
             <label className="field">
@@ -87,7 +85,7 @@ function SourceManager({
           </button>
         </form>
       )}
-    </>
+    </section>
   )
 }
 

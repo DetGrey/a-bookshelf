@@ -26,48 +26,39 @@ function GenreFilter({
   }
 
   return (
-    <div className="block" style={{ marginTop: '12px' }}>
+    <div className="block mt-12">
       <div
-        style={{
-          display: 'flex',
-          justifyContent: 'space-between',
-          alignItems: 'center',
-          marginBottom: '8px',
-          cursor: 'pointer',
-        }}
+        className="flex justify-between items-center mb-8 cursor-pointer"
         onClick={() => setOpen(!open)}
       >
-        <p className="eyebrow" style={{ margin: 0 }}>
+        <p className="eyebrow m-0">
           Filter by Genre {open ? '▼' : '▶'}
         </p>
         {activeGenres.length > 0 && (
-          <div style={{ display: 'flex', gap: '4px' }}>
+          <div className="flex gap-4">
             <button
-              className={genreFilterMode === 'any' ? 'pill' : 'pill ghost'}
+              className={`${genreFilterMode === 'any' ? 'pill' : 'pill ghost'} filter-toggle-button`}
               onClick={() => onGenreFilterModeChange('any')}
-              style={{ cursor: 'pointer', fontSize: '0.75rem', borderRadius: '8px' }}
             >
               Any
             </button>
             <button
-              className={genreFilterMode === 'all' ? 'pill' : 'pill ghost'}
+              className={`${genreFilterMode === 'all' ? 'pill' : 'pill ghost'} filter-toggle-button`}
               onClick={() => onGenreFilterModeChange('all')}
-              style={{ cursor: 'pointer', fontSize: '0.75rem', borderRadius: '8px' }}
             >
               All
             </button>
           </div>
         )}
       </div>
-      {open && <div style={{ display: 'flex', alignItems: 'center', gap: '4px', flexWrap: 'wrap' }}>
+      {open && <div className="flex items-center gap-4 flex-wrap">
         {activeGenres.length > 0 && (
           <button
-            className="pill"
+            className="pill radius-8 cursor-pointer"
             onClick={() => {
               onGenreChange([])
               setOpen(false)
             }}
-            style={{ cursor: 'pointer', borderRadius: '8px' }}
           >
             ✕ Clear
           </button>
@@ -77,13 +68,12 @@ function GenreFilter({
           return (
             <button
               key={genre}
-              className={isActive ? 'pill' : 'pill ghost'}
+              className={`${isActive ? 'pill' : 'pill ghost'} radius-8 cursor-pointer`}
               onClick={() => {
                 onGenreChange(
                   isActive ? activeGenres.filter((g) => g !== genre) : [...activeGenres, genre]
                 )
               }}
-              style={{ cursor: 'pointer', borderRadius: '8px' }}
             >
               {genre}
             </button>

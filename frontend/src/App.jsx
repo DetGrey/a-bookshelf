@@ -1,11 +1,10 @@
 import { useEffect } from 'react'
-import { Outlet, useLocation, useNavigate } from 'react-router-dom'
+import { Outlet, useLocation } from 'react-router-dom'
 import NavigationBar from './components/NavigationBar.jsx'
 import './App.css'
 
 function App() {
   const location = useLocation()
-  const navigate = useNavigate()
   const hideNav = location.pathname === '/login' || location.pathname === '/signup'
 
   // Handle missing trailing slash on reload

@@ -1,5 +1,18 @@
+/* ALL @import rules MUST come first before any other CSS */
 @import url('https://fonts.googleapis.com/css2?family=Space+Grotesk:wght@400;500;600;700&family=Sora:wght@400;500;600&display=swap');
+@import './styles/theme.css';
+@import './styles/buttons.css';
+@import './styles/cards.css';
+@import './styles/pills.css';
+@import './styles/forms.css';
+@import './styles/images.css';
+@import './styles/layout.css';
+@import './styles/sidebar.css';
+@import './styles/book-linker.css';
+@import './styles/filters.css';
+@import './styles/utilities.css';
 
+/* Now other CSS rules can follow */
 @font-face {
   font-family: 'NotoColorEmojiLimited';
   unicode-range: U+1F1E6-1F1FF;
@@ -179,116 +192,7 @@ p {
   gap: 12px;
 }
 
-.eyebrow {
-  letter-spacing: 0.08em;
-  text-transform: uppercase;
-  font-size: 0.7rem;
-  color: var(--accent);
-  margin-bottom: 4px;
-}
-
-.muted {
-  color: var(--text-muted);
-  font-size: 0.9rem;
-}
-
-.emoji-text {
-  font-family: 'NotoColorEmojiLimited', 'Apple Color Emoji', 'Segoe UI Emoji', 'Noto Color Emoji', 'Segoe UI', sans-serif;
-}
-
-/* Mobile-first buttons with larger touch targets */
-.primary,
-.ghost,
-button.primary,
-button.ghost,
-button.pill {
-  display: inline-flex;
-  align-items: center;
-  justify-content: center;
-  gap: 8px;
-  padding: 12px 16px;
-  border-radius: 10px;
-  font-weight: 600;
-  border: 1px solid transparent;
-  cursor: pointer;
-  transition: transform 0.1s ease, box-shadow 0.2s ease, background 0.2s ease;
-  text-decoration: none;
-  font-size: 0.95rem;
-  min-height: 44px;
-  touch-action: manipulation;
-}
-
-.primary {
-  background: linear-gradient(135deg, var(--accent), var(--accent-2));
-  color: #05060d;
-  box-shadow: 0 8px 20px rgba(0, 201, 167, 0.25);
-  border: 1px solid rgba(255, 255, 255, 0.07);
-}
-
-.primary:active {
-  transform: scale(0.98);
-}
-
-.primary:hover {
-  transform: translateY(-1px);
-}
-
-.ghost {
-  background: var(--panel);
-  border: 1px solid var(--border);
-  color: var(--text-primary);
-}
-
-.ghost:active {
-  transform: scale(0.98);
-}
-
-/* Mobile-first card layout */
-.card {
-  background: var(--panel);
-  border: 1px solid var(--border);
-  border-radius: var(--radius);
-  padding: 14px;
-  box-shadow: var(--shadow);
-  backdrop-filter: blur(8px);
-  position: relative;
-  overflow: visible;
-  clip-path: none;
-  z-index: 0;
-}
-
-.card-head {
-  display: flex;
-  flex-direction: column;
-  gap: 12px;
-  align-items: flex-start;
-}
-
-.card-footer {
-  margin-top: 12px;
-  padding-top: 12px;
-  border-top: 1px solid var(--border);
-  display: flex;
-  flex-direction: column;
-  gap: 10px;
-  position: relative;
-  overflow: visible;
-}
-
-.card-links {
-  display: flex;
-  gap: 6px;
-  flex-wrap: wrap;
-}
-
-/* Mobile-first card grid - single column on mobile */
-.card-grid {
-  display: grid;
-  grid-template-columns: 1fr;
-  gap: 12px;
-  position: relative;
-  overflow: visible;
-}
+/* Modular CSS imports handle button, card, and utility styles */
 
 .block {
   display: grid;
@@ -302,209 +206,9 @@ button.pill {
   gap: 10px;
 }
 
-.pill-row {
-  display: flex;
-  gap: 6px;
-  flex-wrap: wrap;
-}
+/* Pill and form styles are now in modular CSS files */
 
-.pill {
-  display: inline-flex;
-  align-items: center;
-  gap: 6px;
-  border-radius: 999px;
-  padding: 5px 10px;
-  background: rgba(255, 255, 255, 0.06);
-  border: 1px solid var(--border);
-  font-weight: 600;
-  color: var(--text-primary);
-  font-size: 0.85rem;
-  min-height: 20px;
-}
-
-.pill.ghost {
-  color: var(--accent);
-  border-color: rgba(0, 201, 167, 0.3);
-}
-
-.thumb {
-  width: 100%;
-  aspect-ratio: 2 / 3;
-  height: auto;
-  max-height: 320px;
-  border-radius: 10px;
-}
-
-.cover-image {
-  width: 100%;
-  height: 100%;
-  object-fit: contain;
-  object-position: top;
-  border-radius: inherit;
-  display: block;
-  background: transparent;
-}
-
-.cover-fallback {
-  width: 100%;
-  height: 100%;
-  border-radius: inherit;
-  display: flex;
-  align-items: center;
-  justify-content: center;
-  padding: 10px;
-  text-align: center;
-  font-weight: 600;
-  color: var(--text-primary);
-  letter-spacing: -0.01em;
-}
-
-/* Mobile-first stat grid */
-.stat-grid {
-  display: grid;
-  grid-template-columns: repeat(2, 1fr);
-  gap: 10px;
-}
-
-.stat {
-  background: var(--panel);
-  border: 1px solid var(--border);
-  border-radius: var(--radius);
-  padding: 12px;
-  box-shadow: var(--shadow);
-}
-
-.stat strong {
-  font-size: 1.3rem;
-}
-
-/* Mobile-first grid - single column */
-.grid-2 {
-  display: grid;
-  grid-template-columns: 1fr;
-  gap: 12px;
-}
-
-/* Form fields optimized for mobile */
-.field {
-  display: grid;
-  gap: 6px;
-}
-
-.field input,
-.field textarea,
-.field select {
-  width: 100%;
-  border-radius: 10px;
-  padding: 14px;
-  border: 1px solid var(--border);
-  background: var(--panel-strong);
-  color: var(--text-primary);
-  font: inherit;
-  font-size: 16px;
-  min-height: 44px;
-}
-
-.field input:focus,
-.field textarea:focus,
-.field select:focus {
-  outline: 2px solid rgba(0, 201, 167, 0.4);
-  border-color: rgba(0, 201, 167, 0.4);
-}
-
-.field select option {
-  background: var(--panel-strong);
-  color: var(--text-primary);
-}
-
-.stack {
-  display: grid;
-  gap: 14px;
-}
-
-.auth {
-  min-height: 100vh;
-  display: grid;
-  place-items: center;
-  padding: 20px;
-}
-
-.auth-card {
-  width: 100%;
-  max-width: 420px;
-  background: var(--panel);
-  border: 1px solid var(--border);
-  border-radius: var(--radius);
-  padding: 24px;
-  box-shadow: var(--shadow);
-}
-
-.error {
-  color: #ff7b7b;
-}
-
-.success {
-  color: #4ade80;
-}
-
-.centered {
-  display: grid;
-  place-items: center;
-  gap: 8px;
-  min-height: 180px;
-}
-
-.spinner {
-  width: 48px;
-  height: 48px;
-  border-radius: 50%;
-  border: 4px solid rgba(255, 255, 255, 0.15);
-  border-top-color: var(--accent);
-  animation: spin 1s linear infinite;
-}
-
-@keyframes spin {
-  to {
-    transform: rotate(360deg);
-  }
-}
-
-/* Mobile-first book details hero - single column */
-.book-hero {
-  display: flex;
-  flex-direction: column;
-  gap: 16px;
-}
-
-.cover {
-  width: 100%;
-  max-width: 280px;
-  aspect-ratio: 2 / 3;
-  border-radius: var(--radius);
-  border: 1px solid var(--border);
-  box-shadow: var(--shadow);
-  margin: 0 auto;
-}
-
-/* Mobile-first source grid - single column */
-.source-grid {
-  display: grid;
-  grid-template-columns: 1fr;
-  gap: 10px;
-}
-
-.source-card {
-  display: grid;
-  gap: 6px;
-}
-
-.card.metadata {
-  display: flex;
-  flex-direction: column;
-  gap: 14px;
-}
-
-/* Related Books / Book Search Linker */
+/* Book search linker related styles */
 .book-search-linker {
   margin-top: 1.5rem;
 }
@@ -614,207 +318,21 @@ button.pill {
   background: var(--panel-strong);
 }
 
-.btn-icon {
-  background: none;
-  border: 1px solid var(--border);
-  border-radius: 6px;
-  padding: 0.25rem 0.5rem;
-  cursor: pointer;
-  font-size: 1rem;
-  opacity: 0.6;
-  transition: all 0.2s;
-  color: var(--text-primary);
-  min-height: auto;
-}
+/* Shelf and filter styles are now in modular CSS files */
 
-.btn-icon:hover {
-  opacity: 1;
-  background: rgba(255, 123, 123, 0.1);
-  border-color: #ff7b7b;
-  color: #ff7b7b;
-}
-
-.related-books-grid {
-  display: grid;
-  grid-template-columns: 1fr;
-  gap: 0.75rem;
-  margin-top: 0.75rem;
-}
-
-.related-book-link {
-  display: flex;
-  align-items: center;
-  gap: 0.75rem;
-  padding: 0.75rem;
-  background: var(--panel);
-  border: 1px solid var(--border);
-  border-radius: var(--radius);
-  text-decoration: none;
-  color: var(--text-primary);
-  transition: background 0.2s;
-}
-
-.related-book-link:hover {
-  background: var(--panel-strong);
-}
-
-.related-book-link img {
-  width: 50px;
-  height: 75px;
-  object-fit: cover;
-  border-radius: 6px;
-  flex-shrink: 0;
-}
-
-.related-book-info {
-  flex: 1;
-}
-
-.related-book-info strong {
-  font-weight: 500;
-  display: block;
-  margin-bottom: 0.25rem;
-  color: var(--text-primary);
-}
-
-.related-book-info small {
-  font-size: 0.875rem;
-  color: var(--text-muted);
-}
-
-/* Mobile-first bookshelf layout - single column */
+/* Bookshelf layout */
 .bookshelf-layout {
   display: flex;
   flex-direction: column;
   gap: 20px;
 }
 
-.shelf-sidebar {
-  position: relative;
-  top: auto;
-}
-
-.shelf-list {
-  display: grid;
-  gap: 6px;
-}
-
-.shelf-item {
-  display: flex;
-  justify-content: space-between;
-  align-items: center;
-  padding: 12px 14px;
-  border-radius: 10px;
-  background: transparent;
-  border: 1px solid transparent;
-  color: var(--text-muted);
-  cursor: pointer;
-  transition: all 0.2s ease;
-  text-align: left;
-  font-family: inherit;
-  min-height: 44px;
-}
-
-.shelf-item > div {
-  display: flex;
-  justify-content: space-between;
-  align-items: center;
-  width: 100%;
-  gap: 8px;
-}
-
-.shelf-item.active {
-  background: var(--panel);
-  border-color: var(--border);
-  color: var(--text-primary);
-}
-
-.shelf-item:active {
-  transform: scale(0.98);
-}
-
-.shelf-item:hover {
-  background: var(--panel);
-}
-
-.shelf-count {
-  color: var(--text-muted);
-  font-size: 0.85rem;
-}
-
-.shelf-delete {
-  background: transparent;
-  border: none;
-  color: var(--text-primary);
-  font-size: 1.4rem;
-  cursor: pointer;
-  padding: 4px 8px;
-  min-height: 44px;
-  display: flex;
-  align-items: center;
-  opacity: 0.7;
-  transition: opacity 0.2s ease;
-}
-
-.shelf-delete:hover {
-  opacity: 1;
-  color: #ff7b7b;
-}
-
-.shelf-content {
-  display: grid;
-  gap: 14px;
-}
-
-/* Mobile-first shelf controls - stacked */
-.shelf-controls {
-  display: flex;
-  flex-direction: column;
-  gap: 10px;
-}
-
-/* Shelf dropdown for adding books to shelves */
-.shelf-dropdown {
-  position: absolute;
-  top: calc(100% + 4px);
-  right: 0;
-  background: var(--background-gradient);
-  border: 1px solid var(--border);
-  border-radius: 10px;
-  padding: 6px;
-  min-width: 200px;
-  max-width: 90vw;
-  box-shadow: 0 12px 32px rgba(0, 0, 0, 0.5);
-  display: grid;
-  gap: 2px;
-  backdrop-filter: blur(12px);
-}
-
-.shelf-dropdown-item {
-  display: flex;
-  align-items: center;
-  gap: 10px;
-  padding: 12px;
-  border-radius: 8px;
-  background: transparent;
-  border: none;
-  color: var(--text-primary);
-  cursor: pointer;
-  text-align: left;
-  font-family: inherit;
-  font-size: 0.95rem;
-  transition: background 0.15s ease;
-  min-height: 44px;
-}
-
-.shelf-dropdown-item:active {
-  background: var(--panel);
-}
-
-.shelf-dropdown-item span:first-child {
-  color: var(--accent);
-  font-weight: 600;
-  font-size: 1.1rem;
+@media (min-width: 768px) {
+  .bookshelf-layout {
+    display: grid;
+    grid-template-columns: 260px 1fr;
+    gap: 24px;
+  }
 }
 
 /* Desktop breakpoint - switch to multi-column and horizontal layouts */
@@ -855,92 +373,9 @@ button.pill {
     justify-content: space-between;
   }
 
-  .card-head {
-    display: grid;
-    grid-template-columns: 140px 1fr;
-    gap: 16px;
-    align-items: start;
-  }
-
-  .card-footer {
-    flex-direction: row;
-    justify-content: space-between;
-    align-items: center;
-  }
-
-  .card-links {
-    justify-content: flex-end;
-  }
-
-  .card-grid {
-    grid-template-columns: repeat(auto-fill, minmax(300px, 1fr));
-    gap: 16px;
-  }
-
-  .stat-grid {
-    grid-template-columns: repeat(auto-fit, minmax(160px, 1fr));
-  }
-
-  .grid-2 {
-    grid-template-columns: repeat(auto-fit, minmax(240px, 1fr));
-  }
-
-  .thumb {
-    height: auto;
-  }
-
-  .book-hero {
-    display: grid;
-    grid-template-columns: 280px 1fr;
-    gap: 20px;
-    align-items: start;
-  }
-
-  .cover {
-    max-width: none;
-  }
-
-  .source-grid {
-    grid-template-columns: repeat(auto-fill, minmax(240px, 1fr));
-  }
-
-  .card.metadata {
-    display: grid;
-    grid-template-columns: 160px 1fr;
-  }
-
-  .bookshelf-layout {
-    display: grid;
-    grid-template-columns: 260px 1fr;
-    gap: 24px;
-  }
-
-  .shelf-sidebar {
-    position: sticky;
-    top: 90px;
-  }
-
-  .shelf-controls {
-    flex-direction: row;
-    align-items: flex-end;
-  }
-
-  .shelf-delete {
-    opacity: 0;
-  }
-
-  .shelf-item:hover .shelf-delete {
-    opacity: 1;
-  }
-
-  .shelf-dropdown-item:hover {
-    background: var(--panel);
-  }
+  /* Card and layout responsive styles are in modular CSS files */
 }
 
 /* Large desktop */
 @media (min-width: 1200px) {
-  .card-grid {
-    grid-template-columns: repeat(auto-fill, minmax(320px, 1fr));
-  }
-}
+  /* Large desktop styles are in modular CSS files */}

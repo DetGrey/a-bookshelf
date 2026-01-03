@@ -35,7 +35,7 @@ function ShelfSidebar({
     <aside className="shelf-sidebar">
       {/* Status shelves */}
       <div className="block">
-        <div className="block-head" style={{ cursor: 'pointer' }} onClick={() => setStatusOpen(!statusOpen)}>
+        <div className="block-head cursor-pointer" onClick={() => setStatusOpen(!statusOpen)}>
           <p className="eyebrow">Status {statusOpen ? '▼' : '▶'}</p>
         </div>
         {statusOpen && <nav className="shelf-list">
@@ -58,12 +58,11 @@ function ShelfSidebar({
       </div>
 
       {/* Custom shelves */}
-      <div className="block" style={{ marginTop: '16px' }}>
-        <div className="block-head" style={{ cursor: 'pointer' }} onClick={() => setCustomOpen(!customOpen)}>
+      <div className="block shelf-block-section">
+        <div className="block-head cursor-pointer" onClick={() => setCustomOpen(!customOpen)}>
           <p className="eyebrow">Custom Shelves {customOpen ? '▼' : '▶'}</p>
           <button
-            className="ghost"
-            style={{ fontSize: '0.85rem', padding: '6px 10px' }}
+            className="ghost shelf-header-button"
             onClick={(e) => {
               e.stopPropagation()
               setShowNewShelfForm(!showNewShelfForm)
@@ -76,11 +75,10 @@ function ShelfSidebar({
           {customShelves.map((shelf) => {
             const count = getShelfCount(shelf.id)
             return (
-              <div key={shelf.id} style={{ display: 'flex', alignItems: 'center', gap: '4px' }}>
+              <div key={shelf.id} className="shelf-item-wrapper">
                 <button
-                  className={`shelf-item ${activeShelf === shelf.id ? 'active' : ''}`}
+                  className={`shelf-item flex-1 ${activeShelf === shelf.id ? 'active' : ''}`}
                   onClick={() => onShelfChange(shelf.id)}
-                  style={{ flex: 1 }}
                 >
                   <div>
                     <span>{shelf.name}</span>
@@ -113,14 +111,13 @@ function ShelfSidebar({
                 autoFocus
               />
             </label>
-            <div style={{ display: 'flex', gap: '6px' }}>
-              <button type="submit" className="primary" style={{ fontSize: '0.85rem' }}>
+            <div className="shelf-form-section">
+              <button type="submit" className="primary shelf-form-button">
                 Create
               </button>
               <button
                 type="button"
-                className="ghost"
-                style={{ fontSize: '0.85rem' }}
+                className="ghost shelf-form-button"
                 onClick={() => setShowNewShelfForm(false)}
               >
                 Cancel

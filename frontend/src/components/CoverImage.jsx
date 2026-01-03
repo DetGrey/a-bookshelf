@@ -21,11 +21,12 @@ function CoverImage({ src, title, alt, className = '', style = {}, lazy = true }
   }
 
   useEffect(() => {
-    if (!lazy || shouldLoad) return
+    if (!lazy) return
     const el = holderRef.current
     if (!el || typeof IntersectionObserver === 'undefined') {
-      setShouldLoad(true)
-      return
+      // If IntersectionObserver not available, load immediately in next tick
+      const timer = setTimeout(() => setShouldLoad(true), 0)
+      return () => clearTimeout(timer)
     }
     const observer = new IntersectionObserver((entries) => {
       entries.forEach((entry) => {
@@ -37,12 +38,12 @@ function CoverImage({ src, title, alt, className = '', style = {}, lazy = true }
     }, { rootMargin: '120px' })
     observer.observe(el)
     return () => observer.disconnect()
-  }, [lazy, shouldLoad])
+  }, [lazy])
 
   const showImage = shouldLoad && src && !errored
 
   return (
-    <span ref={holderRef} style={{ display: 'inline-block' }}>
+    <span ref={holderRef} className="cover-holder">
       {showImage ? (
         <img
           className={`cover-image ${className}`}

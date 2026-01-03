@@ -69,3 +69,7 @@ Row Level Security is enabled on every table; policies limit access to the ownin
 Since this is a personal tool, you likely want to use it on your phone while reading in bed.
 
 Action: Add a manifest.json and service worker (Vite has a plugin vite-plugin-pwa). This lets you "Install" the website as an app on iOS/Android, removing the browser address bar.
+
+### Extra
+- book relations go both ways - make it seen from both bookdetails pages
+- in addbook, it should only show add source or related book when clicking on it (it should be collapsable and collapsed by default)

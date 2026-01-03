@@ -12,16 +12,15 @@ function ShelfSelector({ customShelves, selectedShelves, onToggleShelf }) {
   return (
     <label className="field">
       <span>Add to Shelves (optional)</span>
-      <div className="pill-row" style={{ marginTop: '4px' }}>
+      <div className="pill-row mt-4">
         {customShelves.map((shelf) => {
           const isSelected = selectedShelves.includes(shelf.id)
           return (
             <button
               key={shelf.id}
               type="button"
-              className={isSelected ? 'pill' : 'pill ghost'}
+              className={`${isSelected ? 'pill' : 'pill ghost'} cursor-pointer`}
               onClick={() => onToggleShelf(shelf.id)}
-              style={{ cursor: 'pointer' }}
             >
               {isSelected ? '✓ ' : ''}{shelf.name}
             </button>

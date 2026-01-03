@@ -1,4 +1,4 @@
-import { describe, it, expect, vi, beforeEach } from 'vitest'
+import { describe, it, expect, vi } from 'vitest'
 import { mockBooks, STATUS } from './mocks'
 
 /**
@@ -160,8 +160,8 @@ describe('Authentication & User Flows', () => {
     })
 
     it('should clear all password fields after successful signup', () => {
-      const password = 'MyPassword123'
-      const confirmPassword = 'MyPassword123'
+      const _password = 'MyPassword123'
+      const _confirmPassword = 'MyPassword123'
       
       // Simulate successful signup clearing fields
       const clearedPassword = ''
@@ -200,14 +200,14 @@ describe('Authentication & User Flows', () => {
 describe('Book Management Edge Cases', () => {
   describe('Adding Books', () => {
     it('should handle URLs without metadata', () => {
-      const url = 'https://unknown-site.com/book'
+      const _url = 'https://unknown-site.com/book'
       const metadata = null
       
       expect(metadata).toBeNull()
     })
 
     it('should auto-fetch metadata when URL is provided', () => {
-      const url = 'https://bato.to/series/12345'
+      const _url = 'https://bato.to/series/12345'
       const isFetching = true
       
       expect(isFetching).toBe(true)
@@ -248,7 +248,7 @@ describe('Book Management Edge Cases', () => {
 
   describe('Updating Books', () => {
     it('should save draft changes without page navigation', () => {
-      const changes = { title: 'New Title' }
+      const _changes = { title: 'New Title' }
       const shouldNavigate = false
       
       expect(shouldNavigate).toBe(false)
@@ -466,7 +466,7 @@ describe('Data Validation & Sanitization', () => {
 describe('Status & Filter Logic', () => {
   describe('Status Transitions', () => {
     it('should allow reading -> completed', () => {
-      const validTransition = (from, to) => true // All transitions allowed
+      const validTransition = () => true // All transitions allowed
       expect(validTransition('reading', 'completed')).toBe(true)
     })
 

@@ -446,11 +446,11 @@ function BookDetails() {
       <div className="page-head">
         <Link to="/" className="ghost">← Back to Library</Link>
         {!isEditing && (
-          <div style={{ display: 'flex', gap: '8px' }}>
+          <div className="flex gap-8">
             <button className="ghost" onClick={() => setIsEditing(true)}>
               Edit
             </button>
-            <button className="ghost" style={{ color: '#ff7b7b' }} onClick={handleDelete}>
+            <button className="ghost delete-action-button" onClick={handleDelete}>
               Delete
             </button>
           </div>
@@ -495,7 +495,7 @@ function BookDetails() {
             isEditing={true}
           />
 
-          <div style={{ display: 'flex', gap: '8px', marginTop: '12px' }}>
+          <div className="flex gap-8 mt-12">
             <button className="primary" onClick={handleSave}>
               Save Changes
             </button>
@@ -559,26 +559,24 @@ function BookDetails() {
                 </div>
               </div>
 
-              <div style={{ marginTop: '16px' }}>
+              <div className="related-section-wrapper">
                 <button
-                  className="primary"
+                  className="primary related-link-preview"
                   onClick={handleFetchLatest}
                   disabled={latestLoading}
-                  style={{ width: '100%' }}
                 >
                   {latestLoading ? 'Fetching…' : 'Fetch Latest Chapter'}
                 </button>
                 {latestMessage && (
                   <p
-                    className={latestStatus === 'error' ? 'error' : latestStatus === 'updated' ? 'success' : 'muted'}
-                    style={{ marginTop: '8px', textAlign: 'center' }}
+                    className={`${latestStatus === 'error' ? 'error' : latestStatus === 'updated' ? 'success' : 'muted'} related-link-title`}
                   >
                     {latestStatus === 'error'}{latestStatus === 'updated'}{latestStatus === 'skipped'}
                     {latestMessage}
                   </p>
                 )}
                 {latestDetails.length > 0 && (
-                  <ul className="muted" style={{ marginTop: '6px', textAlign: 'center', paddingLeft: 0, listStyle: 'none' }}>
+                  <ul className="muted related-link-urls">
                     {latestDetails.map((d, idx) => (
                       <li key={idx}>{d}</li>
                     ))}
@@ -587,13 +585,12 @@ function BookDetails() {
               </div>
 
               {book.genres?.length > 0 && (
-                <div className="pill-row" style={{ marginTop: '8px' }}>
+                <div className="pill-row genres-section">
                   {book.genres.map((g, i) => (
                     <button
                       key={`${g}-${i}`}
-                      className="pill ghost"
+                      className="pill ghost genre-remove-button"
                       onClick={() => navigate(`/bookshelf?genre=${encodeURIComponent(g)}`)}
-                      style={{ cursor: 'pointer', fontSize: '0.75rem', padding: '0 8px' }}
                     >
                       {g}
                     </button>
@@ -606,7 +603,7 @@ function BookDetails() {
           {book.notes && (
             <section className="card">
               <p className="eyebrow">Personal Notes</p>
-              <p style={{ whiteSpace: 'pre-wrap' }}>{book.notes}</p>
+              <p className="notes-section">{book.notes}</p>
             </section>
           )}
 
