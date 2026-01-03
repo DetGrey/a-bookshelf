@@ -53,7 +53,7 @@ function Bookshelf() {
   const [waitingProgress, setWaitingProgress] = useState({ current: 0, total: 0 })
   const [updateDetails, setUpdateDetails] = useState([])
   const [currentPage, setCurrentPage] = useState(1)
-  const booksPerPage = 2
+  const booksPerPage = 50
 
   // Scroll to top when page loads
   useEffect(() => {
