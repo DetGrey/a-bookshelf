@@ -38,6 +38,9 @@ function BookDetails() {
   const [fetchError, setFetchError] = useState('')
   const [fetchSuccess, setFetchSuccess] = useState('')
   const [fetchedMetadata, setFetchedMetadata] = useState(null)
+  const [latestLoading, setLatestLoading] = useState(false)
+  const [latestMessage, setLatestMessage] = useState('')
+  const [latestStatus, setLatestStatus] = useState(null) // 'updated' | 'skipped' | 'error'
 
   const formatDatetimeLocal = (isoString) => {
     if (!isoString) return ''
@@ -221,6 +224,99 @@ function BookDetails() {
     setFetchSuccess('Applied metadata to fields. Remember to Save Changes.')
   }
 
+  const handleFetchLatest = async () => {
+    setLatestMessage('')
+    setLatestStatus(null)
+    setLatestLoading(true)
+
+    const url = sources?.[0]?.url
+    if (!url) {
+      setLatestMessage('No URL available for this book.')
+      setLatestStatus('error')
+      setLatestLoading(false)
+      return
+    }
+
+    try {
+      const { data: payload, error: fnError } = await supabase.functions.invoke('fetch-latest', {
+        body: { url },
+      })
+
+      if (fnError || !payload) {
+        throw new Error(fnError?.message || 'Failed to fetch latest')
+      }
+
+      const payloadLatest = payload.latest_chapter
+      const payloadUploaded = payload.last_uploaded_at
+
+      const latestHasText = typeof payloadLatest === 'string' ? payloadLatest.trim() !== '' : Boolean(payloadLatest)
+      const uploadHasValue = Boolean(payloadUploaded)
+      const emptyPayload = !latestHasText && !uploadHasValue
+
+      if (emptyPayload) {
+        setLatestMessage('No chapter data found.')
+        setLatestStatus('skipped')
+        setLatestLoading(false)
+        return
+      }
+
+      const normalizedPayloadLatest = latestHasText ? String(payloadLatest).trim() : ''
+      const normalizedCurrentLatest = (book.latest_chapter ?? '').trim()
+      const hasLatestChange = latestHasText && normalizedPayloadLatest !== normalizedCurrentLatest
+
+      const parsedPayloadUpload = uploadHasValue ? new Date(payloadUploaded) : null
+      const parsedCurrentUpload = book.last_uploaded_at ? new Date(book.last_uploaded_at) : null
+      const payloadUploadMs = parsedPayloadUpload && !isNaN(parsedPayloadUpload) ? parsedPayloadUpload.getTime() : null
+      const currentUploadMs = parsedCurrentUpload && !isNaN(parsedCurrentUpload) ? parsedCurrentUpload.getTime() : null
+      const payloadUploadDate = payloadUploadMs ? new Date(payloadUploadMs).toISOString().split('T')[0] : null
+      const currentUploadDate = currentUploadMs ? new Date(currentUploadMs).toISOString().split('T')[0] : null
+      const hasUploadChange = uploadHasValue && payloadUploadDate !== currentUploadDate
+
+      const hasChange = hasLatestChange || hasUploadChange
+
+      if (!hasChange) {
+        setLatestMessage('No changes found (already up to date).')
+        setLatestStatus('skipped')
+        setLatestLoading(false)
+        return
+      }
+
+      const now = new Date().toISOString()
+      const { error: updateError } = await supabase
+        .from('books')
+        .update({
+          latest_chapter: hasLatestChange ? payloadLatest : book.latest_chapter,
+          last_uploaded_at: hasUploadChange ? payloadUploaded : book.last_uploaded_at,
+          last_fetched_at: now,
+        })
+        .eq('id', book.id)
+
+      if (updateError) throw updateError
+
+      // Update local state
+      setBook((prev) => ({
+        ...prev,
+        latest_chapter: hasLatestChange ? payloadLatest : prev.latest_chapter,
+        last_uploaded_at: hasUploadChange ? payloadUploaded : prev.last_uploaded_at,
+        last_fetched_at: now,
+      }))
+      setEditForm((prev) => ({
+        ...prev,
+        latest_chapter: hasLatestChange ? payloadLatest : prev.latest_chapter,
+        last_uploaded_at: hasUploadChange ? formatDatetimeLocal(payloadUploaded) : prev.last_uploaded_at,
+        last_fetched_at: formatDatetimeLocal(now),
+      }))
+
+      setLatestMessage('Updated successfully.')
+      setLatestStatus('updated')
+    } catch (err) {
+      setLatestMessage(err?.message || 'Failed to fetch latest chapter.')
+      setLatestStatus('error')
+    } finally {
+      setLatestLoading(false)
+    }
+  }
+
   return (
     <div className="page">
       <div className="page-head">
@@ -319,6 +415,26 @@ function BookDetails() {
                   <p className="muted">Last Upload</p>
                   <strong>{book.last_uploaded_at ? new Date(book.last_uploaded_at).toLocaleString() : '—'}</strong>
                 </div>
+              </div>
+
+              <div style={{ marginTop: '16px' }}>
+                <button
+                  className="primary"
+                  onClick={handleFetchLatest}
+                  disabled={latestLoading}
+                  style={{ width: '100%' }}
+                >
+                  {latestLoading ? 'Fetching…' : 'Fetch Latest Chapter'}
+                </button>
+                {latestMessage && (
+                  <p
+                    className={latestStatus === 'error' ? 'error' : latestStatus === 'updated' ? 'success' : 'muted'}
+                    style={{ marginTop: '8px', textAlign: 'center' }}
+                  >
+                    {latestStatus === 'error'}{latestStatus === 'updated'}{latestStatus === 'skipped'}
+                    {latestMessage}
+                  </p>
+                )}
               </div>
 
               {book.genres?.length > 0 && (
