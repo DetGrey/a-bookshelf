@@ -52,17 +52,20 @@ function Bookshelf() {
   const [showErrors, setShowErrors] = useState(false)
   const [waitingProgress, setWaitingProgress] = useState({ current: 0, total: 0 })
   const [updateDetails, setUpdateDetails] = useState([])
+  const [currentPage, setCurrentPage] = useState(1)
+  const booksPerPage = 2
 
   // Scroll to top when page loads
   useEffect(() => {
     window.scrollTo(0, 0)
   }, [])
 
-  // Clear update messages when shelf or filters change
+  // Clear update messages and reset pagination when shelf or filters change
   useEffect(() => {
     setUpdateMessage('')
     setErrorDetails([])
     setShowErrors(false)
+    setCurrentPage(1)
   }, [activeShelf, activeGenres, genreFilterMode, chapterFilter, languageFilter, searchQuery])
 
   // Read genre from URL params on mount
@@ -162,11 +165,15 @@ function Bookshelf() {
     // Search filter
     if (searchQuery) {
       const query = searchQuery.toLowerCase()
-      filtered = filtered.filter(
-        (book) =>
-          book.title.toLowerCase().includes(query) ||
-          book.description.toLowerCase().includes(query)
-      )
+      // Split query into words and check if all words exist in title or description
+      const queryWords = query.split(/\s+/).filter((w) => w.length > 0)
+      filtered = filtered.filter((book) => {
+        const titleLower = book.title.toLowerCase()
+        const descLower = book.description.toLowerCase()
+        const combinedText = `${titleLower} ${descLower}`
+        // All words must be found in the combined text (in any order)
+        return queryWords.every((word) => combinedText.includes(word))
+      })
     }
 
     // Sort
@@ -424,6 +431,10 @@ function Bookshelf() {
   }
 
   const filteredBooks = getFilteredBooks()
+  const totalPages = Math.ceil(filteredBooks.length / booksPerPage)
+  const startIndex = (currentPage - 1) * booksPerPage
+  const endIndex = startIndex + booksPerPage
+  const paginatedBooks = filteredBooks.slice(startIndex, endIndex)
 
   return (
     <div className="page">
@@ -602,13 +613,58 @@ function Bookshelf() {
 
           {/* Book grid */}
           <BookGrid
-            books={filteredBooks}
+            books={paginatedBooks}
             loading={loading}
             customShelves={customShelves}
             onAddToShelf={handleToggleBookShelf}
             activeGenres={activeGenres}
             setActiveGenres={setActiveGenres}
           />
+
+          {/* Pagination Controls */}
+          {totalPages > 1 && (
+            <div className="pagination-controls">
+              <div className="pagination-info">
+                Showing {startIndex + 1}–{Math.min(endIndex, filteredBooks.length)} of {filteredBooks.length} books
+              </div>
+              <div className="pagination-buttons">
+                <button
+                  className="ghost"
+                  onClick={() => {
+                    setCurrentPage((p) => Math.max(1, p - 1))
+                    document.querySelector('.card-grid')?.scrollIntoView({ behavior: 'smooth', block: 'start' })
+                  }}
+                  disabled={currentPage === 1}
+                >
+                  ← Previous
+                </button>
+                <select
+                  className="page-selector"
+                  value={currentPage}
+                  onChange={(e) => {
+                    setCurrentPage(Number(e.target.value))
+                    document.querySelector('.card-grid')?.scrollIntoView({ behavior: 'smooth', block: 'start' })
+                  }}
+                >
+                  {Array.from({ length: totalPages }, (_, i) => i + 1).map((page) => (
+                    <option key={page} value={page}>
+                      Page {page}
+                    </option>
+                  ))}
+                </select>
+                <button
+                  className="ghost"
+                  onClick={() => {
+                    setCurrentPage((p) => Math.min(totalPages, p + 1))
+                    document.querySelector('.card-grid')?.scrollIntoView({ behavior: 'smooth', block: 'start' })
+                  }}
+                  disabled={currentPage === totalPages}
+                >
+                  Next →
+                </button>
+              </div>
+            </div>
+          )}
         </div>
       </div>
     </div>

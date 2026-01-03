@@ -44,6 +44,7 @@
   gap: 12px;
   position: relative;
   overflow: visible;
+  scroll-margin-top: 100px;
 }
 
 @media (min-width: 768px) {

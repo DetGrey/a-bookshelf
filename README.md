@@ -69,3 +69,7 @@ Row Level Security is enabled on every table; policies limit access to the ownin
 Since this is a personal tool, you likely want to use it on your phone while reading in bed.
 
 Action: Add a manifest.json and service worker (Vite has a plugin vite-plugin-pwa). This lets you "Install" the website as an app on iOS/Android, removing the browser address bar.
+
+### Extra
+
+- Add paging on the book grids for bookshelf. There might be way too many books so maybe 50 per page
