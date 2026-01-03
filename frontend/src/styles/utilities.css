@@ -77,6 +77,10 @@
   margin-bottom: 12px;
 }
 
+.mb-16 {
+  margin-bottom: 16px;
+}
+
 /* Flex utilities */
 .flex {
   display: flex;
@@ -174,6 +178,7 @@
 }
 
 .bookshelf-filters {
+  flex: 1;
   flex-wrap: wrap;
 }
 
@@ -354,74 +359,6 @@ button:disabled {
   display: block;
 }
 
-/* Dashboard and page-specific utilities */
-.section-card {
-  margin-top: 16px;
-}
-
-.genre-chart {
-  width: 140px;
-  height: 140px;
-  border-radius: 50%;
-  border: 1px solid var(--border);
-}
-
-.genre-list {
-  min-width: 220px;
-  flex: 1;
-}
-
-.genre-item {
-  display: flex;
-  align-items: center;
-  gap: 8px;
-}
-
-.genre-label {
-  flex: 1;
-}
-
-.duplicate-card {
-  padding: 10px;
-  background: var(--panel);
-}
-
-.duplicate-item {
-  display: flex;
-  justify-content: space-between;
-  gap: 12px;
-  align-items: center;
-  flex-wrap: wrap;
-}
-
-.duplicate-info {
-  flex: 1;
-  min-width: 220px;
-}
-
-.duplicate-titles {
-  display: flex;
-  flex-direction: column;
-  gap: 4px;
-}
-
-.similarity-badge {
-  font-size: 0.85rem;
-}
-
-.data-portability {
-  display: flex;
-  align-items: center;
-  justify-content: space-between;
-  gap: 12px;
-}
-
-.data-portability-buttons {
-  display: flex;
-  gap: 8px;
-  align-items: center;
-}
-
 .notice-box {
   margin-bottom: 12px;
   padding: 8px 12px;
@@ -433,44 +370,6 @@ button:disabled {
   background: var(--panel);
   border-radius: 999px;
   overflow: hidden;
-}
-
-.progress-bar {
-  height: 100%;
-  background: var(--accent);
-  border-radius: 999px;
-  transition: width 0.3s ease;
-}
-
-/* Filter and search related */
-.filter-section {
-  margin-top: 12px;
-}
-
-.filter-header {
-  display: flex;
-  justify-content: space-between;
-  align-items: center;
-  margin-bottom: 8px;
-  cursor: pointer;
-}
-
-.filter-options {
-  display: flex;
-  align-items: center;
-  gap: 4px;
-  flex-wrap: wrap;
-}
-
-.toggle-buttons {
-  display: flex;
-  gap: 4px;
-}
-
-.toggle-buttons button {
-  font-size: 0.75rem;
-  border-radius: 8px;
-  cursor: pointer;
 }
 
 /* Additional spacing utilities */
@@ -488,11 +387,6 @@ button:disabled {
   cursor: pointer;
   font-size: 0.75rem;
   border-radius: 8px;
-}
-
-/* Metadata preview */
-.metadata-preview {
-  margin-top: 8px;
 }
 
 /* Metadata action buttons */
@@ -675,6 +569,7 @@ button:disabled {
   align-items: center;
   justify-content: space-between;
   gap: 12px;
+  margin-top: 12px;
 }
 
 .data-portability-content > div:first-child {
@@ -724,10 +619,6 @@ button:disabled {
 .quality-check-button {
   padding: 10px 14px;
   font-size: 0.95rem;
-}
-
-.data-portability-section {
-  margin-top: 12px;
 }
 
 .hidden-file-input {
@@ -806,10 +697,6 @@ button:disabled {
 }
 
 /* Bookshelf page */
-.bookshelf-filters {
-  flex: 1;
-}
-
 .bookshelf-filter-field {
   flex: 1;
 }
@@ -950,14 +837,6 @@ button:disabled {
   margin: 0;
 }
 
-.mt-8 {
-  margin-top: 8px;
-}
-
-.mb-16 {
-  margin-bottom: 16px;
-}
-
 /* Collapsible Section Header */
 .collapsible-header {
   display: flex;
@@ -1033,4 +912,8 @@ button:disabled {
   background: none;
   color: var(--accent);
   margin-top: 12px;
+}
+.text-small-muted {
+  font-size: 0.85em;
+  margin: 4px 0 0 0;
 }

@@ -444,7 +444,7 @@ function Dashboard() {
                         <Link to={`/book/${book.id}`} target="_blank" rel="noreferrer">
                           <strong>{book.title}</strong>
                         </Link>
-                        <p className="muted" style={{ fontSize: '0.85em', margin: '4px 0 0 0' }}>
+                        <p className="muted text-small-muted">
                           {reason}
                         </p>
                       </div>

@@ -16,7 +16,7 @@ function SourceManager({
   onAddSource,
   isEditing = false,
 }) {
-  const [isCollapsed, setIsCollapsed] = useState(true)
+  const [isCollapsed, setIsCollapsed] = useState(isEditing)
 
   if (!isEditing && sources.length === 0) {
     return null

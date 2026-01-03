@@ -9,7 +9,7 @@ function BookSearchLinker({ currentBookId, existingRelatedBooks = [], pendingRel
   const [results, setResults] = useState([])
   const [loading, setLoading] = useState(false)
   const [showResults, setShowResults] = useState(false)
-  const [isCollapsed, setIsCollapsed] = useState(true)
+  const [isCollapsed, setIsCollapsed] = useState(isEditing)
   const searchRef = useRef(null)
 
   useEffect(() => {
