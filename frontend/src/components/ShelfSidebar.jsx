@@ -20,7 +20,7 @@ function ShelfSidebar({
   const [showNewShelfForm, setShowNewShelfForm] = useState(false)
   const [newShelfName, setNewShelfName] = useState('')
   const [statusOpen, setStatusOpen] = useState(true)
-  const [customOpen, setCustomOpen] = useState(false)
+  const [customOpen, setCustomOpen] = useState(true)
 
   const handleCreateShelf = async (e) => {
     e.preventDefault()

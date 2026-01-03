@@ -63,7 +63,10 @@ function GenreFilter({
         {activeGenres.length > 0 && (
           <button
             className="pill"
-            onClick={() => onGenreChange([])}
+            onClick={() => {
+              onGenreChange([])
+              setOpen(false)
+            }}
             style={{ cursor: 'pointer', borderRadius: '8px' }}
           >
             ✕ Clear

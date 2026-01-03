@@ -105,12 +105,11 @@ function BookCard({
                 {book.original_language}
               </span>
             )}
-            {book.last_read && book.status !== 'completed' && <span className="pill ghost">Last: {book.last_read}</span>}
             {book.times_read !== undefined && book.times_read !== null && book.times_read > 1 && (
               <span className="pill ghost">Reads: {book.times_read}</span>
             )}
             {book.chapter_count !== undefined && book.chapter_count !== null && (
-              <span className="pill ghost">Ch: {book.chapter_count}</span>
+              <span className="pill ghost">Chapters: {book.chapter_count}</span>
             )}
             {!compact &&
               book.shelves?.map((shelfId) => {
@@ -154,7 +153,13 @@ function BookCard({
       </div>
       <div className="card-footer">
         <div>
-          <p className="muted">Latest chapter</p>
+          {book.last_read && book.status !== 'completed' && (
+            <>
+              <p className="muted">Last read</p>
+              <p>{book.last_read}</p>
+            </>
+          )}
+          <p className="muted" style={book.last_read && book.status !== 'completed' ? { marginTop: '8px' } : undefined}>Latest chapter</p>
           <p>{book.latest_chapter || '—'}</p>
           {!compact && book.last_uploaded_at && (
             <p className="muted" style={{ fontSize: '0.85rem', marginTop: '4px' }}>

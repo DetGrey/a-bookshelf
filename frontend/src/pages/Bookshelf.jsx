@@ -9,6 +9,7 @@ import BookCard from '../components/BookCard.jsx'
 import ShelfSidebar from '../components/ShelfSidebar.jsx'
 import BookGrid from '../components/BookGrid.jsx'
 import GenreFilter from '../components/GenreFilter.jsx'
+import ChapterCountFilter from '../components/ChapterCountFilter.jsx'
 
 // Built-in status-based shelves
 const statusShelves = [
@@ -37,6 +38,8 @@ function Bookshelf() {
   const [activeGenres, setActiveGenres] = useState([])
   const [genreFilterMode, setGenreFilterMode] = useState('all')
   const [genreFilterOpen, setGenreFilterOpen] = useState(false)
+  const [chapterFilter, setChapterFilter] = useState({ mode: 'max', value: null })
+  const [chapterFilterOpen, setChapterFilterOpen] = useState(false)
   const [languageFilter, setLanguageFilter] = useState('all')
   const [sortBy, setSortBy] = useState('created')
   const [sortDirection, setSortDirection] = useState('desc')
@@ -69,7 +72,7 @@ function Bookshelf() {
     setUpdateMessage('')
     setErrorDetails([])
     setShowErrors(false)
-  }, [activeShelf, activeGenres, genreFilterMode, languageFilter, searchQuery])
+  }, [activeShelf, activeGenres, genreFilterMode, chapterFilter, languageFilter, searchQuery])
 
   // Read genre from URL params on mount
   useEffect(() => {
@@ -150,6 +153,19 @@ function Bookshelf() {
     // Filter by language
     if (languageFilter !== 'all') {
       filtered = filtered.filter((book) => (book.language ?? '') === languageFilter)
+    }
+
+    // Filter by chapter count
+    if (chapterFilter.value !== null) {
+      filtered = filtered.filter((book) => {
+        const count = book.chapter_count
+        if (count === null || count === undefined) return false
+        if (chapterFilter.mode === 'max') {
+          return count <= chapterFilter.value
+        } else {
+          return count >= chapterFilter.value
+        }
+      })
     }
 
     // Search filter
@@ -496,6 +512,14 @@ function Bookshelf() {
             onGenreFilterModeChange={setGenreFilterMode}
             isOpen={genreFilterOpen}
             onOpenChange={setGenreFilterOpen}
+          />
+
+          {/* Chapter count filter */}
+          <ChapterCountFilter
+            chapterFilter={chapterFilter}
+            onChapterFilterChange={setChapterFilter}
+            isOpen={chapterFilterOpen}
+            onOpenChange={setChapterFilterOpen}
           />
 
           {/* Results count with check updates button for waiting shelf */}
