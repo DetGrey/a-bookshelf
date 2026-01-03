@@ -98,7 +98,7 @@ function Dashboard() {
   const perfectScoreCount = books.filter((b) => Number(b.score) === 10).length
 
   // Genre breakdown
-  const IGNORE_GENRES = new Set(['manhwa', 'manhua', 'webtoon', 'manga'])
+  const IGNORE_GENRES = new Set(['manhwa', 'manhua', 'webtoon', 'manga', 'full color'])
   const genreCounts = books.reduce((acc, book) => {
     (book.genres ?? []).forEach((g) => {
       const key = g.trim()

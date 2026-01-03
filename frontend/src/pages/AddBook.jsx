@@ -54,26 +54,29 @@ function AddBook() {
   }, [user])
 
   // Format ISO string to datetime-local (YYYY-MM-DDTHH:mm)
-  // detailed safe version to prevent "Dec 31" timezone shifts
+  // Preserve real time when present; only set to noon when the input is date-only
   const formatDatetimeLocal = (isoString) => {
     if (!isoString) return ''
-    
-    // 1. Try to slice the string directly (Best for 'T12:00:00Z' or 'T00:00:00Z')
-    // Matches YYYY-MM-DD
-    const simpleMatch = isoString.match(/^(\d{4})-(\d{2})-(\d{2})/)
-    if (simpleMatch) {
-      // Returns "2026-01-01T12:00" (or T00:00 if you prefer midnight)
-      // We force T12:00 to keep it middle-of-day in the input too
-      return `${simpleMatch[1]}-${simpleMatch[2]}-${simpleMatch[3]}T12:00`
-    }
-
-    // 2. Fallback for other formats (using UTC methods to avoid local shift)
     try {
+      const hasExplicitTime = /T\d{2}:\d{2}/.test(isoString)
+
+      // Date-only strings → set to 00:00
+      if (!hasExplicitTime) {
+        const dateMatch = isoString.match(/^(\d{4})-(\d{2})-(\d{2})/)
+        if (dateMatch) {
+          return `${dateMatch[1]}-${dateMatch[2]}-${dateMatch[3]}T12:00`
+        }
+      }
+
+      // Keep the time component when provided
       const date = new Date(isoString)
-      const year = date.getUTCFullYear()
-      const month = String(date.getUTCMonth() + 1).padStart(2, '0')
-      const day = String(date.getUTCDate()).padStart(2, '0')
-      return `${year}-${month}-${day}T12:00`
+      if (Number.isNaN(date.getTime())) return ''
+      const year = date.getFullYear()
+      const month = String(date.getMonth() + 1).padStart(2, '0')
+      const day = String(date.getDate()).padStart(2, '0')
+      const hours = String(date.getHours()).padStart(2, '0')
+      const minutes = String(date.getMinutes()).padStart(2, '0')
+      return `${year}-${month}-${day}T${hours}:${minutes}`
     } catch {
       return ''
     }

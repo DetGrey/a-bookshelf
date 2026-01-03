@@ -109,18 +109,23 @@ Deno.serve(async (req) => {
     }
     // --------------------------------------------- DEFAULT (BATO V3 STYLE)
     else {
-      // Find chapter rows and pick the one with the newest timestamp
-      const chapterCandidates = $('[name="chapter-list"] .group a, .scrollable-panel a').filter((_: any, el: any) => {
-        const text = $(el).text().toLowerCase();
-        return text.includes('chapter');
-      }).toArray();
+      // Find all chapter links (include side stories/creator notes) and pick the newest by timestamp
+      const chapterCandidates = $('[name="chapter-list"] a, .scrollable-panel a')
+        .filter((_: any, el: any) => {
+          const text = $(el).text().trim();
+          const href = $(el).attr('href') || '';
+          // Must have text and look like a title link (avoid nav/utility links)
+          return text.length > 0 && /\/title\//.test(href);
+        })
+        .toArray();
 
       let best = { text: '', ts: -Infinity } as { text: string; ts: number };
 
       chapterCandidates.forEach((el: any) => {
-        const row = $(el).closest('div');
+        const $el = $(el);
+        const row = $el.closest('div');
         const timeTag = row.find('time').first();
-        // Check time attribute first (ISO format), then data-time, then datetime
+        // Prefer explicit attributes: time (epoch ms), data-time, then datetime/ISO
         const tsAttr = timeTag.attr('time') || timeTag.attr('data-time') || timeTag.attr('datetime');
         let tsNum = Number.NEGATIVE_INFINITY;
         if (tsAttr) {
@@ -134,7 +139,7 @@ Deno.serve(async (req) => {
         }
 
         if (tsNum > best.ts) {
-          best = { text: $(el).text().trim(), ts: tsNum };
+          best = { text: $el.text().trim(), ts: tsNum };
         }
       });
 
