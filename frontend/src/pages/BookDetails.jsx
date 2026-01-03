@@ -1,12 +1,13 @@
 import { useEffect, useState } from 'react'
 import { Link, useNavigate, useParams } from 'react-router-dom'
 import { supabase } from '../lib/supabaseClient.js'
-import { getBook, updateBook, addLink, deleteLink, deleteBook, STATUS, scoreToLabel, SCORE_OPTIONS } from '../lib/db.js'
+import { getBook, updateBook, addLink, deleteLink, deleteBook, getRelatedBooks, addRelatedBook, deleteRelatedBook, STATUS, scoreToLabel, SCORE_OPTIONS } from '../lib/db.js'
 import { usePageTitle } from '../lib/usePageTitle.js'
 import CoverImage from '../components/CoverImage.jsx'
 import BookFormFields from '../components/BookFormFields.jsx'
 import MetadataFetcher from '../components/MetadataFetcher.jsx'
 import SourceManager from '../components/SourceManager.jsx'
+import BookSearchLinker from '../components/BookSearchLinker.jsx'
 import { useBooks } from '../context/BooksProvider.jsx'
 
 function BookDetails() {
@@ -47,6 +48,9 @@ function BookDetails() {
   const [latestMessage, setLatestMessage] = useState('')
   const [latestStatus, setLatestStatus] = useState(null) // 'updated' | 'skipped' | 'error'
   const [latestDetails, setLatestDetails] = useState([])
+  const [relatedBooks, setRelatedBooks] = useState([])
+  const [pendingRelatedBooks, setPendingRelatedBooks] = useState([])
+  const [deletedRelatedBookIds, setDeletedRelatedBookIds] = useState([])
 
   usePageTitle(book?.title ? `${book.title}` : 'Book')
 
@@ -91,6 +95,9 @@ function BookDetails() {
           times_read: b.times_read ?? 1,
           chapter_count: b.chapter_count ?? null,
         })
+        // Load related books
+        const related = await getRelatedBooks(bookId)
+        if (mounted) setRelatedBooks(related)
       } catch (err) {
         if (mounted) setError(err.message)
       } finally {
@@ -164,6 +171,38 @@ function BookDetails() {
       chapter_count: editForm.chapter_count ?? null,
     }
     await updateBook(book.id, payload)
+    
+    // Save new sources (that have temp IDs)
+    for (const source of sources) {
+      if (String(source.id).startsWith('temp-')) {
+        await addLink(book.id, source.label, source.url)
+      }
+    }
+    
+    // Delete removed sources (that don't exist anymore)
+    const currentSourceIds = new Set(sources.map((s) => s.id))
+    for (const existingSource of (book.sources ?? [])) {
+      if (!currentSourceIds.has(existingSource.id)) {
+        await deleteLink(existingSource.id)
+      }
+    }
+    
+    // Save pending related books to database
+    for (const related of pendingRelatedBooks) {
+      if (related.isNew) {
+        await addRelatedBook(book.id, related.relatedBookId, related.relationshipType)
+      }
+    }
+    
+    // Delete removed related books
+    for (const relationshipId of deletedRelatedBookIds) {
+      await deleteRelatedBook(relationshipId)
+    }
+    
+    // Clear pending changes
+    setPendingRelatedBooks([])
+    setDeletedRelatedBookIds([])
+    
     setBook({ ...book, ...payload, times_read: timesRead })
     setEditForm((prev) => ({ ...prev, times_read: timesRead }))
     refetch()
@@ -180,17 +219,45 @@ function BookDetails() {
   const handleAddSource = async (e) => {
     e.preventDefault()
     if (newSourceLabel && newSourceUrl) {
-      await addLink(book.id, newSourceLabel, newSourceUrl)
+      // Just add to local state, don't save to DB yet
       setSources([...sources, { id: `temp-${Date.now()}`, label: newSourceLabel, url: newSourceUrl }])
       setNewSourceLabel('')
       setNewSourceUrl('')
     }
   }
 
-  const handleRemoveSource = async (index) => {
-    const link = sources[index]
-    if (link?.id && !String(link.id).startsWith('temp-')) await deleteLink(link.id)
+  const handleRemoveSource = (index) => {
+    // Just remove from local state, deletion will be handled on save
     setSources(sources.filter((_, i) => i !== index))
+  }
+
+  const handleAddRelated = (relatedBookId, relationshipType = 'related', bookData = {}) => {
+    // Add to pending related books (don't save to DB yet)
+    const newRelated = {
+      tempId: `temp-${Date.now()}-${Math.random()}`,
+      relatedBookId,
+      relationshipType,
+      book: {
+        title: bookData.title,
+        language: bookData.language,
+        coverUrl: bookData.coverUrl,
+        id: bookData.id,
+      },
+      isNew: true,
+    }
+    setPendingRelatedBooks([...pendingRelatedBooks, newRelated])
+  }
+
+  const handleRemoveRelated = (tempId) => {
+    // Remove from pending related books
+    setPendingRelatedBooks(pendingRelatedBooks.filter((r) => r.tempId !== tempId))
+  }
+
+  const handleRemoveExistingRelated = (relationshipId) => {
+    // Mark existing related book for deletion
+    if (!confirm('Remove this book link?')) return
+    setDeletedRelatedBookIds([...deletedRelatedBookIds, relationshipId])
+    setRelatedBooks(relatedBooks.filter((r) => r.id !== relationshipId))
   }
 
   const handleFetch = async (e) => {
@@ -418,6 +485,16 @@ function BookDetails() {
             isEditing={true}
           />
 
+          <BookSearchLinker
+            currentBookId={book.id}
+            existingRelatedBooks={relatedBooks}
+            pendingRelatedBooks={pendingRelatedBooks}
+            onAddRelated={handleAddRelated}
+            onRemoveRelated={handleRemoveRelated}
+            onRemoveExistingRelated={handleRemoveExistingRelated}
+            isEditing={true}
+          />
+
           <div style={{ display: 'flex', gap: '8px', marginTop: '12px' }}>
             <button className="primary" onClick={handleSave}>
               Save Changes
@@ -538,6 +615,36 @@ function BookDetails() {
             onRemoveSource={handleRemoveSource}
             isEditing={false}
           />
+
+          {relatedBooks.length > 0 && (
+            <section className="card">
+              <p className="eyebrow">Related Books</p>
+              <div className="related-books-grid">
+                {relatedBooks.map((rel) => (
+                  <Link
+                    key={rel.id}
+                    to={`/book/${rel.relatedBookId}`}
+                    className="related-book-link"
+                  >
+                    {rel.book?.coverUrl && (
+                      <img
+                        src={rel.book.coverUrl}
+                        alt={rel.book.title}
+                      />
+                    )}
+                    <div className="related-book-info">
+                      <strong>{rel.book?.title || 'Unknown'}</strong>
+                      <small>
+                        {rel.book?.language && <span>{rel.book.language}</span>}
+                        {rel.book?.language && rel.relationshipType && <span> • </span>}
+                        {rel.relationshipType && <span>{rel.relationshipType}</span>}
+                      </small>
+                    </div>
+                  </Link>
+                ))}
+              </div>
+            </section>
+          )}
         </div>
       )}
     </div>

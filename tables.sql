@@ -60,14 +60,26 @@ create table public.book_links (
   created_at timestamp with time zone default timezone('utc'::text, now())
 );
 
--- 6. Enable RLS (Security)
+-- 6. Create Related Books (for language versions, related books, etc.)
+create table public.related_books (
+  id uuid default gen_random_uuid() primary key,
+  book_id uuid references public.books(id) on delete cascade not null,
+  related_book_id uuid references public.books(id) on delete cascade not null,
+  relationship_type text default 'related',
+  created_at timestamp with time zone default timezone('utc'::text, now()),
+  check (book_id != related_book_id),
+  unique (book_id, related_book_id)
+);
+
+-- 7. Enable RLS (Security)
 alter table public.profiles enable row level security;
 alter table public.books enable row level security;
 alter table public.shelves enable row level security;
 alter table public.shelf_books enable row level security;
 alter table public.book_links enable row level security;
+alter table public.related_books enable row level security;
 
--- 7. RLS Policies
+-- 8. RLS Policies
 -- Books
 create policy "Users can manage own books" on public.books for all using (auth.uid() = user_id);
 
@@ -83,7 +95,12 @@ create policy "Users can manage shelf items" on public.shelf_books for all using
 create policy "Users can manage links" on public.book_links for all using (
   exists ( select 1 from public.books where id = book_links.book_id and user_id = auth.uid() )
 );
+-- Related Books
+create policy "Users can manage related books" on public.related_books for all using (
+  exists ( select 1 from public.books where id = related_books.book_id and user_id = auth.uid() )
+);
 
+-- 
 -- Profiles
 create policy "Users can manage own profile" on public.profiles for all using (auth.uid() = id);
 

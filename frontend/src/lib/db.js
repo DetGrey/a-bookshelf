@@ -341,3 +341,57 @@ export async function toggleBookShelf(bookId, shelfId) {
   if (insErr) throw insErr
   return { added: true }
 }
+
+// Related Books (for linking books like language versions)
+export async function getRelatedBooks(bookId) {
+  const { data, error } = await supabase
+    .from('related_books')
+    .select('id,related_book_id,relationship_type,created_at,books!related_books_related_book_id_fkey(id,title,language,cover_url,status)')
+    .eq('book_id', bookId)
+  if (error) throw error
+  return (data ?? []).map((r) => ({
+    id: r.id,
+    relatedBookId: r.related_book_id,
+    relationshipType: r.relationship_type,
+    createdAt: r.created_at,
+    book: r.books ? {
+      id: r.books.id,
+      title: r.books.title,
+      language: normalizeLanguageName(r.books.language),
+      coverUrl: r.books.cover_url ?? '',
+      status: r.books.status,
+    } : null,
+  }))
+}
+
+export async function addRelatedBook(bookId, relatedBookId, relationshipType = 'related') {
+  const { error } = await supabase
+    .from('related_books')
+    .insert({ book_id: bookId, related_book_id: relatedBookId, relationship_type: relationshipType })
+  if (error) throw error
+}
+
+export async function deleteRelatedBook(relatedBookId) {
+  const { error } = await supabase.from('related_books').delete().eq('id', relatedBookId)
+  if (error) throw error
+}
+
+export async function searchBooks(userId, query) {
+  if (!query || query.trim().length < 2) return []
+  const searchTerm = `%${query.trim()}%`
+  const { data, error } = await supabase
+    .from('books')
+    .select('id,title,language,cover_url,status')
+    .eq('user_id', userId)
+    .ilike('title', searchTerm)
+    .order('title', { ascending: true })
+    .limit(10)
+  if (error) throw error
+  return (data ?? []).map((b) => ({
+    id: b.id,
+    title: b.title,
+    language: normalizeLanguageName(b.language),
+    coverUrl: b.cover_url ?? '',
+    status: b.status,
+  }))
+}

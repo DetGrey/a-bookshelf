@@ -2,12 +2,14 @@ import { useState, useEffect } from 'react'
 import { useNavigate } from 'react-router-dom'
 import { supabase } from '../lib/supabaseClient.js'
 import { useAuth } from '../context/AuthProvider.jsx'
-import { createBook, addLink, getShelves, toggleBookShelf, STATUS_KEYS, STATUS } from '../lib/db.js'
+import { createBook, addLink, addRelatedBook, getShelves, toggleBookShelf, STATUS_KEYS, STATUS } from '../lib/db.js'
 import { usePageTitle } from '../lib/usePageTitle.js'
 import CoverImage from '../components/CoverImage.jsx'
 import BookFormFields from '../components/BookFormFields.jsx'
 import MetadataFetcher from '../components/MetadataFetcher.jsx'
 import ShelfSelector from '../components/ShelfSelector.jsx'
+import SourceManager from '../components/SourceManager.jsx'
+import BookSearchLinker from '../components/BookSearchLinker.jsx'
 
 function AddBook() {
   const { user } = useAuth()
@@ -22,6 +24,10 @@ function AddBook() {
   const [error, setError] = useState('')
   const [success, setSuccess] = useState('')
   const [saving, setSaving] = useState(false)
+  const [sources, setSources] = useState([])
+  const [newSourceLabel, setNewSourceLabel] = useState('')
+  const [newSourceUrl, setNewSourceUrl] = useState('')
+  const [pendingRelatedBooks, setPendingRelatedBooks] = useState([])
 
   const [form, setForm] = useState({
     title: '',
@@ -139,6 +145,39 @@ function AddBook() {
     }
   }
 
+  const handleAddSource = (e) => {
+    e.preventDefault()
+    if (newSourceLabel && newSourceUrl) {
+      setSources([...sources, { id: `temp-${Date.now()}`, label: newSourceLabel, url: newSourceUrl }])
+      setNewSourceLabel('')
+      setNewSourceUrl('')
+    }
+  }
+
+  const handleRemoveSource = (index) => {
+    setSources(sources.filter((_, i) => i !== index))
+  }
+
+  const handleAddRelated = (relatedBookId, relationshipType = 'related', bookData = {}) => {
+    const newRelated = {
+      tempId: `temp-${Date.now()}-${Math.random()}`,
+      relatedBookId,
+      relationshipType,
+      book: {
+        title: bookData.title,
+        language: bookData.language,
+        coverUrl: bookData.coverUrl,
+        id: bookData.id,
+      },
+      isNew: true,
+    }
+    setPendingRelatedBooks([...pendingRelatedBooks, newRelated])
+  }
+
+  const handleRemoveRelated = (tempId) => {
+    setPendingRelatedBooks(pendingRelatedBooks.filter((r) => r.tempId !== tempId))
+  }
+
   // Save book to library
   const handleSave = async () => {
     if (!user) return
@@ -174,7 +213,17 @@ function AddBook() {
       }
 
       const bookId = await createBook(user.id, payload)
+      
+      // Add all sources (including ones from fetched URL and manually added)
       if (url) await addLink(bookId, 'Source', url)
+      for (const source of sources) {
+        await addLink(bookId, source.label, source.url)
+      }
+      
+      // Add related books
+      for (const related of pendingRelatedBooks) {
+        await addRelatedBook(bookId, related.relatedBookId, related.relationshipType)
+      }
 
       // Add to selected shelves
       for (const shelfId of selectedShelves) {
@@ -234,6 +283,26 @@ function AddBook() {
         <div className="stack">
           <p className="eyebrow">Book Details</p>
           <BookFormFields form={form} onChange={setForm} />
+
+          <SourceManager
+            sources={sources}
+            onRemoveSource={handleRemoveSource}
+            newSourceLabel={newSourceLabel}
+            onSourceLabelChange={setNewSourceLabel}
+            newSourceUrl={newSourceUrl}
+            onSourceUrlChange={setNewSourceUrl}
+            onAddSource={handleAddSource}
+            isEditing={true}
+          />
+
+          <BookSearchLinker
+            currentBookId={''}
+            existingRelatedBooks={[]}
+            pendingRelatedBooks={pendingRelatedBooks}
+            onAddRelated={handleAddRelated}
+            onRemoveRelated={handleRemoveRelated}
+            isEditing={true}
+          />
 
           <ShelfSelector
             customShelves={customShelves}
