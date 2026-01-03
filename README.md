@@ -1,6 +1,8 @@
 # A Bookshelf
 A personal library dashboard that tracks reading status, progress, and links across multiple sources. The frontend is a React + Vite SPA hosted on GitHub Pages and backed by Supabase Auth, tables, and two Edge Functions.
 
+Deployment link: https://detgrey.github.io/a-bookshelf/
+
 ## Highlights
 - Smart add: paste a URL (Webtoons, Bato) and the `fetch-metadata` Edge Function scrapes title, description, cover, genres, language, latest chapter, and upload date.
 - Reading states and shelves: built-in shelves (reading, plan to read, waiting, completed, dropped, on hold) plus custom shelves.
