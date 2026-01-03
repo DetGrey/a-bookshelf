@@ -4,6 +4,7 @@ import { useAuth } from '../context/AuthProvider.jsx'
 import { useBooks } from '../context/BooksProvider.jsx'
 import { toggleBookShelf, createShelf, deleteShelf, getShelves, STATUS } from '../lib/db.js'
 import { supabase } from '../lib/supabaseClient.js'
+import { usePageTitle } from '../lib/usePageTitle.js'
 import BookCard from '../components/BookCard.jsx'
 import ShelfSidebar from '../components/ShelfSidebar.jsx'
 import BookGrid from '../components/BookGrid.jsx'
@@ -30,6 +31,7 @@ const sortOptions = [
 function Bookshelf() {
   const { user } = useAuth()
   const { books, loading: contextLoading } = useBooks()
+  usePageTitle('Bookshelf')
   const [customShelves, setCustomShelves] = useState([])
   const [activeShelf, setActiveShelf] = useState('all')
   const [activeGenres, setActiveGenres] = useState([])

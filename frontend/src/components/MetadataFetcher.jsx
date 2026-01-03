@@ -1,3 +1,5 @@
+import CoverImage from './CoverImage.jsx'
+
 /**
  * MetadataFetcher Component
  * 

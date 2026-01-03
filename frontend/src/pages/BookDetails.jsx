@@ -2,6 +2,7 @@ import { useEffect, useState } from 'react'
 import { Link, useNavigate, useParams } from 'react-router-dom'
 import { supabase } from '../lib/supabaseClient.js'
 import { getBook, updateBook, addLink, deleteLink, deleteBook, STATUS, scoreToLabel, SCORE_OPTIONS } from '../lib/db.js'
+import { usePageTitle } from '../lib/usePageTitle.js'
 import CoverImage from '../components/CoverImage.jsx'
 import BookFormFields from '../components/BookFormFields.jsx'
 import MetadataFetcher from '../components/MetadataFetcher.jsx'
@@ -41,6 +42,8 @@ function BookDetails() {
   const [latestLoading, setLatestLoading] = useState(false)
   const [latestMessage, setLatestMessage] = useState('')
   const [latestStatus, setLatestStatus] = useState(null) // 'updated' | 'skipped' | 'error'
+
+  usePageTitle(book?.title ? `${book.title}` : 'Book')
 
   const formatDatetimeLocal = (isoString) => {
     if (!isoString) return ''

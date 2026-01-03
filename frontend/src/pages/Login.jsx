@@ -2,11 +2,13 @@ import { useState } from 'react'
 import { Link, useLocation, useNavigate } from 'react-router-dom'
 import { useAuth } from '../context/AuthProvider.jsx'
 import AuthForm from '../components/AuthForm.jsx'
+import { usePageTitle } from '../lib/usePageTitle.js'
 
 function Login() {
   const { signIn } = useAuth()
   const navigate = useNavigate()
   const location = useLocation()
+  usePageTitle('Login')
   const redirectTo = location.state?.from?.pathname ?? '/'
 
   const [email, setEmail] = useState('')

@@ -2,10 +2,12 @@ import { useState } from 'react'
 import { Link, useNavigate } from 'react-router-dom'
 import { useAuth } from '../context/AuthProvider.jsx'
 import AuthForm from '../components/AuthForm.jsx'
+import { usePageTitle } from '../lib/usePageTitle.js'
 
 function Signup() {
   const { signUp } = useAuth()
   const navigate = useNavigate()
+  usePageTitle('Sign up')
 
   const [email, setEmail] = useState('')
   const [password, setPassword] = useState('')

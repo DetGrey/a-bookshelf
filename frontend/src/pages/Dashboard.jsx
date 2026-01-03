@@ -3,6 +3,7 @@ import { Link } from 'react-router-dom'
 import { useAuth } from '../context/AuthProvider.jsx'
 import { useBooks } from '../context/BooksProvider.jsx'
 import { getBackup, restoreBackup, STATUS } from '../lib/db.js'
+import { usePageTitle } from '../lib/usePageTitle.js'
 import BookCard from '../components/BookCard.jsx'
 
 function Dashboard() {
@@ -13,7 +14,12 @@ function Dashboard() {
   const [backupError, setBackupError] = useState('')
   const [restoreLoading, setRestoreLoading] = useState(false)
   const [restoreMessage, setRestoreMessage] = useState('')
+  const [dupeLoading, setDupeLoading] = useState(false)
+  const [dupeResults, setDupeResults] = useState([])
+  const [dupeMessage, setDupeMessage] = useState('')
   const fileInputRef = useRef(null)
+
+  usePageTitle('Dashboard')
 
   const loadBooks = useCallback(async () => {
     if (!user) return
@@ -76,6 +82,67 @@ function Dashboard() {
       setRestoreLoading(false)
       if (fileInputRef.current) fileInputRef.current.value = ''
     }
+  }
+
+  // Duplicate title finder (simple Dice coefficient over bigrams + substring check)
+  const normalizeTitle = (title = '') => title.toLowerCase().replace(/[^a-z0-9\s]/g, ' ').replace(/\s+/g, ' ').trim()
+  const bigrams = (text) => {
+    if (!text) return []
+    if (text.length === 1) return [text]
+    const grams = []
+    for (let i = 0; i < text.length - 1; i += 1) {
+      grams.push(text.slice(i, i + 2))
+    }
+    return grams
+  }
+  const diceSimilarity = (a, b) => {
+    const aBigrams = bigrams(a)
+    const bBigrams = bigrams(b)
+    if (!aBigrams.length || !bBigrams.length) return 0
+    const counts = new Map()
+    aBigrams.forEach((g) => counts.set(g, (counts.get(g) || 0) + 1))
+    let overlap = 0
+    bBigrams.forEach((g) => {
+      const count = counts.get(g) || 0
+      if (count > 0) {
+        overlap += 1
+        counts.set(g, count - 1)
+      }
+    })
+    return (2 * overlap) / (aBigrams.length + bBigrams.length)
+  }
+
+  const handleFindDuplicates = () => {
+    setDupeLoading(true)
+    setDupeResults([])
+    setDupeMessage('')
+
+    const normalized = books.map((b) => ({
+      ...b,
+      norm: normalizeTitle(b.title || ''),
+    })).filter((b) => b.norm.length > 0)
+
+    const pairs = []
+    for (let i = 0; i < normalized.length; i += 1) {
+      for (let j = i + 1; j < normalized.length; j += 1) {
+        const a = normalized[i]
+        const b = normalized[j]
+        const sim = diceSimilarity(a.norm, b.norm)
+        const contains = a.norm.includes(b.norm) || b.norm.includes(a.norm)
+        if (sim >= 0.7 || contains) {
+          pairs.push({
+            a,
+            b,
+            score: Math.max(sim, contains ? 0.7 : sim),
+          })
+        }
+      }
+    }
+
+    pairs.sort((x, y) => y.score - x.score)
+    setDupeResults(pairs)
+    setDupeMessage(pairs.length ? '' : 'No likely duplicates found.')
+    setDupeLoading(false)
   }
 
   // Stats: average score (ignore 0) and perfect scores
@@ -235,6 +302,45 @@ function Dashboard() {
           </section>
         )
       })}
+
+      <section className="card" style={{ marginTop: '12px' }}>
+        <div className="block-head" style={{ marginBottom: '8px', alignItems: 'center' }}>
+          <div>
+            <p className="eyebrow" style={{ margin: 0 }}>Quality check</p>
+            <h2 style={{ margin: 0 }}>Find possible duplicate titles</h2>
+          </div>
+          <button
+            className="ghost"
+            onClick={handleFindDuplicates}
+            disabled={dupeLoading || loading || books.length === 0}
+            style={{ padding: '10px 14px', fontSize: '0.95rem' }}
+          >
+            {dupeLoading ? 'Scanning…' : 'Scan for duplicates'}
+          </button>
+        </div>
+        {dupeMessage && <p className="muted" style={{ marginTop: 4 }}>{dupeMessage}</p>}
+        {dupeResults.length > 0 && (
+          <div className="stack" style={{ marginTop: '8px', gap: '10px' }}>
+            {dupeResults.map(({ a, b, score }) => (
+              <div key={`${a.id}-${b.id}`} className="card" style={{ padding: '10px', background: 'var(--panel)' }}>
+                <div style={{ display: 'flex', justifyContent: 'space-between', gap: '12px', alignItems: 'center', flexWrap: 'wrap' }}>
+                  <div style={{ flex: 1, minWidth: '220px' }}>
+                    <div style={{ display: 'flex', flexDirection: 'column', gap: '4px' }}>
+                      <Link to={`/book/${a.id}`} target="_blank" rel="noreferrer">
+                        <strong>{a.title}</strong>
+                      </Link>
+                      <Link to={`/book/${b.id}`} target="_blank" rel="noreferrer" className="muted" style={{ margin: 0 }}>
+                        vs. {b.title}
+                      </Link>
+                    </div>
+                  </div>
+                  <span className="pill ghost" style={{ fontSize: '0.85rem' }}>Similarity {(score * 100).toFixed(0)}%</span>
+                </div>
+              </div>
+            ))}
+          </div>
+        )}
+      </section>
 
       <section className="card" style={{ marginTop: '12px', display: 'flex', alignItems: 'center', justifyContent: 'space-between', gap: '12px' }}>
           <div>

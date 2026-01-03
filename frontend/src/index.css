@@ -261,6 +261,7 @@ button.pill {
   display: flex;
   flex-direction: column;
   gap: 12px;
+  align-items: flex-start;
 }
 
 .card-footer {
@@ -328,17 +329,20 @@ button.pill {
 
 .thumb {
   width: 100%;
-  height: 180px;
+  aspect-ratio: 2 / 3;
+  height: auto;
+  max-height: 320px;
   border-radius: 10px;
 }
 
 .cover-image {
   width: 100%;
   height: 100%;
-  object-fit: cover;
+  object-fit: contain;
+  object-position: top;
   border-radius: inherit;
   display: block;
-  background: var(--panel-strong);
+  background: transparent;
 }
 
 .cover-fallback {
@@ -677,7 +681,7 @@ button.pill {
     display: grid;
     grid-template-columns: 140px 1fr;
     gap: 16px;
-    align-items: center;
+    align-items: start;
   }
 
   .card-footer {
@@ -704,7 +708,7 @@ button.pill {
   }
 
   .thumb {
-    height: 140px;
+    height: auto;
   }
 
   .book-hero {

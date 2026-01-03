@@ -3,6 +3,7 @@ import { useNavigate } from 'react-router-dom'
 import { supabase } from '../lib/supabaseClient.js'
 import { useAuth } from '../context/AuthProvider.jsx'
 import { createBook, addLink, getShelves, toggleBookShelf, STATUS_KEYS, STATUS } from '../lib/db.js'
+import { usePageTitle } from '../lib/usePageTitle.js'
 import CoverImage from '../components/CoverImage.jsx'
 import BookFormFields from '../components/BookFormFields.jsx'
 import MetadataFetcher from '../components/MetadataFetcher.jsx'
@@ -11,6 +12,7 @@ import ShelfSelector from '../components/ShelfSelector.jsx'
 function AddBook() {
   const { user } = useAuth()
   const navigate = useNavigate()
+  usePageTitle('Add Book')
   const [url, setUrl] = useState('')
   const [metadata, setMetadata] = useState(null)
   const [fetchedAt, setFetchedAt] = useState(null)
