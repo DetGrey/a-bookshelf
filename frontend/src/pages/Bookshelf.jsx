@@ -23,6 +23,7 @@ const statusShelves = [
 ]
 
 const sortOptions = [
+  { value: 'relevance', label: 'Relevance (search)' },
   { value: 'created', label: 'Date Added' },
   { value: 'updated', label: 'Last Updated' },
   { value: 'title', label: 'Title (A-Z)' },
@@ -67,6 +68,17 @@ function Bookshelf() {
     setShowErrors(false)
     setCurrentPage(1)
   }, [activeShelf, activeGenres, genreFilterMode, chapterFilter, languageFilter, searchQuery])
+
+  // When searching, prefer relevance sort; reset to date added when clearing search
+  useEffect(() => {
+    if (searchQuery && sortBy === 'created') {
+      setSortBy('relevance')
+    } else if (!searchQuery && sortBy === 'relevance') {
+      setSortBy('created')
+    }
+    // we intentionally omit sortBy from deps to avoid fighting user choice when typing
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [searchQuery])
 
   // Read genre from URL params on mount
   useEffect(() => {
@@ -124,6 +136,7 @@ function Bookshelf() {
   // Filter and sort books
   const getFilteredBooks = () => {
     let filtered = [...books]
+    let relevanceScores = new Map()
 
     // Filter by shelf
     if (activeShelf !== 'all') {
@@ -166,46 +179,56 @@ function Bookshelf() {
     if (searchQuery) {
       const query = searchQuery.toLowerCase()
       const queryWords = query.split(/\s+/).filter((w) => w.length > 0)
-      
-      // Filter books that have all query words
-      filtered = filtered.filter((book) => {
+
+      // Score all books by relevance match (don't require all words)
+      const scored = filtered.map((book) => {
         const titleLower = book.title.toLowerCase()
-        const descLower = book.description.toLowerCase()
-        const combinedText = `${titleLower} ${descLower}`
-        return queryWords.every((word) => combinedText.includes(word))
-      })
-      
-      // Score and sort by relevance (title matches weighted higher)
-      filtered.sort((a, b) => {
-        const titleLowerA = a.title.toLowerCase()
-        const descLowerA = (a.description || '').toLowerCase()
-        const titleLowerB = b.title.toLowerCase()
-        const descLowerB = (b.description || '').toLowerCase()
-        
-        let scoreA = 0
-        let scoreB = 0
-        
-        // Score each query word: title matches worth more than description matches
+        const descLower = (book.description || '').toLowerCase()
+        let score = 0
+
+        let titleMatches = 0
+        let descMatches = 0
+
+        // Count how many query words match in each field
         queryWords.forEach((word) => {
-          if (titleLowerA.includes(word)) scoreA += 10
-          if (descLowerA.includes(word)) scoreA += 2
-          if (titleLowerB.includes(word)) scoreB += 10
-          if (descLowerB.includes(word)) scoreB += 2
+          if (titleLower.includes(word)) {
+            titleMatches++
+            score += 10
+          }
+          if (descLower.includes(word)) {
+            descMatches++
+            score += 2
+          }
         })
-        
-        // Bonus: if all query words appear in title, give significant boost
-        const allWordsInTitleA = queryWords.every((word) => titleLowerA.includes(word))
-        const allWordsInTitleB = queryWords.every((word) => titleLowerB.includes(word))
-        if (allWordsInTitleA) scoreA += 50
-        if (allWordsInTitleB) scoreB += 50
-        
-        // Return higher score first
-        return scoreB - scoreA
+
+        // Boost score based on match ratio (more matches = better)
+        const totalMatches = titleMatches + descMatches
+        const maxPossibleMatches = queryWords.length * 2
+        const matchRatio = totalMatches / maxPossibleMatches
+        score += matchRatio * 100
+
+        // Significant bonus if all words found in title
+        if (queryWords.every((w) => titleLower.includes(w))) {
+          score += 50
+        }
+
+        // Bonus for title-only matches (description-only is less relevant)
+        score += (titleMatches / queryWords.length) * 30
+
+        return { book, score }
       })
+
+      // Filter to only books with at least one word match, then sort by relevance
+      const filteredScored = scored.filter((s) => s.score > 0).sort((a, b) => b.score - a.score)
+      relevanceScores = new Map(filteredScored.map((s) => [s.book.id, s.score]))
+      filtered = filteredScored.map((s) => s.book)
     }
 
     // Sort
     switch (sortBy) {
+      case 'relevance':
+        filtered.sort((a, b) => (relevanceScores.get(b.id) ?? 0) - (relevanceScores.get(a.id) ?? 0))
+        break
       case 'title':
         filtered.sort((a, b) => a.title.localeCompare(b.title))
         break
@@ -228,7 +251,7 @@ function Bookshelf() {
     }
 
     // Apply direction
-    if (sortDirection === 'asc') {
+    if (sortDirection === 'asc' && sortBy !== 'relevance') {
       filtered.reverse()
     }
 
