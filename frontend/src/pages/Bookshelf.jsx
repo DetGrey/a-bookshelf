@@ -1,7 +1,8 @@
 import { useEffect, useState } from 'react'
 import { Link } from 'react-router-dom'
 import { useAuth } from '../context/AuthProvider.jsx'
-import { getBooks, getShelves, toggleBookShelf, createShelf, deleteShelf, STATUS } from '../lib/db.js'
+import { useBooks } from '../context/BooksProvider.jsx'
+import { toggleBookShelf, createShelf, deleteShelf, getShelves, STATUS } from '../lib/db.js'
 import { supabase } from '../lib/supabaseClient.js'
 import BookCard from '../components/BookCard.jsx'
 import ShelfSidebar from '../components/ShelfSidebar.jsx'
@@ -28,7 +29,7 @@ const sortOptions = [
 
 function Bookshelf() {
   const { user } = useAuth()
-  const [books, setBooks] = useState([])
+  const { books, loading: contextLoading } = useBooks()
   const [customShelves, setCustomShelves] = useState([])
   const [activeShelf, setActiveShelf] = useState('all')
   const [activeGenres, setActiveGenres] = useState([])
@@ -68,7 +69,7 @@ function Bookshelf() {
     }
   }, [])
 
-  // Load books and shelves
+  // Load custom shelves
   useEffect(() => {
     let mounted = true
     async function load() {
@@ -76,9 +77,8 @@ function Bookshelf() {
       setLoading(true)
       setError('')
       try {
-        const [list, shelves] = await Promise.all([getBooks(user.id), getShelves(user.id)])
+        const shelves = await getShelves(user.id)
         if (mounted) {
-          setBooks(list)
           setCustomShelves(shelves)
         }
       } catch (err) {
@@ -92,6 +92,11 @@ function Bookshelf() {
       mounted = false
     }
   }, [user])
+
+  // Sync loading state with context
+  useEffect(() => {
+    setLoading(contextLoading)
+  }, [contextLoading])
 
   // Calculate shelf counts
   const getShelfCount = (shelfId) => {

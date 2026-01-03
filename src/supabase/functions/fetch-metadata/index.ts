@@ -51,11 +51,28 @@ Deno.serve(async (req) => {
 
     // 2. Fetch HTML
     stage = 'fetch';
-    const response = await fetch(url, {
+    const urlObj = new URL(url);
+    let hostname = urlObj.hostname;
+    
+    let response = await fetch(url, {
       headers: {
         'User-Agent': 'Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/119.0.0.0 Safari/537.36'
       }
     });
+
+    // Special handling: if dto.to returns 404, try bato.ing instead
+    if (!response.ok && response.status === 404 && hostname === 'dto.to') {
+      const fallbackUrl = url.replace('dto.to', 'bato.ing');
+      response = await fetch(fallbackUrl, {
+        headers: {
+          'User-Agent': 'Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/119.0.0.0 Safari/537.36'
+        }
+      });
+      // Update hostname to use bato.ing parser if fallback succeeded
+      if (response.ok) {
+        hostname = 'bato.ing';
+      }
+    }
 
     if (!response.ok) throw new Error(`Failed to fetch site: ${response.status} ${response.statusText}`);
 
@@ -65,8 +82,6 @@ Deno.serve(async (req) => {
 
     // 3. Determine website and extract metadata accordingly
     stage = 'select_parser';
-    const urlObj = new URL(url);
-    const hostname = urlObj.hostname;
 
     let metadata: any = {
       title: '',

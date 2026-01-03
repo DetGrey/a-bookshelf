@@ -1,13 +1,13 @@
 import { useCallback, useEffect, useRef, useState } from 'react'
 import { Link } from 'react-router-dom'
 import { useAuth } from '../context/AuthProvider.jsx'
-import { getBooks, getBackup, restoreBackup, STATUS } from '../lib/db.js'
+import { useBooks } from '../context/BooksProvider.jsx'
+import { getBackup, restoreBackup, STATUS } from '../lib/db.js'
 import BookCard from '../components/BookCard.jsx'
 
 function Dashboard() {
   const { user } = useAuth()
-  const [books, setBooks] = useState([])
-  const [loading, setLoading] = useState(true)
+  const { books, loading } = useBooks()
   const [error, setError] = useState('')
   const [backupLoading, setBackupLoading] = useState(false)
   const [backupError, setBackupError] = useState('')
@@ -17,16 +17,7 @@ function Dashboard() {
 
   const loadBooks = useCallback(async () => {
     if (!user) return
-    setLoading(true)
-    setError('')
-    try {
-      const list = await getBooks(user.id)
-      setBooks(list)
-    } catch (err) {
-      setError(err.message)
-    } finally {
-      setLoading(false)
-    }
+    // Books are now managed by BooksProvider context
   }, [user])
 
   useEffect(() => {
@@ -76,7 +67,7 @@ function Dashboard() {
       const json = JSON.parse(text)
       await restoreBackup(user.id, json)
       setRestoreMessage('Restore complete. Refreshing data…')
-      await loadBooks()
+      // Context will automatically refresh via realtime subscription
       setRestoreMessage('Restore complete.')
     } catch (err) {
       const message = err instanceof Error ? err.message : 'Restore failed'
@@ -220,7 +211,10 @@ function Dashboard() {
       </section>
 
       {sectionKeys.map((key) => {
-        const sectionBooks = books.filter((book) => book.status === key)
+        const sectionBooks = books
+          .filter((book) => book.status === key)
+          .sort((a, b) => new Date(b.updated_at) - new Date(a.updated_at))
+          .slice(0, 5)
         if (!sectionBooks.length) return null
         return (
           <section key={key} className="block">

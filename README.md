@@ -12,9 +12,11 @@ Deployment link: https://detgrey.github.io/a-bookshelf/
 - Dashboard stats: genre breakdown pie (top genres + Other), average score (ignores 0), score-10 count, and latest updates.
 - Data portability: one-click JSON backup + upload/restore (profiles, books, shelves, links, mappings).
 - Filtering and sorting: status, genre, or last update.
+- Performance: global `BooksProvider` context caches books/shelves for 5 minutes and uses Supabase realtime subscriptions to auto-refresh on changes (no redundant fetches across page navigation).
+- Lazy loading: book cover images only load when about to enter viewport (IntersectionObserver), with CSS gradient fallback for broken links.
 
 ## Repo layout
-- frontend/ — React app (Vite) with routes, components, sample data, and tests.
+- frontend/ — React app (Vite) with routes, components, sample data, and tests. Includes context providers for global state management: `AuthProvider` handles auth, `BooksProvider` manages books/shelves with 5-minute caching and realtime Supabase subscriptions to auto-refresh on changes.
 - tables.sql — Supabase schema and RLS policies for profiles, books, shelves, shelf_books, and book_links.
 - src/supabase/functions/ — Edge Functions `fetch-metadata` and `fetch-latest` (Deno + cheerio) plus minimal Supabase CLI config.
 
