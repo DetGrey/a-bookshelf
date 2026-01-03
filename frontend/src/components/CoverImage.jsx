@@ -1,4 +1,4 @@
-import { useMemo, useState } from 'react'
+import { useEffect, useMemo, useRef, useState } from 'react'
 
 function hashHue(text = '') {
   let hash = 0
@@ -9,8 +9,10 @@ function hashHue(text = '') {
   return Math.abs(hash) % 360
 }
 
-function CoverImage({ src, title, alt, className = '', style = {} }) {
-  const [errored, setErrored] = useState(!src)
+function CoverImage({ src, title, alt, className = '', style = {}, lazy = true }) {
+  const holderRef = useRef(null)
+  const [shouldLoad, setShouldLoad] = useState(!lazy)
+  const [errored, setErrored] = useState(false)
   const label = title || alt || 'No cover'
   const hue = useMemo(() => hashHue(label), [label])
   const fallbackStyle = {
@@ -18,23 +20,44 @@ function CoverImage({ src, title, alt, className = '', style = {} }) {
     ...style,
   }
 
-  if (errored || !src) {
-    return (
-      <div className={`cover-fallback ${className}`} style={fallbackStyle}>
-        <span>{label}</span>
-      </div>
-    )
-  }
+  useEffect(() => {
+    if (!lazy || shouldLoad) return
+    const el = holderRef.current
+    if (!el || typeof IntersectionObserver === 'undefined') {
+      setShouldLoad(true)
+      return
+    }
+    const observer = new IntersectionObserver((entries) => {
+      entries.forEach((entry) => {
+        if (entry.isIntersecting) {
+          setShouldLoad(true)
+          observer.disconnect()
+        }
+      })
+    }, { rootMargin: '120px' })
+    observer.observe(el)
+    return () => observer.disconnect()
+  }, [lazy, shouldLoad])
+
+  const showImage = shouldLoad && src && !errored
 
   return (
-    <img
-      className={`cover-image ${className}`}
-      src={src}
-      alt={alt || title || 'Cover image'}
-      onError={() => setErrored(true)}
-      style={style}
-      loading="lazy"
-    />
+    <span ref={holderRef} style={{ display: 'inline-block' }}>
+      {showImage ? (
+        <img
+          className={`cover-image ${className}`}
+          src={src}
+          alt={alt || title || 'Cover image'}
+          onError={() => setErrored(true)}
+          style={style}
+          loading="lazy"
+        />
+      ) : (
+        <div className={`cover-fallback ${className}`} style={fallbackStyle}>
+          <span>{label}</span>
+        </div>
+      )}
+    </span>
   )
 }
 
