@@ -16,6 +16,7 @@ create table public.books (
   description text,
   cover_url text,
   genres text[], -- Array: ['Action', 'Romance'] - easy to filter
+  language text default 'English', -- Reading language (UI filter)
   original_language text, -- e.g. "Japanese"
   score integer check (score >= 0 and score <= 10), -- 0 = N/A, 1-10 as scale
   

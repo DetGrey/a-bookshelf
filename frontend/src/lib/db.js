@@ -1,5 +1,31 @@
 import { supabase } from './supabaseClient.js'
 
+const LANGUAGE_NAME_MAP = {
+  en: 'English', enus: 'English', eng: 'English',
+  es: 'Spanish', esp: 'Spanish', spa: 'Spanish',
+  ja: 'Japanese', jp: 'Japanese', jpn: 'Japanese',
+  ko: 'Korean', kr: 'Korean', kor: 'Korean',
+  zh: 'Chinese', chi: 'Chinese', cn: 'Chinese', zhtw: 'Chinese', zhcn: 'Chinese',
+  fr: 'French', fra: 'French', fre: 'French',
+  de: 'German', deu: 'German', ger: 'German',
+  it: 'Italian', ita: 'Italian',
+  pt: 'Portuguese', prt: 'Portuguese', ptbr: 'Portuguese',
+  ru: 'Russian', rus: 'Russian',
+  vi: 'Vietnamese', vie: 'Vietnamese',
+  id: 'Indonesian', ind: 'Indonesian',
+  th: 'Thai', tha: 'Thai',
+}
+
+const normalizeLanguageName = (value) => {
+  if (!value) return null
+  const trimmed = value.trim()
+  if (!trimmed) return null
+  const key = trimmed.toLowerCase().replace(/[_-]/g, '')
+  if (LANGUAGE_NAME_MAP[key]) return LANGUAGE_NAME_MAP[key]
+  if (/^[a-z]{2,3}$/.test(key)) return null // prefer empty over surfacing codes
+  return trimmed
+}
+
 // Helpers for status mapping (DB uses lowercase snake_case)
 export const STATUS = {
   reading: 'Reading',
@@ -45,7 +71,7 @@ export async function getBooks(userId) {
   const { data, error } = await supabase
     .from('books')
     .select(
-      'id,user_id,title,description,cover_url,genres,original_language,score,status,last_read,notes,latest_chapter,last_fetched_at,last_uploaded_at,created_at,updated_at,book_links(id,site_name,url,created_at),shelf_books(shelf_id)'
+      'id,user_id,title,description,cover_url,genres,language,original_language,score,status,last_read,notes,latest_chapter,last_fetched_at,last_uploaded_at,created_at,updated_at,book_links(id,site_name,url,created_at),shelf_books(shelf_id)'
     )
     .eq('user_id', userId)
     .order('updated_at', { ascending: false })
@@ -57,7 +83,8 @@ export async function getBooks(userId) {
     description: b.description ?? '',
     cover_url: b.cover_url ?? '',
     genres: b.genres ?? [],
-    original_language: b.original_language ?? '',
+    language: normalizeLanguageName(b.language),
+    original_language: normalizeLanguageName(b.original_language),
     score: b.score ?? null,
     status: b.status, // lowercase key
     last_read: b.last_read ?? '',
@@ -76,7 +103,7 @@ export async function getBook(bookId) {
   const { data, error } = await supabase
     .from('books')
     .select(
-      'id,user_id,title,description,cover_url,genres,original_language,score,status,last_read,notes,latest_chapter,last_fetched_at,last_uploaded_at,created_at,updated_at,book_links(id,site_name,url,created_at),shelf_books(shelf_id)'
+      'id,user_id,title,description,cover_url,genres,language,original_language,score,status,last_read,notes,latest_chapter,last_fetched_at,last_uploaded_at,created_at,updated_at,book_links(id,site_name,url,created_at),shelf_books(shelf_id)'
     )
     .eq('id', bookId)
     .single()
@@ -88,7 +115,8 @@ export async function getBook(bookId) {
     description: data.description ?? '',
     cover_url: data.cover_url ?? '',
     genres: data.genres ?? [],
-    original_language: data.original_language ?? '',
+    language: normalizeLanguageName(data.language),
+    original_language: normalizeLanguageName(data.original_language),
     score: data.score ?? null,
     status: data.status,
     last_read: data.last_read ?? '',
@@ -109,7 +137,8 @@ export async function updateBook(bookId, patch) {
     description: patch.description,
     cover_url: patch.cover_url,
     genres: patch.genres,
-    original_language: patch.original_language,
+    language: normalizeLanguageName(patch.language),
+    original_language: normalizeLanguageName(patch.original_language),
     score: patch.score,
     status: patch.status, // expect lowercase key
     last_read: patch.last_read,
@@ -130,7 +159,8 @@ export async function createBook(userId, book) {
     description: book.description ?? '',
     cover_url: book.cover_url ?? book.image ?? '',
     genres: book.genres ?? [],
-    original_language: book.original_language ?? '',
+    language: normalizeLanguageName(book.language),
+    original_language: normalizeLanguageName(book.original_language),
     score: book.score ?? null,
     status: book.status ?? 'reading',
     last_read: book.last_read ?? '',

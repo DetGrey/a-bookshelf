@@ -45,9 +45,11 @@ function BookCard({
   const languageFlag = (lang) => {
     if (!lang) return null
     const lower = lang.toLowerCase()
+    if (lower.startsWith('eng') || lower === 'en' || lower === 'english') return '🇬🇧'
     if (lower.startsWith('jap') || lower === 'jp' || lower === 'ja' || lower === 'jpn') return '🇯🇵'
     if (lower.startsWith('kor') || lower === 'kr' || lower === 'ko') return '🇰🇷'
     if (lower.startsWith('chi') || lower.includes('mandarin') || lower === 'cn' || lower === 'zh') return '🇨🇳'
+    if (lower.startsWith('spa') || lower === 'es') return '🇪🇸'
     return null
   }
 
@@ -91,8 +93,14 @@ function BookCard({
                 {scoreToLabel(book.score) || `Score: ${book.score}`}
               </span>
             ) : null}
+            {!compact && book.language && (
+              <span className="pill ghost emoji-text" title="Reading Language" style={{ color: '#4ade80', borderColor: '#4ade80' }}>
+                {languageFlag(book.language) ? `${languageFlag(book.language)} ` : ''}
+                {book.language}
+              </span>
+            )}
             {book.original_language && (
-              <span className="pill ghost emoji-text">
+              <span className="pill ghost emoji-text" title="Original Language" style={{ color: '#a78bfa', borderColor: '#a78bfa' }}>
                 {languageFlag(book.original_language) ? `${languageFlag(book.original_language)} ` : ''}
                 {book.original_language}
               </span>

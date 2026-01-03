@@ -4,7 +4,7 @@ A personal library dashboard that tracks reading status, progress, and links acr
 Deployment link: https://detgrey.github.io/a-bookshelf/
 
 ## Highlights
-- Smart add: paste a URL (Webtoons, Bato) and the `fetch-metadata` Edge Function scrapes title, description, cover, genres, language, latest chapter, and upload date.
+- Smart add: paste a URL (Webtoons, Bato) and the `fetch-metadata` Edge Function scrapes title, description, cover, genres, original language, language, latest chapter, and upload date.
 - Reading states and shelves: built-in shelves (reading, plan to read, waiting, completed, dropped, on hold) plus custom shelves.
 - Progress tracking: personal notes, last read, latest scraped chapter, and last uploaded timestamp per book.
 - Multi-source links: keep multiple URLs per book (official, scanlation, etc.) and switch quickly.
@@ -67,4 +67,3 @@ Row Level Security is enabled on every table; policies limit access to the ownin
 Since this is a personal tool, you likely want to use it on your phone while reading in bed.
 
 Action: Add a manifest.json and service worker (Vite has a plugin vite-plugin-pwa). This lets you "Install" the website as an app on iOS/Android, removing the browser address bar.
-

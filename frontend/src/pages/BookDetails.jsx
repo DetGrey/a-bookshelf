@@ -19,6 +19,7 @@ function BookDetails() {
     title: '',
     description: '',
     status: 'reading',
+    language: null,
     original_language: '',
     score: 0,
     last_read: '',
@@ -66,6 +67,7 @@ function BookDetails() {
           title: b.title ?? '',
           description: b.description ?? '',
           status: b.status ?? 'reading',
+          language: b.language || null,
           original_language: b.original_language ?? '',
           score: b.score ?? 0,
           last_read: b.last_read ?? '',
@@ -136,6 +138,7 @@ function BookDetails() {
         ? editForm.genres.split(',').map((g) => g.trim()).filter(Boolean)
         : [],
       score: parsedScore,
+      language: editForm.language || null,
       last_uploaded_at: toIsoOrNull(editForm.last_uploaded_at),
       last_fetched_at: toIsoOrNull(editForm.last_fetched_at),
     }
@@ -207,7 +210,8 @@ function BookDetails() {
       description: fetchedMetadata.description ?? prev.description,
       cover_url: fetchedMetadata.image ?? prev.cover_url,
       genres: (fetchedMetadata.genres ?? []).join(', '),
-      original_language: fetchedMetadata.original_language ?? prev.original_language,
+      language: fetchedMetadata.language ?? null,
+      original_language: fetchedMetadata.original_language ?? null,
       latest_chapter: fetchedMetadata.latest_chapter ?? prev.latest_chapter,
       last_uploaded_at: fetchedMetadata.last_uploaded_at
         ? formatDatetimeLocal(fetchedMetadata.last_uploaded_at)
@@ -294,6 +298,10 @@ function BookDetails() {
                 <div className="stat">
                   <p className="muted">Score</p>
                   <strong>{book.score === 0 ? '0 — N/A' : (scoreToLabel(book.score) || '—')}</strong>
+                </div>
+                <div className="stat">
+                  <p className="muted">Language</p>
+                  <strong>{book.language || '—'}</strong>
                 </div>
                 <div className="stat">
                   <p className="muted">Original Language</p>

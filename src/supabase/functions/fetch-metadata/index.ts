@@ -6,6 +6,36 @@ const corsHeaders = {
   'Access-Control-Expose-Headers': 'x-error-stage, x-error-message',
 };
 
+const normalizeLanguageName = (value: string | null) => {
+  if (!value) return null
+  const trimmed = value.trim()
+  if (!trimmed) return null
+  const key = trimmed.toLowerCase().replace(/[_-]/g, '')
+
+  const map: Record<string, string> = {
+    en: 'English', enus: 'English', eng: 'English',
+    es: 'Spanish', esp: 'Spanish', spa: 'Spanish',
+    ja: 'Japanese', jp: 'Japanese', jpn: 'Japanese',
+    ko: 'Korean', kr: 'Korean', kor: 'Korean',
+    zh: 'Chinese', chi: 'Chinese', cn: 'Chinese', zhtw: 'Chinese', zhcn: 'Chinese',
+    fr: 'French', fra: 'French', fre: 'French',
+    de: 'German', deu: 'German', ger: 'German',
+    it: 'Italian', ita: 'Italian',
+    pt: 'Portuguese', prt: 'Portuguese', ptbr: 'Portuguese',
+    ru: 'Russian', rus: 'Russian',
+    vi: 'Vietnamese', vie: 'Vietnamese',
+    id: 'Indonesian', ind: 'Indonesian',
+    th: 'Thai', tha: 'Thai',
+  }
+
+  if (map[key]) return map[key]
+  // If value is a short code (2-3 letters) we prefer not to surface it; return null to allow fallbacks
+  if (/^[a-z]{2,3}$/i.test(key)) return null
+  return trimmed
+}
+
+
+
 Deno.serve(async (req) => {
   // 1. Handle CORS
   if (req.method === 'OPTIONS') {
@@ -43,6 +73,7 @@ Deno.serve(async (req) => {
       description: '',
       image: '',
       genres: [],
+      language: null,
       original_language: null,
       latest_chapter: '',
       last_uploaded_at: null
@@ -51,7 +82,7 @@ Deno.serve(async (req) => {
     // --------------------------------------------- WEBTOONS
     if (hostname.includes('webtoons.com')) {
       stage = 'parse:webtoons';
-      
+
       // -- Title --
       metadata.title = $('h1.subj').first().text().trim() || 
                        $('meta[property="og:title"]').attr('content') || 
@@ -80,6 +111,13 @@ Deno.serve(async (req) => {
         });
       }
       metadata.genres = genres;
+
+      // -- Language (Webtoons-specific detection)
+      // Webtoons typically doesn't use "Tr From" pattern; check lang/meta attributes
+      const htmlLang = normalizeLanguageName($('html').attr('lang') ?? null);
+      const ogLocale = normalizeLanguageName($('meta[property="og:locale"]').attr('content') ?? null);
+      const metaLang = normalizeLanguageName($('meta[name="language"]').attr('content') ?? null);
+      metadata.language = htmlLang || ogLocale || metaLang || null;
 
       // -- Latest Episode & Date --
       // SUPPORT BOTH DESKTOP (ul#_listUl) AND MOBILE (ul#_episodeList)
@@ -133,6 +171,7 @@ Deno.serve(async (req) => {
     // --------------------------------------------- BATO.SI / BATO.ING
     else if (hostname === 'bato.ing' || hostname === 'bato.si') {
       stage = 'parse:bato';
+      
       // -- Title --
       metadata.title = $('h3.font-bold a').first().text().trim() || 
                        $('meta[property="og:title"]').attr('content') || 
@@ -157,6 +196,27 @@ Deno.serve(async (req) => {
         image = `https://${hostname}${image}`;
       }
       metadata.image = image;
+
+      // -- Language (Bato-specific: "Tr From" pattern)
+      const trFromLang = $('span:contains("Tr From")').first();
+      if (trFromLang.length) {
+        // Get the immediate previous sibling and keep going back until we find one with letters
+        let prev = trFromLang.prev();
+        while (prev.length > 0) {
+          const txt = prev.text().trim();
+          if (/[A-Za-z]/.test(txt)) {
+            // Found a span with letters
+            const cleanLang = txt.replace(/[\p{Emoji_Presentation}\p{Extended_Pictographic}]/gu, '').trim();
+            const normalized = normalizeLanguageName(cleanLang);
+            if (normalized) {
+              metadata.language = normalized;
+            }
+            break;
+          }
+          prev = prev.prev();
+        }
+      }
+      if (!metadata.language) metadata.language = null;
 
       // -- Genres (Fix Duplicates) --
       const genresSet = new Set<string>();
@@ -245,6 +305,27 @@ Deno.serve(async (req) => {
         });
       });
       metadata.genres = Array.from(genresSet);
+
+      // -- Language (v3/Default-specific: "Tr From" pattern) --
+      const trFromDefault = $('span:contains("Tr From")').first();
+      if (trFromDefault.length) {
+        // Get the immediate previous sibling and keep going back until we find one with letters
+        let prev = trFromDefault.prev();
+        while (prev.length > 0) {
+          const txt = prev.text().trim();
+          if (/[A-Za-z]/.test(txt)) {
+            // Found a span with letters
+            const cleanLang = txt.replace(/[\p{Emoji_Presentation}\p{Extended_Pictographic}]/gu, '').trim();
+            const normalizedDefault = normalizeLanguageName(cleanLang);
+            if (normalizedDefault) {
+              metadata.language = normalizedDefault;
+            }
+            break;
+          }
+          prev = prev.prev();
+        }
+      }
+      if (!metadata.language) metadata.language = null;
 
       // -- Original Language --
       const trFrom = $('span:contains("Tr From")');

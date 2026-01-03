@@ -83,11 +83,21 @@ function BookFormFields({ form, onChange }) {
           />
         </label>
         <label className="field">
+          <span>Language</span>
+          <input
+            type="text"
+            placeholder="English, Spanish..."
+            value={form.language ?? ''}
+            autoCapitalize='words'
+            onChange={(e) => handleChange('language', e.target.value)}
+          />
+        </label>
+        <label className="field">
           <span>Original Language</span>
           <input
             type="text"
             placeholder="Japanese, Korean, English..."
-            value={form.original_language}
+            value={form.original_language ?? ''}
             autoCapitalize='sentences'
             onChange={(e) => handleChange('original_language', e.target.value)}
           />

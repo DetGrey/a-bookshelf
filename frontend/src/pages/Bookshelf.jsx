@@ -34,6 +34,7 @@ function Bookshelf() {
   const [activeGenres, setActiveGenres] = useState([])
   const [genreFilterMode, setGenreFilterMode] = useState('all')
   const [genreFilterOpen, setGenreFilterOpen] = useState(false)
+  const [languageFilter, setLanguageFilter] = useState('all')
   const [sortBy, setSortBy] = useState('created')
   const [sortDirection, setSortDirection] = useState('desc')
   const [searchQuery, setSearchQuery] = useState('')
@@ -55,7 +56,7 @@ function Bookshelf() {
     setUpdateMessage('')
     setErrorDetails([])
     setShowErrors(false)
-  }, [activeShelf, activeGenres, genreFilterMode, searchQuery])
+  }, [activeShelf, activeGenres, genreFilterMode, languageFilter, searchQuery])
 
   // Read genre from URL params on mount
   useEffect(() => {
@@ -104,6 +105,7 @@ function Bookshelf() {
 
   // Get all unique genres from books
   const allGenres = [...new Set(books.flatMap((b) => b.genres ?? []))].sort()
+  const allLanguages = [...new Set(books.map((b) => b.language).filter(Boolean))].sort()
 
   // Filter and sort books
   const getFilteredBooks = () => {
@@ -126,6 +128,11 @@ function Bookshelf() {
       } else {
         filtered = filtered.filter((book) => activeGenres.some((genre) => book.genres?.includes(genre)))
       }
+    }
+
+    // Filter by language
+    if (languageFilter !== 'all') {
+      filtered = filtered.filter((book) => (book.language ?? '') === languageFilter)
     }
 
     // Search filter
@@ -411,6 +418,17 @@ function Bookshelf() {
                 {sortOptions.map((option) => (
                   <option key={option.value} value={option.value}>
                     {option.label}
+                  </option>
+                ))}
+              </select>
+            </label>
+            <label className="field" style={{ minWidth: '160px' }}>
+              <span>Language</span>
+              <select value={languageFilter} onChange={(e) => setLanguageFilter(e.target.value)}>
+                <option value="all">All languages</option>
+                {allLanguages.map((lang) => (
+                  <option key={lang} value={lang}>
+                    {lang}
                   </option>
                 ))}
               </select>

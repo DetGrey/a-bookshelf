@@ -26,6 +26,7 @@ function AddBook() {
     description: '',
     cover_url: '',
     genres: '',
+      language: null,
     original_language: '',
     status: STATUS_KEYS[0],
     last_read: '',
@@ -119,7 +120,8 @@ function AddBook() {
           description: m.description || prev.description,
           cover_url: m.image || prev.cover_url,
           genres: Array.isArray(m.genres) && m.genres.length > 0 ? m.genres.join(', ') : prev.genres,
-          original_language: m.original_language || prev.original_language,
+          language: m.language ?? null,
+          original_language: m.original_language ?? null,
           latest_chapter: m.latest_chapter || prev.latest_chapter,
           last_uploaded_at: formatDatetimeLocal(m.last_uploaded_at) || prev.last_uploaded_at,
         }))
@@ -153,6 +155,7 @@ function AddBook() {
         genres: form.genres
           ? form.genres.split(',').map((g) => g.trim()).filter(Boolean)
           : [],
+         language: form.language || null,
         original_language: form.original_language || null,
         status: form.status,
         last_read: form.last_read || '',
