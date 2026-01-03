@@ -161,6 +161,84 @@ export async function deleteLink(linkId) {
   if (error) throw error
 }
 
+// Export all user-owned rows for backup (JSON download)
+export async function getBackup(userId) {
+  // Base tables scoped by user_id
+  const booksRes = await supabase.from('books').select('*').eq('user_id', userId)
+  if (booksRes.error) throw booksRes.error
+
+  const shelvesRes = await supabase.from('shelves').select('*').eq('user_id', userId)
+  if (shelvesRes.error) throw shelvesRes.error
+
+  // Dependent tables filtered by owned ids (book_links, shelf_books may not have user_id columns)
+  const bookIds = (booksRes.data ?? []).map((b) => b.id)
+  const shelfIds = (shelvesRes.data ?? []).map((s) => s.id)
+
+  let bookLinks = []
+  if (bookIds.length > 0) {
+    const bookLinksRes = await supabase.from('book_links').select('*').in('book_id', bookIds)
+    if (bookLinksRes.error) throw bookLinksRes.error
+    bookLinks = bookLinksRes.data ?? []
+  }
+
+  let shelfBooks = []
+  if (shelfIds.length > 0) {
+    const shelfBooksRes = await supabase.from('shelf_books').select('*').in('shelf_id', shelfIds)
+    if (shelfBooksRes.error) throw shelfBooksRes.error
+    shelfBooks = shelfBooksRes.data ?? []
+  }
+
+  const profileRes = await supabase.from('profiles').select('*').eq('id', userId).maybeSingle()
+  if (profileRes.error) throw profileRes.error
+
+  return {
+    exported_at: new Date().toISOString(),
+    user_id: userId,
+    profiles: profileRes.data ? [profileRes.data] : [],
+    books: booksRes.data ?? [],
+    shelves: shelvesRes.data ?? [],
+    shelf_books: shelfBooks,
+    book_links: bookLinks,
+  }
+}
+
+// Restore backup JSON (upsert) scoped to the signed-in user
+export async function restoreBackup(userId, backup) {
+  if (!backup || typeof backup !== 'object') throw new Error('Invalid backup payload')
+
+  const books = (backup.books ?? []).map((b) => ({ ...b, user_id: userId }))
+  const shelves = (backup.shelves ?? []).map((s) => ({ ...s, user_id: userId }))
+  const bookLinks = backup.book_links ?? []
+  const shelfBooks = backup.shelf_books ?? []
+  const profileRow = backup.profiles?.[0]
+
+  const chunk = (arr, size = 500) => {
+    const out = []
+    for (let i = 0; i < arr.length; i += size) out.push(arr.slice(i, i + size))
+    return out
+  }
+
+  const upsertChunks = async (table, rows, options) => {
+    for (const part of chunk(rows)) {
+      const { error } = await supabase.from(table).upsert(part, options)
+      if (error) throw error
+    }
+  }
+
+  if (profileRow) {
+    const profilePayload = { ...profileRow, id: userId }
+    const { error } = await supabase.from('profiles').upsert(profilePayload)
+    if (error) throw error
+  }
+
+  if (shelves.length) await upsertChunks('shelves', shelves, { onConflict: 'id' })
+  if (books.length) await upsertChunks('books', books, { onConflict: 'id' })
+  if (bookLinks.length) await upsertChunks('book_links', bookLinks)
+  if (shelfBooks.length) await upsertChunks('shelf_books', shelfBooks)
+
+  return true
+}
+
 export async function getShelves(userId) {
   const { data, error } = await supabase
     .from('shelves')

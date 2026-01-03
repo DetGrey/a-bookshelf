@@ -6,6 +6,15 @@
     <link rel="icon" type="image/svg+xml" href="/vite.svg" />
     <meta name="viewport" content="width=device-width, initial-scale=1.0" />
     <title>frontend</title>
+    <script>
+      // Redirect to trailing slash before the app loads (helps local dev at /a-bookshelf)
+      (function () {
+        var path = window.location.pathname
+        if (path === '/a-bookshelf') {
+          window.location.replace('/a-bookshelf/')
+        }
+      })()
+    </script>
   </head>
   <body>
     <div id="root"></div>

@@ -44,8 +44,8 @@ function MetadataFetcher({
       </form>
 
       {fetchedMetadata && (
-        <div className="metadata-preview" style={{ marginTop: '8px' }}>
-          <div className="thumb" style={{ backgroundImage: `url(${fetchedMetadata.image})` }} />
+          <div className="metadata-preview" style={{ marginTop: '8px' }}>
+            <CoverImage className="thumb" src={fetchedMetadata.image} title={fetchedMetadata.title} />
           <div className="stack">
             <strong>{fetchedMetadata.title}</strong>
             <p className="muted" style={{ margin: 0 }}>

@@ -2,6 +2,7 @@ import { useEffect, useState } from 'react'
 import { Link, useNavigate, useParams } from 'react-router-dom'
 import { supabase } from '../lib/supabaseClient.js'
 import { getBook, updateBook, addLink, deleteLink, deleteBook, STATUS, scoreToLabel, SCORE_OPTIONS } from '../lib/db.js'
+import CoverImage from '../components/CoverImage.jsx'
 import BookFormFields from '../components/BookFormFields.jsx'
 import MetadataFetcher from '../components/MetadataFetcher.jsx'
 import SourceManager from '../components/SourceManager.jsx'
@@ -272,7 +273,7 @@ function BookDetails() {
       ) : (
         <div className="stack">
             <div className="book-hero">
-            <div className="cover" style={{ backgroundImage: `url(${book.cover_url})` }} />
+            <CoverImage className="cover" src={book.cover_url} title={book.title} />
             <div className="stack">
               <div>
                 <p className="eyebrow">{STATUS[book.status] ?? book.status}</p>

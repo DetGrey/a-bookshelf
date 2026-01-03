@@ -43,6 +43,7 @@ function Bookshelf() {
   const [updateMessage, setUpdateMessage] = useState('')
   const [errorDetails, setErrorDetails] = useState([])
   const [showErrors, setShowErrors] = useState(false)
+  const [waitingProgress, setWaitingProgress] = useState({ current: 0, total: 0 })
 
   // Scroll to top when page loads
   useEffect(() => {
@@ -209,6 +210,8 @@ function Bookshelf() {
   }
 
   // Update checking
+  const sleep = (ms) => new Promise((resolve) => setTimeout(resolve, ms))
+
   const handleCheckWaitingUpdates = async () => {
     if (checkingWaiting) return
     setCheckingWaiting(true)
@@ -216,7 +219,10 @@ function Bookshelf() {
     setError('')
     setErrorDetails([])
     setShowErrors(false)
+    setWaitingProgress({ current: 0, total: 0 })
     const now = new Date().toISOString()
+    const batchSize = 3
+    const delayMs = 1000
     try {
       const waitingBooks = books.filter((b) => b.status === 'waiting')
       if (waitingBooks.length === 0) {
@@ -224,69 +230,83 @@ function Bookshelf() {
         return
       }
 
+      setWaitingProgress({ current: 0, total: waitingBooks.length })
+
       const updatedIds = new Set()
+      const updates = []
 
-      const updates = await Promise.all(
-        waitingBooks.map(async (book) => {
-          const url = book.sources?.[0]?.url
-          if (!url) return { bookId: book.id, title: book.title, skipped: 'no_url' }
+      for (let i = 0; i < waitingBooks.length; i += batchSize) {
+        const batch = waitingBooks.slice(i, i + batchSize)
+        const batchResults = await Promise.all(
+          batch.map(async (book) => {
+            const url = book.sources?.[0]?.url
+            if (!url) return { bookId: book.id, title: book.title, skipped: 'no_url' }
 
-          const { data: payload, error: fnError } = await supabase.functions.invoke('fetch-latest', {
-            body: { url },
-          })
+            const { data: payload, error: fnError } = await supabase.functions.invoke('fetch-latest', {
+              body: { url },
+            })
 
-          if (fnError || !payload) return { bookId: book.id, title: book.title, error: fnError?.message || 'fetch failed' }
+            if (fnError || !payload) return { bookId: book.id, title: book.title, error: fnError?.message || 'fetch failed' }
 
-          const payloadLatest = payload.latest_chapter
-          const payloadUploaded = payload.last_uploaded_at
+            const payloadLatest = payload.latest_chapter
+            const payloadUploaded = payload.last_uploaded_at
 
-          const latestHasText = typeof payloadLatest === 'string' ? payloadLatest.trim() !== '' : Boolean(payloadLatest)
-          const uploadHasValue = Boolean(payloadUploaded)
-          const emptyPayload = !latestHasText && !uploadHasValue
+            const latestHasText = typeof payloadLatest === 'string' ? payloadLatest.trim() !== '' : Boolean(payloadLatest)
+            const uploadHasValue = Boolean(payloadUploaded)
+            const emptyPayload = !latestHasText && !uploadHasValue
 
-          if (emptyPayload) {
-            return { bookId: book.id, title: book.title, payload, skipped: 'empty_payload' }
-          }
-
-          // Compare latest chapter: normalize both strings and check if they differ
-          const normalizedPayloadLatest = latestHasText ? String(payloadLatest).trim() : ''
-          const normalizedCurrentLatest = (book.latest_chapter ?? '').trim()
-          const hasLatestChange = latestHasText && normalizedPayloadLatest !== normalizedCurrentLatest
-
-          // Compare upload dates: only count as change if dates are different days (ignore time of day)
-          const parsedPayloadUpload = uploadHasValue ? new Date(payloadUploaded) : null
-          const parsedCurrentUpload = book.last_uploaded_at ? new Date(book.last_uploaded_at) : null
-          const payloadUploadMs = parsedPayloadUpload && !isNaN(parsedPayloadUpload) ? parsedPayloadUpload.getTime() : null
-          const currentUploadMs = parsedCurrentUpload && !isNaN(parsedCurrentUpload) ? parsedCurrentUpload.getTime() : null
-          const payloadUploadDate = payloadUploadMs ? new Date(payloadUploadMs).toISOString().split('T')[0] : null
-          const currentUploadDate = currentUploadMs ? new Date(currentUploadMs).toISOString().split('T')[0] : null
-          const hasUploadChange = uploadHasValue && payloadUploadDate !== currentUploadDate
-
-          // Determine if any field changed (latest chapter or upload date)
-          const hasChange = hasLatestChange || hasUploadChange
-
-          if (!hasChange) {
-            return { bookId: book.id, title: book.title, payload, skipped: 'no_change' }
-          }
-
-          if (hasChange) {
-            const { error: updateError } = await supabase
-              .from('books')
-              .update({
-                latest_chapter: hasLatestChange ? payloadLatest : book.latest_chapter,
-                last_uploaded_at: hasUploadChange ? payloadUploaded : book.last_uploaded_at,
-                last_fetched_at: now,
-              })
-              .eq('id', book.id)
-
-            if (!updateError) {
-              updatedIds.add(book.id)
+            if (emptyPayload) {
+              return { bookId: book.id, title: book.title, payload, skipped: 'empty_payload' }
             }
-          }
 
-          return { bookId: book.id, title: book.title, payload }
-        })
-      )
+            // Compare latest chapter: normalize both strings and check if they differ
+            const normalizedPayloadLatest = latestHasText ? String(payloadLatest).trim() : ''
+            const normalizedCurrentLatest = (book.latest_chapter ?? '').trim()
+            const hasLatestChange = latestHasText && normalizedPayloadLatest !== normalizedCurrentLatest
+
+            // Compare upload dates: only count as change if dates are different days (ignore time of day)
+            const parsedPayloadUpload = uploadHasValue ? new Date(payloadUploaded) : null
+            const parsedCurrentUpload = book.last_uploaded_at ? new Date(book.last_uploaded_at) : null
+            const payloadUploadMs = parsedPayloadUpload && !isNaN(parsedPayloadUpload) ? parsedPayloadUpload.getTime() : null
+            const currentUploadMs = parsedCurrentUpload && !isNaN(parsedCurrentUpload) ? parsedCurrentUpload.getTime() : null
+            const payloadUploadDate = payloadUploadMs ? new Date(payloadUploadMs).toISOString().split('T')[0] : null
+            const currentUploadDate = currentUploadMs ? new Date(currentUploadMs).toISOString().split('T')[0] : null
+            const hasUploadChange = uploadHasValue && payloadUploadDate !== currentUploadDate
+
+            // Determine if any field changed (latest chapter or upload date)
+            const hasChange = hasLatestChange || hasUploadChange
+
+            if (!hasChange) {
+              return { bookId: book.id, title: book.title, payload, skipped: 'no_change' }
+            }
+
+            if (hasChange) {
+              const { error: updateError } = await supabase
+                .from('books')
+                .update({
+                  latest_chapter: hasLatestChange ? payloadLatest : book.latest_chapter,
+                  last_uploaded_at: hasUploadChange ? payloadUploaded : book.last_uploaded_at,
+                  last_fetched_at: now,
+                })
+                .eq('id', book.id)
+
+              if (!updateError) {
+                updatedIds.add(book.id)
+              }
+            }
+
+            return { bookId: book.id, title: book.title, payload }
+          })
+        )
+
+        updates.push(...batchResults)
+        setWaitingProgress((prev) => ({ current: Math.min(waitingBooks.length, (i + batch.length)), total: waitingBooks.length }))
+
+        // Throttle between batches (skip after last batch)
+        if (i + batchSize < waitingBooks.length) {
+          await sleep(delayMs)
+        }
+      }
 
       const updatesById = new Map(updates.map((u) => [u.bookId, u]))
 
@@ -341,6 +361,7 @@ function Bookshelf() {
       setError(err instanceof Error ? err.message : String(err))
     } finally {
       setCheckingWaiting(false)
+      setWaitingProgress({ current: 0, total: 0 })
     }
   }
 
@@ -432,6 +453,23 @@ function Bookshelf() {
               </button>
             )}
           </div>
+
+          {checkingWaiting && waitingProgress.total > 0 && (
+            <div className="notice" style={{ marginBottom: '12px', padding: '8px 12px' }}>
+              <p className="muted" style={{ margin: 0 }}>
+                Checking {waitingProgress.current}/{waitingProgress.total} (throttled)
+              </p>
+              <div style={{ marginTop: '6px', height: '6px', background: 'var(--panel)', borderRadius: '999px', overflow: 'hidden' }}>
+                <div
+                  style={{
+                    width: `${Math.round((waitingProgress.current / waitingProgress.total) * 100)}%`,
+                    height: '100%',
+                    background: 'var(--accent)',
+                  }}
+                />
+              </div>
+            </div>
+          )}
 
           {updateMessage && (
             <p className="muted" style={{ marginBottom: '12px' }}>

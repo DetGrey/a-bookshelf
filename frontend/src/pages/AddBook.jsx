@@ -3,6 +3,7 @@ import { useNavigate } from 'react-router-dom'
 import { supabase } from '../lib/supabaseClient.js'
 import { useAuth } from '../context/AuthProvider.jsx'
 import { createBook, addLink, getShelves, toggleBookShelf, STATUS_KEYS, STATUS } from '../lib/db.js'
+import CoverImage from '../components/CoverImage.jsx'
 import BookFormFields from '../components/BookFormFields.jsx'
 import MetadataFetcher from '../components/MetadataFetcher.jsx'
 import ShelfSelector from '../components/ShelfSelector.jsx'
@@ -243,7 +244,7 @@ function AddBook() {
 
       {metadata && (
         <section className="card metadata">
-          <div className="thumb" style={{ backgroundImage: `url(${metadata.image})` }} />
+          <CoverImage className="thumb" src={metadata.image} title={metadata.title} />
           <div className="stack">
             <p className="eyebrow">Preview</p>
             <h2>{metadata.title}</h2>

@@ -1,6 +1,7 @@
 import { useState } from 'react'
 import { Link } from 'react-router-dom'
 import { STATUS, truncateText, scoreToLabel } from '../lib/db.js'
+import CoverImage from './CoverImage.jsx'
 
 /**
  * BookCard Component
@@ -67,9 +68,12 @@ function BookCard({
     >
       <div className="card-head">
         <Link to={`/book/${book.id}`} style={{ display: 'block' }}>
-          <div
+          <CoverImage
             className="thumb"
-            style={{ backgroundImage: `url(${book.cover_url})`, cursor: 'pointer' }}
+            src={book.cover_url}
+            title={book.title}
+            alt={book.title}
+            style={{ cursor: 'pointer' }}
           />
         </Link>
         <div style={compact ? undefined : { minWidth: 0 }}>
