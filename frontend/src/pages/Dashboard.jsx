@@ -16,6 +16,8 @@ function Dashboard() {
   const [dupeLoading, setDupeLoading] = useState(false)
   const [dupeResults, setDupeResults] = useState([])
   const [dupeMessage, setDupeMessage] = useState('')
+  const [staleWaitingBooks, setStaleWaitingBooks] = useState([])
+  const [staleCheckMessage, setStaleCheckMessage] = useState('')
   const [genreMoreExpanded, setGenreMoreExpanded] = useState(false)
   const fileInputRef = useRef(null)
 
@@ -143,6 +145,44 @@ function Dashboard() {
     setDupeResults(pairs)
     setDupeMessage(pairs.length ? '' : 'No likely duplicates found.')
     setDupeLoading(false)
+  }
+
+  const handleCheckStaleWaiting = () => {
+    setStaleWaitingBooks([])
+    setStaleCheckMessage('')
+    const sixMonthsAgo = new Date()
+    sixMonthsAgo.setMonth(sixMonthsAgo.getMonth() - 6)
+    
+    const waitingBooks = books.filter((b) => b.status === 'waiting')
+    const staleBooks = waitingBooks.filter((book) => {
+      // Check if series has ended (but not season end)
+      const chapterLower = (book.latest_chapter || '').toLowerCase()
+      const hasEnd = chapterLower.includes('end')
+      const isSeasonEnd = /season\s*\d+\s*end|s\d+\s*end/i.test(chapterLower)
+      const seriesEnded = hasEnd && !isSeasonEnd
+      
+      // Check if not updated in 6+ months
+      let isStale = false
+      if (book.last_uploaded_at) {
+        const lastUpload = new Date(book.last_uploaded_at)
+        isStale = lastUpload < sixMonthsAgo
+      }
+      
+      return seriesEnded || isStale
+    })
+    
+    staleBooks.sort((a, b) => {
+      const dateA = new Date(a.last_uploaded_at || 0)
+      const dateB = new Date(b.last_uploaded_at || 0)
+      return dateA - dateB
+    })
+    
+    setStaleWaitingBooks(staleBooks)
+    setStaleCheckMessage(
+      staleBooks.length
+        ? `Found ${staleBooks.length} book${staleBooks.length > 1 ? 's' : ''} that may need status update`
+        : 'All waiting books appear active'
+    )
   }
 
   // Stats: average score (ignore 0) and perfect scores
@@ -355,6 +395,65 @@ function Dashboard() {
                 </div>
               </div>
             ))}
+          </div>
+        )}
+      </section>
+
+      <section className="card quality-check-section">
+        <div className="block-head quality-check-header">
+          <div>
+            <p className="eyebrow m-0">Quality check</p>
+            <h2 className="m-0">Stale waiting books</h2>
+            <p className="muted m-0">Books in waiting that haven't updated in 6+ months or have ended</p>
+          </div>
+          <button
+            className="ghost quality-check-button"
+            onClick={handleCheckStaleWaiting}
+            disabled={loading || books.length === 0}
+          >
+            Check for stale books
+          </button>
+        </div>
+        {staleCheckMessage && <p className="muted mt-4">{staleCheckMessage}</p>}
+        {staleWaitingBooks.length > 0 && (
+          <div className="stack duplicate-results">
+            {staleWaitingBooks.map((book) => {
+              const chapterLower = (book.latest_chapter || '').toLowerCase()
+              const hasEnd = chapterLower.includes('end')
+              const isSeasonEnd = /season\s*\d+\s*end|s\d+\s*end/i.test(chapterLower)
+              const seriesEnded = hasEnd && !isSeasonEnd
+              
+              const lastUpload = book.last_uploaded_at ? new Date(book.last_uploaded_at) : null
+              const monthsAgo = lastUpload ? Math.floor((Date.now() - lastUpload.getTime()) / (1000 * 60 * 60 * 24 * 30)) : null
+              
+              let reason = ''
+              let badge = ''
+              if (seriesEnded) {
+                reason = `Series ended: "${book.latest_chapter}"`
+                badge = 'Ended'
+              } else if (monthsAgo !== null) {
+                reason = `Last update: ${lastUpload.toLocaleDateString()} (${monthsAgo} months ago)`
+                badge = `${monthsAgo} months`
+              }
+              
+              return (
+                <div key={book.id} className="card duplicate-item-card">
+                  <div className="duplicate-comparison">
+                    <div className="duplicate-titles-wrapper">
+                      <div className="duplicate-titles-list">
+                        <Link to={`/book/${book.id}`} target="_blank" rel="noreferrer">
+                          <strong>{book.title}</strong>
+                        </Link>
+                        <p className="muted" style={{ fontSize: '0.85em', margin: '4px 0 0 0' }}>
+                          {reason}
+                        </p>
+                      </div>
+                    </div>
+                    <span className="pill ghost">{badge}</span>
+                  </div>
+                </div>
+              )
+            })}
           </div>
         )}
       </section>
