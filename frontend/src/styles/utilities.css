@@ -302,10 +302,6 @@ button:disabled {
   border-color: #a78bfa !important;
 }
 
-.score-pill {
-  /* Color applied via inline style for dynamic scoring */
-}
-
 .notes-text {
   margin-top: 8px;
   font-size: 0.9rem;
@@ -349,10 +345,6 @@ button:disabled {
 
 .shelf-indicator {
   font-size: 0.8rem;
-}
-
-.source-link {
-  /* Link styling handled by ghost class */
 }
 
 .cover-link {
@@ -463,6 +455,9 @@ button:disabled {
 
 .dashboard-section-header {
   margin-bottom: 8px;
+  display: flex;
+  flex-direction: column;
+  gap: 4px;
 }
 
 .dashboard-section-header h2 {
@@ -471,6 +466,14 @@ button:disabled {
 
 .dashboard-section-header p {
   margin: 0;
+}
+
+@media (min-width: 600px) {
+  .dashboard-section-header {
+    flex-direction: row;
+    align-items: center;
+    gap: 12px;
+  }
 }
 
 /* Genre breakdown */

@@ -69,7 +69,15 @@ function BookFormFields({ form, onChange }) {
             type="number"
             min="1"
             value={form.times_read ?? 1}
-            onChange={(e) => handleChange('times_read', Math.max(1, Number(e.target.value) || 1))}
+            onChange={(e) => handleChange('times_read', e.target.value === '' ? '' : Number(e.target.value))}
+            onBlur={(e) => {
+              const val = Number(e.target.value)
+              if (!Number.isFinite(val) || val < 1) {
+                handleChange('times_read', 1)
+              } else {
+                handleChange('times_read', Math.round(val))
+              }
+            }}
           />
         </label>
         <label className="field">
@@ -81,7 +89,20 @@ function BookFormFields({ form, onChange }) {
             value={form.chapter_count ?? ''}
             onChange={(e) => {
               const val = e.target.value;
-              handleChange('chapter_count', val === '' ? null : Math.max(0, Number(val) || 0))
+              handleChange('chapter_count', val === '' ? '' : Number(val))
+            }}
+            onBlur={(e) => {
+              const val = e.target.value;
+              if (val === '') {
+                handleChange('chapter_count', null)
+              } else {
+                const n = Number(val)
+                if (!Number.isFinite(n) || n < 0) {
+                  handleChange('chapter_count', null)
+                } else {
+                  handleChange('chapter_count', Math.round(n))
+                }
+              }
             }}
           />
         </label>

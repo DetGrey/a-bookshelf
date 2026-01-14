@@ -28,6 +28,7 @@ function BookCard({
   activeGenres = [],
   setActiveGenres,
   compact = false,
+  onOpenBook,
 }) {
   const [showShelfMenu, setShowShelfMenu] = useState(false)
 
@@ -61,9 +62,9 @@ function BookCard({
   }
 
   return (
-    <article className="card" style={{ zIndex: showShelfMenu ? 50 : 0 }}>
+    <article className="card" style={{ zIndex: showShelfMenu ? 50 : 0 }} data-book-id={book.id}>
       <div className="card-head">
-        <Link to={`/book/${book.id}`} className="cover-link">
+        <Link to={`/book/${book.id}`} className="cover-link" onClick={() => onOpenBook?.(book.id)}>
           <CoverImage
             className="thumb cursor-pointer"
             src={book.cover_url}
@@ -200,7 +201,7 @@ function BookCard({
               )}
             </div>
           )}
-          <Link to={`/book/${book.id}`} className="primary">
+          <Link to={`/book/${book.id}`} className="primary" onClick={() => onOpenBook?.(book.id)}>
             Details
           </Link>
         </div>

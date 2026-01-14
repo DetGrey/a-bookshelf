@@ -1,12 +1,14 @@
 import { useEffect, useState } from 'react'
 import { Link, useNavigate, useParams } from 'react-router-dom'
 import { supabase } from '../lib/supabaseClient.js'
-import { getBook, updateBook, addLink, deleteLink, deleteBook, getRelatedBooks, addRelatedBook, deleteRelatedBook, STATUS, scoreToLabel, SCORE_OPTIONS } from '../lib/db.js'
+import { getBook, updateBook, addLink, deleteLink, deleteBook, getRelatedBooks, addRelatedBook, deleteRelatedBook, STATUS, scoreToLabel, SCORE_OPTIONS, getShelves, toggleBookShelf, getBookShelvesForBooks } from '../lib/db.js'
 import { usePageTitle } from '../lib/usePageTitle.js'
+import { useAuth } from '../context/AuthProvider.jsx'
 import CoverImage from '../components/CoverImage.jsx'
 import BookFormFields from '../components/BookFormFields.jsx'
 import MetadataFetcher from '../components/MetadataFetcher.jsx'
 import SourceManager from '../components/SourceManager.jsx'
+import ShelfSelector from '../components/ShelfSelector.jsx'
 import BookSearchLinker from '../components/BookSearchLinker.jsx'
 import { useBooks } from '../context/BooksProvider.jsx'
 
@@ -14,6 +16,7 @@ function BookDetails() {
   const { bookId } = useParams()
   const navigate = useNavigate()
   const { refetch } = useBooks()
+  const { user } = useAuth()
 
   const [book, setBook] = useState(null)
   const [loading, setLoading] = useState(true)
@@ -51,8 +54,16 @@ function BookDetails() {
   const [relatedBooks, setRelatedBooks] = useState([])
   const [pendingRelatedBooks, setPendingRelatedBooks] = useState([])
   const [deletedRelatedBookIds, setDeletedRelatedBookIds] = useState([])
+  const [customShelves, setCustomShelves] = useState([])
+  const [selectedShelves, setSelectedShelves] = useState([])
+  const [currentShelves, setCurrentShelves] = useState([])
 
   usePageTitle(book?.title ? `${book.title}` : 'Book')
+
+  // Always start at top on book details to avoid inheriting list scroll
+  useEffect(() => {
+    window.scrollTo({ top: 0, behavior: 'auto' })
+  }, [bookId])
 
   const formatDatetimeLocal = (isoString) => {
     if (!isoString) return ''
@@ -98,6 +109,14 @@ function BookDetails() {
         // Load related books
         const related = await getRelatedBooks(bookId)
         if (mounted) setRelatedBooks(related)
+        
+        // Load current shelves for this book
+        const shelfMappings = await getBookShelvesForBooks([bookId])
+        if (mounted) {
+          const currentShelfIds = shelfMappings.map((sb) => sb.shelf_id)
+          setCurrentShelves(currentShelfIds)
+          setSelectedShelves(currentShelfIds)
+        }
       } catch (err) {
         if (mounted) setError(err.message)
       } finally {
@@ -109,6 +128,24 @@ function BookDetails() {
       mounted = false
     }
   }, [bookId])
+
+  // Load custom shelves
+  useEffect(() => {
+    let mounted = true
+    async function loadShelves() {
+      if (!user) return
+      try {
+        const shelves = await getShelves(user.id)
+        if (mounted) setCustomShelves(shelves)
+      } catch (err) {
+        console.error('Failed to load shelves:', err)
+      }
+    }
+    loadShelves()
+    return () => {
+      mounted = false
+    }
+  }, [user])
 
   if (loading) {
     return (
@@ -199,6 +236,21 @@ function BookDetails() {
       await deleteRelatedBook(relationshipId)
     }
     
+    // Handle shelf changes
+    for (const shelfId of selectedShelves) {
+      if (!currentShelves.includes(shelfId)) {
+        // Add shelf
+        await toggleBookShelf(book.id, shelfId)
+      }
+    }
+    for (const shelfId of currentShelves) {
+      if (!selectedShelves.includes(shelfId)) {
+        // Remove shelf
+        await toggleBookShelf(book.id, shelfId)
+      }
+    }
+    setCurrentShelves(selectedShelves)
+    
     // Clear pending changes
     setPendingRelatedBooks([])
     setDeletedRelatedBookIds([])
@@ -207,6 +259,12 @@ function BookDetails() {
     setEditForm((prev) => ({ ...prev, times_read: timesRead }))
     refetch()
     setIsEditing(false)
+  }
+
+  const handleToggleShelf = (shelfId) => {
+    setSelectedShelves((prev) =>
+      prev.includes(shelfId) ? prev.filter((id) => id !== shelfId) : [...prev, shelfId]
+    )
   }
 
   const handleDelete = async () => {
@@ -449,7 +507,7 @@ function BookDetails() {
   return (
     <div className="page">
       <div className="page-head">
-        <Link to="/" className="ghost">← Back to Library</Link>
+        <Link to="/bookshelf" className="ghost">← Back to Library</Link>
         {!isEditing && (
           <div className="flex gap-8">
             <button className="ghost" onClick={() => {
@@ -484,6 +542,12 @@ function BookDetails() {
           />
 
           <BookFormFields form={editForm} onChange={setEditForm} />
+
+          <ShelfSelector
+            customShelves={customShelves}
+            selectedShelves={selectedShelves}
+            onToggleShelf={handleToggleShelf}
+          />
 
           <SourceManager
             sources={sources}
@@ -623,6 +687,26 @@ function BookDetails() {
             onRemoveSource={handleRemoveSource}
             isEditing={false}
           />
+
+          {currentShelves.length > 0 && (
+            <section className="card">
+              <p className="eyebrow">Shelves</p>
+              <div className="pill-row">
+                {currentShelves.map((shelfId) => {
+                  const shelf = customShelves.find((s) => s.id === shelfId)
+                  return shelf ? (
+                    <button
+                      key={shelfId}
+                      className="pill ghost"
+                      onClick={() => navigate(`/bookshelf?shelf=${encodeURIComponent(shelf.id)}`)}
+                    >
+                      {shelf.name}
+                    </button>
+                  ) : null
+                })}
+              </div>
+            </section>
+          )}
 
           {relatedBooks.length > 0 && (
             <section className="card">

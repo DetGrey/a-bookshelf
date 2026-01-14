@@ -104,8 +104,10 @@
 
 .shelf-controls-row {
   display: flex;
-  flex-direction: column;
+  flex-direction: row;
   gap: 10px;
+  align-items: flex-end;
+  flex-wrap: wrap;
 }
 
 @media (min-width: 768px) {
@@ -114,8 +116,7 @@
   }
 
   .shelf-controls-row {
-    flex-direction: row;
-    align-items: flex-end;
+    flex-wrap: nowrap;
   }
 }
 

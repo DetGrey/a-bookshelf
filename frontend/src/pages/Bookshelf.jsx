@@ -1,11 +1,10 @@
-import { useEffect, useState } from 'react'
+import { useEffect, useRef, useState } from 'react'
 import { Link } from 'react-router-dom'
 import { useAuth } from '../context/AuthProvider.jsx'
 import { useBooks } from '../context/BooksProvider.jsx'
 import { toggleBookShelf, createShelf, deleteShelf, getShelves, STATUS } from '../lib/db.js'
 import { supabase } from '../lib/supabaseClient.js'
 import { usePageTitle } from '../lib/usePageTitle.js'
-import BookCard from '../components/BookCard.jsx'
 import ShelfSidebar from '../components/ShelfSidebar.jsx'
 import BookGrid from '../components/BookGrid.jsx'
 import GenreFilter from '../components/GenreFilter.jsx'
@@ -53,20 +52,71 @@ function Bookshelf() {
   const [showErrors, setShowErrors] = useState(false)
   const [waitingProgress, setWaitingProgress] = useState({ current: 0, total: 0 })
   const [updateDetails, setUpdateDetails] = useState([])
-  const [currentPage, setCurrentPage] = useState(1)
+  const [currentPage, setCurrentPage] = useState(() => {
+    const stored = Number(sessionStorage.getItem('bookshelfPage'))
+    return Number.isFinite(stored) && stored > 0 ? stored : 1
+  })
+  const [scrollRestored, setScrollRestored] = useState(false)
+  const resultsRef = useRef(null)
+  const lastFilterKeyRef = useRef('')
   const booksPerPage = 20
 
-  // Scroll to top when page loads
+  const getNavOffset = () => (document.querySelector('header.nav')?.offsetHeight ?? 0) + 12
+
+  const handleBookOpen = (bookId) => {
+    sessionStorage.setItem('bookshelfAnchor', bookId)
+    sessionStorage.setItem('bookshelfScrollPos', window.scrollY.toString())
+    sessionStorage.setItem('bookshelfPage', currentPage.toString())
+  }
+
+  // Scroll to results header when current page changes, accounting for nav height
   useEffect(() => {
-    window.scrollTo(0, 0)
+    if (!scrollRestored) return
+    const target = resultsRef.current
+    const offset = getNavOffset()
+    if (target) {
+      const top = target.getBoundingClientRect().top + window.scrollY
+      window.scrollTo({ top: Math.max(top - offset, 0), behavior: 'smooth' })
+    } else {
+      window.scrollTo({ top: 0, behavior: 'smooth' })
+    }
+  }, [currentPage, scrollRestored])
+
+  // Persist scroll position while browsing
+  useEffect(() => {
+    const handleScroll = () => {
+      sessionStorage.setItem('bookshelfScrollPos', window.scrollY.toString())
+    }
+
+    window.addEventListener('scroll', handleScroll)
+    return () => window.removeEventListener('scroll', handleScroll)
   }, [])
 
-  // Clear update messages and reset pagination when shelf or filters change
+  // Persist current page
   useEffect(() => {
+    sessionStorage.setItem('bookshelfPage', currentPage.toString())
+  }, [currentPage])
+
+  // Clear update messages and reset pagination when shelf or filters change (skip initial load to preserve stored page)
+  useEffect(() => {
+    const key = [
+      activeShelf,
+      activeGenres.join(','),
+      genreFilterMode,
+      chapterFilter.mode,
+      chapterFilter.value,
+      languageFilter,
+      searchQuery,
+    ].join('|')
+
+    if (lastFilterKeyRef.current && lastFilterKeyRef.current !== key) {
+      setCurrentPage(1)
+    }
+
+    lastFilterKeyRef.current = key
     setUpdateMessage('')
     setErrorDetails([])
     setShowErrors(false)
-    setCurrentPage(1)
   }, [activeShelf, activeGenres, genreFilterMode, chapterFilter, languageFilter, searchQuery])
 
   // When searching, prefer relevance sort; reset to date added when clearing search
@@ -80,15 +130,93 @@ function Bookshelf() {
     // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [searchQuery])
 
-  // Read genre from URL params on mount
+  // Read all filters from URL params on mount
   useEffect(() => {
     const params = new URLSearchParams(window.location.search)
+    
+    // Read shelf/status
+    const shelfParam = params.get('shelf')
+    if (shelfParam) {
+      setActiveShelf(decodeURIComponent(shelfParam))
+    }
+    
+    // Read genre(s)
     const genreParam = params.get('genre')
     if (genreParam) {
       setActiveGenres([decodeURIComponent(genreParam)])
       setGenreFilterOpen(true)
     }
+    
+    // Read language
+    const languageParam = params.get('language')
+    if (languageParam) {
+      setLanguageFilter(decodeURIComponent(languageParam))
+    }
+    
+    // Read search
+    const searchParam = params.get('search')
+    if (searchParam) {
+      setSearchQuery(decodeURIComponent(searchParam))
+    }
+    
+    // Read sort
+    const sortParam = params.get('sort')
+    if (sortParam) {
+      setSortBy(decodeURIComponent(sortParam))
+    }
+    
+    // Read sort direction
+    const directionParam = params.get('direction')
+    if (directionParam) {
+      setSortDirection(decodeURIComponent(directionParam))
+    }
+    
+    // Read chapter filter
+    const chapterModeParam = params.get('chapterMode')
+    const chapterValueParam = params.get('chapterValue')
+    if (chapterValueParam) {
+      setChapterFilter({
+        mode: chapterModeParam || 'max',
+        value: Number(chapterValueParam)
+      })
+      setChapterFilterOpen(true)
+    }
   }, [])
+
+  // Save filters to URL query params
+  useEffect(() => {
+    // Build query string from current filters
+    const params = new URLSearchParams()
+    
+    if (activeShelf && activeShelf !== 'all') {
+      params.set('shelf', activeShelf)
+    }
+    if (activeGenres.length > 0) {
+      params.set('genre', activeGenres[0])
+    }
+    if (languageFilter && languageFilter !== 'all') {
+      params.set('language', languageFilter)
+    }
+    if (searchQuery) {
+      params.set('search', searchQuery)
+    }
+    if (sortBy && sortBy !== 'created') {
+      params.set('sort', sortBy)
+    }
+    if (sortDirection !== 'desc') {
+      params.set('direction', sortDirection)
+    }
+    if (chapterFilter.value !== null) {
+      params.set('chapterMode', chapterFilter.mode)
+      params.set('chapterValue', chapterFilter.value)
+    }
+    
+    const queryString = params.toString()
+    const newUrl = queryString ? `?${queryString}` : window.location.pathname
+    
+    // Update URL without pushing to history
+    window.history.replaceState(null, '', newUrl)
+  }, [activeShelf, activeGenres, languageFilter, searchQuery, sortBy, sortDirection, chapterFilter])
 
   // Load custom shelves
   useEffect(() => {
@@ -487,6 +615,63 @@ function Bookshelf() {
   const endIndex = startIndex + booksPerPage
   const paginatedBooks = filteredBooks.slice(startIndex, endIndex)
 
+  // First effect: restore page state and handle skip-restore
+  useEffect(() => {
+    if (scrollRestored) return
+    const skipRestore = sessionStorage.getItem('bookshelfSkipRestore')
+    if (skipRestore) {
+      sessionStorage.removeItem('bookshelfSkipRestore')
+      sessionStorage.removeItem('bookshelfAnchor')
+      sessionStorage.removeItem('bookshelfScrollPos')
+      sessionStorage.removeItem('bookshelfPage')
+      window.scrollTo({ top: 0, behavior: 'auto' })
+      setScrollRestored(true)
+      return
+    }
+    
+    const savedPage = Number(sessionStorage.getItem('bookshelfPage'))
+    if (Number.isFinite(savedPage) && savedPage > 0 && savedPage !== currentPage) {
+      setCurrentPage(savedPage)
+      // Don't set scrollRestored yet; let the second effect handle scrolling
+      return
+    }
+    
+    // If page didn't need updating, proceed to scroll restoration
+    setScrollRestored(true)
+  }, [scrollRestored, currentPage])
+
+  // Second effect: scroll after page state and DOM are ready
+  useEffect(() => {
+    if (!scrollRestored) return
+    const anchorId = sessionStorage.getItem('bookshelfAnchor')
+    const savedScrollPos = sessionStorage.getItem('bookshelfScrollPos')
+    const pos = savedScrollPos ? parseInt(savedScrollPos, 10) : 0
+
+    const scrollToSaved = () => {
+      const offset = getNavOffset()
+      const anchorEl = anchorId ? document.querySelector(`[data-book-id="${anchorId}"]`) : null
+      if (anchorEl) {
+        const top = anchorEl.getBoundingClientRect().top + window.scrollY
+        window.scrollTo({ top: Math.max(top - offset, 0), behavior: 'auto' })
+      } else if (pos > 0) {
+        window.scrollTo({ top: Math.max(pos - offset, 0), behavior: 'auto' })
+      }
+    }
+
+    // Delay to allow images/layout to settle
+    let timeoutId
+    requestAnimationFrame(() => {
+      requestAnimationFrame(() => {
+        scrollToSaved()
+        // Re-apply scroll again after a delay to counter image loading shifts
+        timeoutId = setTimeout(scrollToSaved, 300)
+      })
+    })
+
+    sessionStorage.removeItem('bookshelfAnchor')
+    return () => clearTimeout(timeoutId)
+  }, [scrollRestored, paginatedBooks.length])
+
   return (
     <div className="page">
       <div className="page-head">
@@ -577,7 +762,7 @@ function Bookshelf() {
           />
 
           {/* Results count with check updates button for waiting shelf */}
-          <div className="results-header">
+          <div className="results-header" id="bookshelf-results" ref={resultsRef}>
             <p className="muted">
               {filteredBooks.length} {filteredBooks.length === 1 ? 'book' : 'books'} found{' '}
               {loading && '(loading...)'}
@@ -670,9 +855,10 @@ function Bookshelf() {
             onAddToShelf={handleToggleBookShelf}
             activeGenres={activeGenres}
             setActiveGenres={setActiveGenres}
+            onOpenBook={handleBookOpen}
           />
 
-          {/* Pagination Controls */}
+          {/* Pagination Controls (bottom) */}
           {totalPages > 1 && (
             <div className="pagination-controls">
               <div className="pagination-info">
@@ -681,10 +867,7 @@ function Bookshelf() {
               <div className="pagination-buttons">
                 <button
                   className="ghost"
-                  onClick={() => {
-                    setCurrentPage((p) => Math.max(1, p - 1))
-                    document.querySelector('.card-grid')?.scrollIntoView({ behavior: 'smooth', block: 'start' })
-                  }}
+                  onClick={() => setCurrentPage((p) => Math.max(1, p - 1))}
                   disabled={currentPage === 1}
                 >
                   ← Previous
@@ -692,10 +875,7 @@ function Bookshelf() {
                 <select
                   className="page-selector"
                   value={currentPage}
-                  onChange={(e) => {
-                    setCurrentPage(Number(e.target.value))
-                    document.querySelector('.card-grid')?.scrollIntoView({ behavior: 'smooth', block: 'start' })
-                  }}
+                  onChange={(e) => setCurrentPage(Number(e.target.value))}
                 >
                   {Array.from({ length: totalPages }, (_, i) => i + 1).map((page) => (
                     <option key={page} value={page}>
@@ -705,10 +885,7 @@ function Bookshelf() {
                 </select>
                 <button
                   className="ghost"
-                  onClick={() => {
-                    setCurrentPage((p) => Math.min(totalPages, p + 1))
-                    document.querySelector('.card-grid')?.scrollIntoView({ behavior: 'smooth', block: 'start' })
-                  }}
+                  onClick={() => setCurrentPage((p) => Math.min(totalPages, p + 1))}
                   disabled={currentPage === totalPages}
                 >
                   Next →
@@ -716,6 +893,7 @@ function Bookshelf() {
               </div>
             </div>
           )}
+
         </div>
       </div>
     </div>

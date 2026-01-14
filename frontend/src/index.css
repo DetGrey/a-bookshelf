@@ -87,6 +87,7 @@ p {
 }
 
 /* Mobile-first navigation */
+/* Mobile-first navigation */
 .nav {
   display: flex;
   flex-direction: column;
@@ -98,6 +99,14 @@ p {
   backdrop-filter: blur(14px);
   background: rgba(6, 7, 15, 0.95);
   z-index: 1000;
+  transition: transform 0.3s ease;
+}
+
+/* Hide nav on mobile when scrolling down */
+@media (max-width: 599px) {
+  .nav.nav-hidden {
+    transform: translateY(-100%);
+  }
 }
 
 .brand {

@@ -3,9 +3,10 @@ import { Link } from 'react-router-dom'
 import { useAuth } from '../context/AuthProvider.jsx'
 import { useBooks } from '../context/BooksProvider.jsx'
 import { getBackup, restoreBackup, STATUS } from '../lib/db.js'
-import { supabase } from '../lib/supabaseClient.js'
 import { usePageTitle } from '../lib/usePageTitle.js'
 import BookCard from '../components/BookCard.jsx'
+import QualityChecks from '../components/QualityChecks.jsx'
+import GenreConsolidator from '../components/GenreConsolidator.jsx'
 
 function Dashboard() {
   const { user } = useAuth()
@@ -14,15 +15,29 @@ function Dashboard() {
   const [backupError, setBackupError] = useState('')
   const [restoreLoading, setRestoreLoading] = useState(false)
   const [restoreMessage, setRestoreMessage] = useState('')
-  const [dupeLoading, setDupeLoading] = useState(false)
-  const [dupeResults, setDupeResults] = useState([])
-  const [dupeMessage, setDupeMessage] = useState('')
-  const [staleWaitingBooks, setStaleWaitingBooks] = useState([])
-  const [staleCheckMessage, setStaleCheckMessage] = useState('')
+  const [refreshKey, setRefreshKey] = useState(0)
+
+  // Load cached results on mount so user sees previous findings without re-clicking
+  useEffect(() => {
+    const dupeCached = sessionStorage.getItem('dupeCache')
+    const staleCached = sessionStorage.getItem('staleCache')
+    // Cache is now handled by individual components
+  }, [])
   const [genreMoreExpanded, setGenreMoreExpanded] = useState(false)
+  const [booksPerStatus, setBooksPerStatus] = useState(6)
   const fileInputRef = useRef(null)
 
   usePageTitle('Dashboard')
+
+  // Update books per status based on screen size
+  useEffect(() => {
+    const updateBooksPerStatus = () => {
+      setBooksPerStatus(window.innerWidth < 768 ? 3 : 4)
+    }
+    updateBooksPerStatus()
+    window.addEventListener('resize', updateBooksPerStatus)
+    return () => window.removeEventListener('resize', updateBooksPerStatus)
+  }, [])
 
   const loadBooks = useCallback(async () => {
     if (!user) return
@@ -33,7 +48,7 @@ function Dashboard() {
     loadBooks()
   }, [user, loadBooks])
 
-  const sectionKeys = ['reading', 'plan_to_read', 'waiting', 'completed', 'dropped']
+  const sectionKeys = ['reading', 'plan_to_read', 'waiting', 'completed']
   const lastUpdated = books[0]?.updated_at
 
   const waitingCount = books.filter((b) => b.status === 'waiting').length
@@ -87,144 +102,7 @@ function Dashboard() {
     }
   }
 
-  // Duplicate title finder (simple Dice coefficient over bigrams + substring check)
-  const normalizeTitle = (title = '') => title.toLowerCase().replace(/[^a-z0-9\s]/g, ' ').replace(/\s+/g, ' ').trim()
-  const bigrams = (text) => {
-    if (!text) return []
-    if (text.length === 1) return [text]
-    const grams = []
-    for (let i = 0; i < text.length - 1; i += 1) {
-      grams.push(text.slice(i, i + 2))
-    }
-    return grams
-  }
-  const diceSimilarity = (a, b) => {
-    const aBigrams = bigrams(a)
-    const bBigrams = bigrams(b)
-    if (!aBigrams.length || !bBigrams.length) return 0
-    const counts = new Map()
-    aBigrams.forEach((g) => counts.set(g, (counts.get(g) || 0) + 1))
-    let overlap = 0
-    bBigrams.forEach((g) => {
-      const count = counts.get(g) || 0
-      if (count > 0) {
-        overlap += 1
-        counts.set(g, count - 1)
-      }
-    })
-    return (2 * overlap) / (aBigrams.length + bBigrams.length)
-  }
 
-  const handleFindDuplicates = async () => {
-    setDupeLoading(true)
-    setDupeResults([])
-    setDupeMessage('')
-
-    // Build a set of related pairs so we can skip known intentional links
-    const bookIds = books.map((b) => b.id)
-    if (bookIds.length === 0) {
-      setDupeMessage('No books to check.')
-      setDupeLoading(false)
-      return
-    }
-    const relatedPairs = new Set()
-
-    try {
-      const { data: forward, error: forwardError } = await supabase
-        .from('related_books')
-        .select('book_id, related_book_id')
-        .in('book_id', bookIds)
-      if (forwardError) throw forwardError
-
-      const { data: reverse, error: reverseError } = await supabase
-        .from('related_books')
-        .select('book_id, related_book_id')
-        .in('related_book_id', bookIds)
-      if (reverseError) throw reverseError
-
-      ;[...(forward ?? []), ...(reverse ?? [])].forEach((r) => {
-        if (!r.book_id || !r.related_book_id) return
-        const [a, b] = r.book_id < r.related_book_id ? [r.book_id, r.related_book_id] : [r.related_book_id, r.book_id]
-        relatedPairs.add(`${a}-${b}`)
-      })
-    } catch (err) {
-      setDupeMessage(err instanceof Error ? err.message : 'Failed to check duplicates')
-      setDupeLoading(false)
-      return
-    }
-
-    const normalized = books
-      .map((b) => ({
-        ...b,
-        norm: normalizeTitle(b.title || ''),
-      }))
-      .filter((b) => b.norm.length > 0)
-
-    const pairs = []
-    for (let i = 0; i < normalized.length; i += 1) {
-      for (let j = i + 1; j < normalized.length; j += 1) {
-        const a = normalized[i]
-        const b = normalized[j]
-
-        // Skip if the books are already linked as related
-        const key = a.id < b.id ? `${a.id}-${b.id}` : `${b.id}-${a.id}`
-        if (relatedPairs.has(key)) continue
-
-        const sim = diceSimilarity(a.norm, b.norm)
-        const contains = a.norm.includes(b.norm) || b.norm.includes(a.norm)
-        if (sim >= 0.7 || contains) {
-          pairs.push({
-            a,
-            b,
-            score: Math.max(sim, contains ? 0.7 : sim),
-          })
-        }
-      }
-    }
-
-    pairs.sort((x, y) => y.score - x.score)
-    setDupeResults(pairs)
-    setDupeMessage(pairs.length ? '' : 'No likely duplicates found.')
-    setDupeLoading(false)
-  }
-
-  const handleCheckStaleWaiting = () => {
-    setStaleWaitingBooks([])
-    setStaleCheckMessage('')
-    const sixMonthsAgo = new Date()
-    sixMonthsAgo.setMonth(sixMonthsAgo.getMonth() - 6)
-    
-    const waitingBooks = books.filter((b) => b.status === 'waiting')
-    const staleBooks = waitingBooks.filter((book) => {
-      // Check if series has ended (but not season end)
-      const chapterLower = (book.latest_chapter || '').toLowerCase()
-      const hasEnd = chapterLower.includes('end')
-      const isSeasonEnd = /season\s*\d+\s*end|s\d+\s*end/i.test(chapterLower)
-      const seriesEnded = hasEnd && !isSeasonEnd
-      
-      // Check if not updated in 6+ months
-      let isStale = false
-      if (book.last_uploaded_at) {
-        const lastUpload = new Date(book.last_uploaded_at)
-        isStale = lastUpload < sixMonthsAgo
-      }
-      
-      return seriesEnded || isStale
-    })
-    
-    staleBooks.sort((a, b) => {
-      const dateA = new Date(a.last_uploaded_at || 0)
-      const dateB = new Date(b.last_uploaded_at || 0)
-      return dateA - dateB
-    })
-    
-    setStaleWaitingBooks(staleBooks)
-    setStaleCheckMessage(
-      staleBooks.length
-        ? `Found ${staleBooks.length} book${staleBooks.length > 1 ? 's' : ''} that may need status update`
-        : 'All waiting books appear active'
-    )
-  }
 
   // Stats: average score (ignore 0) and perfect scores
   const scoredBooks = books.filter((b) => {
@@ -380,7 +258,7 @@ function Dashboard() {
         const sectionBooks = books
           .filter((book) => book.status === key)
           .sort((a, b) => new Date(b.updated_at) - new Date(a.updated_at))
-          .slice(0, 5)
+          .slice(0, booksPerStatus)
         if (!sectionBooks.length) return null
         return (
           <section key={key} className="block">
@@ -389,7 +267,7 @@ function Dashboard() {
                 {key === 'reading' ? 'Currently reading' : STATUS[key]}
               </h2>
             </div>
-            <div className="card-grid">
+            <div className="card-grid dashboard-status-grid">
               {sectionBooks.map((book) => (
                 <BookCard
                   key={book.id}
@@ -405,98 +283,15 @@ function Dashboard() {
       <section className="card quality-check-section">
         <div className="block-head quality-check-header">
           <div>
-            <p className="eyebrow m-0">Quality check</p>
-            <h2 className="m-0">Find possible duplicate titles</h2>
+            <p className="eyebrow m-0">Tools</p>
+            <h2 className="m-0">Quality checks & tools</h2>
+            <p className="muted m-0">Audit and improve your library</p>
           </div>
-          <button
-            className="ghost quality-check-button"
-            onClick={handleFindDuplicates}
-            disabled={dupeLoading || loading || books.length === 0}
-          >
-            {dupeLoading ? 'Scanning…' : 'Scan for duplicates'}
-          </button>
         </div>
-        {dupeMessage && <p className="muted mt-4">{dupeMessage}</p>}
-        {dupeResults.length > 0 && (
-          <div className="stack duplicate-results">
-            {dupeResults.map(({ a, b, score }) => (
-              <div key={`${a.id}-${b.id}`} className="card duplicate-item-card">
-                <div className="duplicate-comparison">
-                  <div className="duplicate-titles-wrapper">
-                    <div className="duplicate-titles-list">
-                      <Link to={`/book/${a.id}`} target="_blank" rel="noreferrer">
-                        <strong>{a.title}</strong>
-                      </Link>
-                      <Link to={`/book/${b.id}`} target="_blank" rel="noreferrer" className="muted duplicate-vs-link">
-                        vs. {b.title}
-                      </Link>
-                    </div>
-                  </div>
-                  <span className="pill ghost similarity-percentage">Similarity {(score * 100).toFixed(0)}%</span>
-                </div>
-              </div>
-            ))}
-          </div>
-        )}
-      </section>
-
-      <section className="card quality-check-section">
-        <div className="block-head quality-check-header">
-          <div>
-            <p className="eyebrow m-0">Quality check</p>
-            <h2 className="m-0">Stale waiting books</h2>
-            <p className="muted m-0">Books in waiting that haven't updated in 6+ months or have ended</p>
-          </div>
-          <button
-            className="ghost quality-check-button"
-            onClick={handleCheckStaleWaiting}
-            disabled={loading || books.length === 0}
-          >
-            Check for stale books
-          </button>
+        <div style={{ display: 'grid', gap: '1.5rem' }}>
+          <QualityChecks books={books} loading={loading} />
+          <GenreConsolidator books={books} loading={loading} onRefresh={() => setRefreshKey(k => k + 1)} />
         </div>
-        {staleCheckMessage && <p className="muted mt-4">{staleCheckMessage}</p>}
-        {staleWaitingBooks.length > 0 && (
-          <div className="stack duplicate-results">
-            {staleWaitingBooks.map((book) => {
-              const chapterLower = (book.latest_chapter || '').toLowerCase()
-              const hasEnd = chapterLower.includes('end')
-              const isSeasonEnd = /season\s*\d+\s*end|s\d+\s*end/i.test(chapterLower)
-              const seriesEnded = hasEnd && !isSeasonEnd
-              
-              const lastUpload = book.last_uploaded_at ? new Date(book.last_uploaded_at) : null
-              const monthsAgo = lastUpload ? Math.floor((Date.now() - lastUpload.getTime()) / (1000 * 60 * 60 * 24 * 30)) : null
-              
-              let reason = ''
-              let badge = ''
-              if (seriesEnded) {
-                reason = `Series ended: "${book.latest_chapter}"`
-                badge = 'Ended'
-              } else if (monthsAgo !== null) {
-                reason = `Last update: ${lastUpload.toLocaleDateString()} (${monthsAgo} months ago)`
-                badge = `${monthsAgo} months`
-              }
-              
-              return (
-                <div key={book.id} className="card duplicate-item-card">
-                  <div className="duplicate-comparison">
-                    <div className="duplicate-titles-wrapper">
-                      <div className="duplicate-titles-list">
-                        <Link to={`/book/${book.id}`} target="_blank" rel="noreferrer">
-                          <strong>{book.title}</strong>
-                        </Link>
-                        <p className="muted text-small-muted">
-                          {reason}
-                        </p>
-                      </div>
-                    </div>
-                    <span className="pill ghost">{badge}</span>
-                  </div>
-                </div>
-              )
-            })}
-          </div>
-        )}
       </section>
 
       <section className="card data-portability-section">

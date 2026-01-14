@@ -17,6 +17,7 @@ function BookGrid({
   compact = false,
   emptyStateText = "No books match your filters.",
   showAddButton = true,
+  onOpenBook,
 }) {
   if (loading) {
     return (
@@ -50,6 +51,7 @@ function BookGrid({
           activeGenres={activeGenres}
           setActiveGenres={setActiveGenres}
           compact={compact}
+          onOpenBook={onOpenBook}
         />
       ))}
     </div>

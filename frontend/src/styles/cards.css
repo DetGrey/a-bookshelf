@@ -111,3 +111,23 @@
 .card[style*="padding: '10px'"] {
   padding: 10px;
 }
+
+/* Dashboard status grid - show 1 per row on mobile (3 total), 2 per row on desktop (6 total) */
+.dashboard-status-grid {
+  display: grid;
+  grid-template-columns: 1fr;
+  gap: 12px;
+}
+
+@media (min-width: 600px) {
+  .dashboard-status-grid {
+    grid-template-columns: repeat(2, 1fr);
+    gap: 16px;
+  }
+}
+
+@media (min-width: 1200px) {
+  .dashboard-status-grid {
+    grid-template-columns: repeat(2, 1fr);
+  }
+}
