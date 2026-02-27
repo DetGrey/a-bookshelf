@@ -4,6 +4,7 @@ import { supabase } from '../lib/supabaseClient.js'
 import { useAuth } from '../context/AuthProvider.jsx'
 import { createBook, addLink, addRelatedBook, getShelves, toggleBookShelf, STATUS_KEYS, STATUS } from '../lib/db.js'
 import { usePageTitle } from '../lib/usePageTitle.js'
+import { processCoverUrl } from '../lib/imageProxy.js'
 import CoverImage from '../components/CoverImage.jsx'
 import BookFormFields from '../components/BookFormFields.jsx'
 import MetadataFetcher from '../components/MetadataFetcher.jsx'
@@ -116,10 +117,13 @@ function AddBook() {
         body: { url },
       })
 
+      console.log('fetch-metadata response:', { data, error: fnError })
+
       if (fnError) throw new Error(getErrorMessage(fnError))
       if (data?.error) throw new Error(data.error)
 
       if (data?.metadata) {
+        console.log('Extracted metadata:', data.metadata)
         const m = data.metadata
         setMetadata(m)
         setFetchedAt(new Date())
@@ -139,6 +143,7 @@ function AddBook() {
       }
       setSuccess('Metadata fetched. Review or edit fields below, then save.')
     } catch (err) {
+      console.error('fetch-metadata error:', err)
       setError(getErrorMessage(err))
     } finally {
       setLoading(false)
@@ -192,10 +197,15 @@ function AddBook() {
         return Math.round(n)
       })()
 
+      // Process cover URL to upload to image proxy
+      const processedCoverUrl = form.cover_url 
+        ? await processCoverUrl(form.cover_url)
+        : '';
+
       const payload = {
         title: form.title || 'Untitled',
         description: form.description || '',
-        cover_url: form.cover_url || '',
+        cover_url: processedCoverUrl,
         genres: form.genres
           ? form.genres.split(',').map((g) => g.trim()).filter(Boolean)
           : [],

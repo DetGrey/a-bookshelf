@@ -54,19 +54,26 @@ Deno.serve(async (req) => {
     const urlObj = new URL(url);
     let hostname = urlObj.hostname;
     
+    const fetchHeaders = {
+      'User-Agent': 'Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/119.0.0.0 Safari/537.36',
+      'Accept': 'text/html,application/xhtml+xml,application/xml;q=0.9,*/*;q=0.8',
+      'Accept-Language': 'en-US,en;q=0.9',
+      'Accept-Encoding': 'gzip, deflate, br',
+      'Referer': url,
+      'DNT': '1',
+      'Connection': 'keep-alive',
+      'Upgrade-Insecure-Requests': '1'
+    };
+
     let response = await fetch(url, {
-      headers: {
-        'User-Agent': 'Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/119.0.0.0 Safari/537.36'
-      }
+      headers: fetchHeaders
     });
 
     // Special handling: if dto.to returns 404, try bato.ing instead
     if (!response.ok && response.status === 404 && hostname === 'dto.to') {
       const fallbackUrl = url.replace('dto.to', 'bato.ing');
       response = await fetch(fallbackUrl, {
-        headers: {
-          'User-Agent': 'Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/119.0.0.0 Safari/537.36'
-        }
+        headers: fetchHeaders
       });
       // Update hostname to use bato.ing parser if fallback succeeded
       if (response.ok) {
@@ -303,6 +310,346 @@ Deno.serve(async (req) => {
           metadata.last_uploaded_at = new Date(parseInt(timestamp)).toISOString();
         }
       }
+    // --------------------------------------------- MANGAGO
+    } else if (hostname.includes('mangago')) {
+      stage = 'parse:mangago';
+
+      // -- Title --
+      metadata.title = $('div.w-title h1').first().text().trim() || 
+                       $('meta[property="og:title"]').attr('content') || 
+                       '';
+
+      // -- Description --
+      metadata.description = $('div.manga_summary').first().text().trim() || 
+                             $('meta[property="og:description"]').attr('content') || 
+                             '';
+
+      // -- Cover Image --
+      let image = $('div.left.cover img').attr('src') || 
+                  $('meta[property="og:image"]').attr('content') || 
+                  '';
+      metadata.image = image;
+
+      // -- Genres --
+      const genresSet = new Set<string>();
+      const genreLabel = $('label:contains("Genre")').parent();
+      genreLabel.find('a').each((_: any, el: any) => {
+        const text = $(el).text().trim();
+        if (text && text !== '/') genresSet.add(text);
+      });
+      metadata.genres = Array.from(genresSet);
+
+      // -- Language & Original Language --
+      // Mangago doesn't display explicit language/translation information
+      metadata.language = null;
+      metadata.original_language = null;
+
+      // -- Latest Chapter & Chapter Count --
+      const chaptersTable = $('#chapter_table, table.listing');
+      const chapterLinks: string[] = [];
+      
+      chaptersTable.find('td a.chico').each((_: any, el: any) => {
+        const text = $(el).text().trim();
+        if (text) chapterLinks.push(text);
+      });
+
+      // Find the chapter with the highest chapter number
+      let highestChapterNum = 0;
+      let latestChapter = '';
+      
+      chapterLinks.forEach((link) => {
+        const match = link.match(/Ch\.(\d+)/);
+        if (match) {
+          const num = parseInt(match[1], 10);
+          if (num > highestChapterNum) {
+            highestChapterNum = num;
+            latestChapter = link;
+          }
+        }
+      });
+
+      if (latestChapter) {
+        metadata.latest_chapter = latestChapter;
+        metadata.chapter_count = highestChapterNum;
+      } else if (chapterLinks.length > 0) {
+        // Fallback to first link if chapter number extraction fails
+        metadata.latest_chapter = chapterLinks[0];
+        metadata.chapter_count = chapterLinks.length;
+      }
+
+      // -- Upload Date --
+      // Extract date from the first row (latest chapter) in the table
+      const firstRow = chaptersTable.find('tr').first();
+      if (firstRow.length) {
+        // Find the date in the third td.no
+        const dateCells = firstRow.find('td.no');
+        // The date is in the last td.no (typically the 2nd one)
+        const dateText = dateCells.last().text().trim();
+        
+        if (dateText) {
+          // Match date pattern like "Sep 27, 2025" or "27 Sep 2025"
+          const dateMatch = dateText.match(/([A-Za-z]+)\s+(\d{1,2}),?\s+(\d{4})|(\d{1,2})\s+([A-Za-z]+)\s+(\d{4})/);
+          if (dateMatch) {
+            try {
+              let month = '', day = '', year = '';
+              if (dateMatch[1]) {
+                // Format: "Sep 27, 2025"
+                month = dateMatch[1];
+                day = dateMatch[2];
+                year = dateMatch[3];
+              } else {
+                // Format: "27 Sep 2025"
+                day = dateMatch[4];
+                month = dateMatch[5];
+                year = dateMatch[6];
+              }
+              
+              const monthNames = ['January', 'February', 'March', 'April', 'May', 'June',
+                                  'July', 'August', 'September', 'October', 'November', 'December'];
+              const monthIndex = monthNames.findIndex((m) => m.toLowerCase().startsWith(month.toLowerCase()));
+              
+              if (monthIndex !== -1) {
+                const dateObj = new Date(Date.UTC(parseInt(year, 10), monthIndex, parseInt(day, 10), 12, 0, 0, 0));
+                metadata.last_uploaded_at = dateObj.toISOString();
+              }
+            } catch (e) {
+              console.log('[Mangago] Date parsing error:', e);
+            }
+          }
+        }
+      }
+
+    // --------------------------------------------- ASURACOMIC
+    } else if (hostname.includes('asuracomic') || hostname.includes('asurascans')) {
+      stage = 'parse:asuracomic';
+
+      // -- Title --
+      metadata.title = $('span.text-xl.font-bold').first().text().trim() || 
+                       $('meta[property="og:title"]').attr('content') || 
+                       '';
+
+      // -- Description --
+      const synopsisLabel = $('h3:contains("Synopsis")').first();
+      if (synopsisLabel.length) {
+        const synopsisText = synopsisLabel.parent().find('span.font-medium').first().text().trim().replace(/^Synopsis\s+/, '');
+        metadata.description = synopsisText || '';
+      }
+      if (!metadata.description) {
+        metadata.description = $('meta[property="og:description"]').attr('content') || '';
+      }
+
+      // -- Cover Image --
+      let image = $('img[alt="poster"]').first().attr('src');
+      if (!image) {
+        image = $('img[alt*="poster"]').first().attr('src');
+      }
+      if (!image) {
+        image = $('meta[property="og:image"]').attr('content');
+      }
+      metadata.image = image || '';
+
+      // -- Genres --
+      const genresSet = new Set<string>();
+      const genreSection = $('h3:contains("Genres")').first();
+      if (genreSection.length) {
+        const genreContainer = genreSection.next('.flex');
+        genreContainer.find('button').each((_: any, el: any) => {
+          const text = $(el).text().trim();
+          if (text) genresSet.add(text);
+        });
+        // Alternative selector if above doesn't work
+        if (genresSet.size === 0) {
+          genreSection.parent().find('button').each((_: any, el: any) => {
+            const text = $(el).text().trim();
+            if (text) genresSet.add(text);
+          });
+        }
+      }
+      metadata.genres = Array.from(genresSet);
+
+      // -- Language & Original Language --
+      metadata.language = null;
+      metadata.original_language = null;
+      const typeLabel = $('h3:contains("Type")').first();
+      if (typeLabel.length) {
+        const typeValue = typeLabel.closest('div').find('h3').last().text().trim().toLowerCase();
+        if (typeValue.includes('manhwa')) metadata.original_language = 'Korean';
+        else if (typeValue.includes('manga')) metadata.original_language = 'Japanese';
+        else if (typeValue.includes('manhua')) metadata.original_language = 'Chinese';
+      }
+
+      // -- Latest Chapter, Chapter Count & Upload Date --
+      const chapterRows = $('div.pl-4.py-2.border.rounded-md, div[class*="pl-4"][class*="py-2"][class*="rounded-md"]')
+        .filter((_: any, el: any) => $(el).find('a[href*="/chapter/"]').length > 0)
+        .toArray();
+
+      const parseAsuraDate = (dateText: string): string | null => {
+        const trimmed = dateText.trim();
+        if (!trimmed) return null;
+        const dateMatch = trimmed.match(/([A-Za-z]+)\s+(\d{1,2})(?:st|nd|rd|th)?(?:,)?\s+(\d{4})/);
+        if (!dateMatch) return null;
+        const monthNames = ['January', 'February', 'March', 'April', 'May', 'June',
+          'July', 'August', 'September', 'October', 'November', 'December'];
+        const monthIndex = monthNames.findIndex((m) => m.toLowerCase().startsWith(dateMatch[1].toLowerCase()));
+        if (monthIndex === -1) return null;
+        const day = parseInt(dateMatch[2], 10);
+        const year = parseInt(dateMatch[3], 10);
+        return new Date(Date.UTC(year, monthIndex, day, 12, 0, 0, 0)).toISOString();
+      };
+
+      let bestChapterNumber = Number.NEGATIVE_INFINITY;
+      let bestChapterText = '';
+      let bestChapterDateIso: string | null = null;
+      const uniqueChapterKeys = new Set<string>();
+
+      chapterRows.forEach((row: any) => {
+        const $row = $(row);
+        const chapterLink = $row.find('a[href*="/chapter/"]').first();
+        const href = chapterLink.attr('href') || '';
+        if (href) uniqueChapterKeys.add(href);
+
+        const text = $row.find('h3.text-sm').first().text().trim().replace(/\s+/g, ' ')
+          || chapterLink.text().trim().replace(/\s+/g, ' ');
+        const chapterMatch = text.match(/chapter\s*(\d+(?:\.\d+)?)/i);
+        const chapterNumber = chapterMatch ? parseFloat(chapterMatch[1]) : Number.NEGATIVE_INFINITY;
+
+        const dateText = $row.find('h3.text-xs').first().text().trim();
+        const dateIso = parseAsuraDate(dateText);
+
+        if (chapterNumber > bestChapterNumber) {
+          bestChapterNumber = chapterNumber;
+          bestChapterText = text;
+          bestChapterDateIso = dateIso;
+        }
+      });
+
+      if (bestChapterText) metadata.latest_chapter = bestChapterText;
+      if (Number.isFinite(bestChapterNumber)) metadata.chapter_count = Math.floor(bestChapterNumber);
+      if ((!metadata.chapter_count || metadata.chapter_count <= 0) && uniqueChapterKeys.size > 0) {
+        metadata.chapter_count = uniqueChapterKeys.size;
+      }
+      if (bestChapterDateIso) metadata.last_uploaded_at = bestChapterDateIso;
+
+    // --------------------------------------------- COMIX
+    } else if (hostname.includes('comix')) {
+      stage = 'parse:comix';
+
+      // -- Title --
+      metadata.title = $('h1.title').first().text().trim() || 
+                       $('meta[property="og:title"]').attr('content') || 
+                       '';
+
+      // -- Description --
+      metadata.description = $('div.description .content').first().text().trim() || 
+                             $('meta[property="og:description"]').attr('content') || 
+                             '';
+
+      // -- Cover Image --
+      let image = $('div.poster img').attr('src') || 
+                  $('meta[property="og:image"]').attr('content') || 
+                  '';
+      metadata.image = image;
+
+      // -- Genres --
+      const genresSet = new Set<string>();
+      const metadataList = $('ul#metadata li');
+      metadataList.each((_: any, el: any) => {
+        const text = $(el).text();
+        if (text.includes('Genres:')) {
+          $(el).find('a').each((_: any, genreEl: any) => {
+            const genreText = $(genreEl).text().trim();
+            if (genreText) genresSet.add(genreText);
+          });
+        }
+      });
+      metadata.genres = Array.from(genresSet);
+
+      // -- Language & Original Language --
+      let language = null;
+      let originalLang = null;
+      const metadataList2 = $('ul#metadata li');
+      metadataList2.each((_: any, el: any) => {
+        const text = $(el).text();
+        if (text.includes('Original language:')) {
+          const langMatch = text.match(/Original language:\s*(\w+)/);
+          if (langMatch) {
+            const code = langMatch[1];
+            // Map language codes to names
+            const langMap: Record<string, string> = {
+              'ko': 'Korean', 'ja': 'Japanese', 'en': 'English', 
+              'zh': 'Chinese', 'es': 'Spanish', 'fr': 'French'
+            };
+            originalLang = langMap[code] || code;
+          }
+        }
+      });
+      metadata.language = language;
+      metadata.original_language = originalLang;
+
+      // -- Latest Chapter & Chapter Count --
+      const chapterList = $('ul.chap-list li').toArray();
+      
+      if (chapterList.length > 0) {
+        // Get latest chapter from first item in list
+        const firstChapter = $(chapterList[0]);
+        const chapterTitle = firstChapter.find('a.title b').text().trim();
+        metadata.latest_chapter = chapterTitle;
+
+        // Extract chapter number
+        const match = chapterTitle.match(/Ch\.\s*(\d+)/);
+        if (match) {
+          metadata.chapter_count = parseInt(match[1], 10);
+        }
+
+        // Get upload date from meta time (relative format like "5d", "1mo, 3d")
+        const timeSpan = firstChapter.find('span.meta__time');
+        const timeText = timeSpan.text().trim();
+        
+        if (timeText) {
+          try {
+            const now = new Date();
+            let daysAgo = 0;
+            
+            // Parse "Xd" format (days)
+            const daysMatch = timeText.match(/(\d+)\s*d(?:\s|,|$)/);
+            if (daysMatch) {
+              daysAgo += parseInt(daysMatch[1], 10);
+            }
+            
+            // Parse "Xmo" format (months, approximate as 30 days)
+            const monthsMatch = timeText.match(/(\d+)\s*mo/);
+            if (monthsMatch) {
+              daysAgo += parseInt(monthsMatch[1], 10) * 30;
+            }
+            
+            // Calculate date
+            if (daysAgo > 0) {
+              const uploadDate = new Date(now.getTime() - daysAgo * 24 * 60 * 60 * 1000);
+              // Set to noon UTC
+              uploadDate.setUTCHours(12, 0, 0, 0);
+              metadata.last_uploaded_at = uploadDate.toISOString();
+            }
+          } catch (e) {
+            console.log('[Comix] Date parsing error:', e);
+            metadata.last_uploaded_at = null;
+          }
+        } else {
+          metadata.last_uploaded_at = null;
+        }
+      }
+
+      // Alternative: check the pagination text at bottom for total chapter count
+      const paginationText = $('div.mt-3 b').text();
+      if (!metadata.chapter_count && paginationText) {
+        const parts = paginationText.match(/of\s+(\d+)/);
+        if (parts) {
+          const totalCount = parseInt(parts[1], 10);
+          if (!isNaN(totalCount)) {
+            metadata.chapter_count = totalCount;
+          }
+        }
+      }
+
     // --------------------------------------------- BATO V3 AS DEFAULT
     } else {      
       stage = 'parse:default';
@@ -464,6 +811,10 @@ Deno.serve(async (req) => {
           }
         }
       }
+    }
+
+    if (!hostname.includes('webtoons.com') && !metadata.language) {
+      metadata.language = 'English';
     }
 
     // 4. Return JSON

@@ -5,6 +5,7 @@ Deployment link: https://detgrey.github.io/a-bookshelf/
 
 ## Highlights
 - Smart add: paste a URL (Webtoons, Bato) and the `fetch-metadata` Edge Function scrapes title, description, cover, genres, original language, language, latest chapter, and upload date.
+- **Image proxy**: Book cover images are automatically downloaded, converted to WebP format, and stored in Cloudflare R2 via a Workers proxy. Ensures images remain available even if the original source goes down. Fast global delivery via Cloudflare's CDN. Gracefully falls back to original URLs if upload fails.
 - Reading states and shelves: built-in shelves (reading, plan to read, waiting, completed, dropped, on hold) plus custom shelves.
 - Progress tracking: personal notes, last read, latest scraped chapter, and last uploaded timestamp per book.
 - Multi-source links: keep multiple URLs per book (official, scanlation, etc.) and switch quickly.
@@ -17,16 +18,31 @@ Deployment link: https://detgrey.github.io/a-bookshelf/
 
 ## Repo layout
 - frontend/ — React app (Vite) with routes, components, sample data, and tests. Includes context providers for global state management: `AuthProvider` handles auth, `BooksProvider` manages books/shelves with 5-minute caching and realtime Supabase subscriptions to auto-refresh on changes.
+- cloudflare-worker/ — Cloudflare Worker for downloading and hosting book cover images in R2 storage.
 - tables.sql — Supabase schema and RLS policies for profiles, books, shelves, shelf_books, and book_links.
 - src/supabase/functions/ — Edge Functions `fetch-metadata` and `fetch-latest` (Deno + cheerio) plus minimal Supabase CLI config.
+- **GUIDE.md** — Complete deployment guide for GitHub Pages + Cloudflare setup.
 
 ## Prerequisites
-- Node 18+ and npm
-- Supabase project and the Supabase CLI (for running/deploying functions and applying the schema)
+- Cloudflare account (free tier works) for image hosting
 - GitHub Pages (or any static host) if you want the provided deploy path
 
-## Quick start (frontend)
-1) Copy envs: `cp frontend/.env.example frontend/.env.local`; fill `VITE_SUPABASE_URL` and `VITE_SUPABASE_ANON_KEY`.
+> 📖 **For complete setup instructions**, see [GUIDE.md](./GUIDE.md)
+- Supabase project and the Supabase CLI (for running/deploying functions and applying the schema)
+- GitHub Pages (or any static host) if you want the provided deploy path, `VITE_SUPABASE_ANON_KEY`, and `VITE_IMAGE_PROXY_URL` (your Cloudflare Worker URL).
+2) Install deps: `cd frontend && npm install`.
+3) Dev server: `npm run dev -- --host` (so phones/tablets can reach it).
+4) Lint: `npm run lint`. Tests: `npm test`. Build: `npm run build` (adds `dist/404.html` for GitHub Pages).
+
+## Quick start (Cloudflare Worker)
+1) Install Wrangler: `npm install -g wrangler`
+2) Login: `wrangler login`
+3) Create R2 buckets: `wrangler r2 bucket create bookshelf-covers && wrangler r2 bucket create bookshelf-covers-preview`
+4) Update `cloudflare-worker/wrangler.toml` with your GitHub Pages URL in `ALLOWED_ORIGINS`
+5) Deploy: `cd cloudflare-worker && npm install && npm run deploy`
+6) Copy the worker URL to your frontend `.env.local` as `VITE_IMAGE_PROXY_URL`
+
+See [GUIDE.md](./GUIDE.md) for detailed step-by-step instructionsANON_KEY`.
 2) Install deps: `cd frontend && npm install`.
 3) Dev server: `npm run dev -- --host` (so phones/tablets can reach it).
 4) Lint: `npm run lint`. Tests: `npm test`. Build: `npm run build` (adds `dist/404.html` for GitHub Pages).

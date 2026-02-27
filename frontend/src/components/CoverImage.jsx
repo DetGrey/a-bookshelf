@@ -13,6 +13,7 @@ function CoverImage({ src, title, alt, className = '', style = {}, lazy = true }
   const holderRef = useRef(null)
   const [shouldLoad, setShouldLoad] = useState(!lazy)
   const [errored, setErrored] = useState(false)
+  const [imageLoaded, setImageLoaded] = useState(false)
   const label = title || alt || 'No cover'
   const hue = useMemo(() => hashHue(label), [label])
   const fallbackStyle = {
@@ -40,19 +41,41 @@ function CoverImage({ src, title, alt, className = '', style = {}, lazy = true }
     return () => observer.disconnect()
   }, [lazy])
 
+  // Timeout for broken image URLs (3 seconds)
+  useEffect(() => {
+    if (!shouldLoad || errored) return
+    const timeout = setTimeout(() => {
+      setErrored(true)
+    }, 3000)
+    return () => clearTimeout(timeout)
+  }, [shouldLoad, errored])
+
+  // Reset imageLoaded when src changes
+  useEffect(() => {
+    setImageLoaded(false)
+  }, [src])
+
   const showImage = shouldLoad && src && !errored
 
   return (
     <span ref={holderRef} className="cover-holder">
       {showImage ? (
-        <img
-          className={`cover-image ${className}`}
-          src={src}
-          alt={alt || title || 'Cover image'}
-          onError={() => setErrored(true)}
-          {...(Object.keys(style).length > 0 && { style })}
-          loading="lazy"
-        />
+        <>
+          <img
+            className={`cover-image ${className}${!imageLoaded ? ' cover-image--loading' : ''}`}
+            src={src}
+            alt={alt || title || 'Cover image'}
+            onLoad={() => setImageLoaded(true)}
+            onError={() => setErrored(true)}
+            {...(Object.keys(style).length > 0 && { style })}
+            loading="lazy"
+          />
+          {!imageLoaded && (
+            <div className={`cover-fallback ${className}`} style={fallbackStyle}>
+              <span>{label}</span>
+            </div>
+          )}
+        </>
       ) : (
         <div className={`cover-fallback ${className}`} style={fallbackStyle}>
           <span>{label}</span>

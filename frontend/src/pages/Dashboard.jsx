@@ -24,6 +24,7 @@ function Dashboard() {
     // Cache is now handled by individual components
   }, [])
   const [genreMoreExpanded, setGenreMoreExpanded] = useState(false)
+  const [sourceMoreExpanded, setSourceMoreExpanded] = useState(false)
   const [booksPerStatus, setBooksPerStatus] = useState(6)
   const fileInputRef = useRef(null)
 
@@ -102,8 +103,6 @@ function Dashboard() {
     }
   }
 
-
-
   // Stats: average score (ignore 0) and perfect scores
   const scoredBooks = books.filter((b) => {
     const n = Number(b.score)
@@ -135,6 +134,25 @@ function Dashboard() {
   const genreEntriesRaw = Array.from(genreCountMap.entries()).sort((a, b) => b[1] - a[1])
   const totalBooks = books.length
   const palette = ['#7c83ff', '#ff8ba7', '#22c55e', '#f6aa1c', '#4cc9f0', '#a855f7', '#ef4444', '#0ea5e9']
+
+  // URL/sources breakdown - count all sources per host (including duplicates)
+  const hostCountMap = new Map()
+  books.forEach((book) => {
+    (book.sources ?? []).forEach((source) => {
+      try {
+        const url = new URL(source.url)
+        let host = url.hostname
+        // Remove www. prefix if present
+        if (host.startsWith('www.')) {
+          host = host.slice(4)
+        }
+        hostCountMap.set(host, (hostCountMap.get(host) ?? 0) + 1)
+      } catch {
+        // Skip invalid URLs
+      }
+    })
+  })
+  const hostEntriesRaw = Array.from(hostCountMap.entries()).sort((a, b) => b[1] - a[1])
 
   return (
     <div className="page">
@@ -251,6 +269,83 @@ function Dashboard() {
           </div>
         ) : (
           <p className="muted">Add genres to your books to see the breakdown.</p>
+        )}
+      </section>
+
+      <section className="card dashboard-section">
+        <div className="block-head dashboard-section-header">
+          <h2>Sources breakdown</h2>
+          <p className="muted">
+            {totalBooks ? 'Books by source (% of your library) — books can have multiple sources' : 'No source data yet'}
+          </p>
+        </div>
+        {totalBooks > 0 && hostEntriesRaw.length > 0 ? (
+          <div className="genre-list-container">
+            {/* Top 5 sources - always visible */}
+            {hostEntriesRaw.slice(0, 5).map(([host, count], idx) => {
+              const percent = ((count / totalBooks) * 100).toFixed(1)
+              const barWidth = Math.min((count / totalBooks) * 100, 100)
+              return (
+                <div key={host} className="genre-bar-item">
+                  <div className="genre-bar-header">
+                    <span className="genre-bar-name">{host}</span>
+                    <span className="muted genre-bar-stats">{percent}% ({count})</span>
+                  </div>
+                  <div className="genre-bar-track">
+                    <div
+                      className="genre-bar-fill"
+                      style={{
+                        width: `${barWidth}%`,
+                        background: palette[idx % palette.length],
+                      }}
+                    />
+                  </div>
+                </div>
+              )
+            })}
+            
+            {/* Remaining sources - collapsible */}
+            {hostEntriesRaw.length > 5 && (
+              <div>
+                <button
+                  type="button"
+                  className="ghost genre-more-button"
+                  onClick={() => setSourceMoreExpanded(!sourceMoreExpanded)}
+                >
+                  <span>{sourceMoreExpanded ? '▼' : '▶'}</span>
+                  <span>+ {hostEntriesRaw.length - 5} more sources</span>
+                </button>
+                
+                {sourceMoreExpanded && (
+                  <div className="mt-8">
+                    {hostEntriesRaw.slice(5).map(([host, count], idx) => {
+                      const percent = ((count / totalBooks) * 100).toFixed(1)
+                      const barWidth = Math.min((count / totalBooks) * 100, 100)
+                      return (
+                        <div key={host} className="genre-bar-item">
+                          <div className="genre-bar-header">
+                            <span className="genre-bar-name">{host}</span>
+                            <span className="muted genre-bar-stats">{percent}% ({count})</span>
+                          </div>
+                          <div className="genre-bar-track">
+                            <div
+                              className="genre-bar-fill"
+                              style={{
+                                width: `${barWidth}%`,
+                                background: palette[(5 + idx) % palette.length],
+                              }}
+                            />
+                          </div>
+                        </div>
+                      )
+                    })}
+                  </div>
+                )}
+              </div>
+            )}
+          </div>
+        ) : (
+          <p className="muted">Add sources to your books to see the breakdown.</p>
         )}
       </section>
 

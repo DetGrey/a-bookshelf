@@ -4,6 +4,7 @@ import { supabase } from '../lib/supabaseClient.js'
 import { getBook, updateBook, addLink, deleteLink, deleteBook, getRelatedBooks, addRelatedBook, deleteRelatedBook, STATUS, scoreToLabel, SCORE_OPTIONS, getShelves, toggleBookShelf, getBookShelvesForBooks } from '../lib/db.js'
 import { usePageTitle } from '../lib/usePageTitle.js'
 import { useAuth } from '../context/AuthProvider.jsx'
+import { processCoverUrl } from '../lib/imageProxy.js'
 import CoverImage from '../components/CoverImage.jsx'
 import BookFormFields from '../components/BookFormFields.jsx'
 import MetadataFetcher from '../components/MetadataFetcher.jsx'
@@ -195,8 +196,14 @@ function BookDetails() {
       return Math.round(n)
     })()
 
+    // Process cover URL to upload to image proxy if needed
+    const processedCoverUrl = editForm.cover_url
+      ? await processCoverUrl(editForm.cover_url)
+      : '';
+
     const payload = {
       ...editForm,
+      cover_url: processedCoverUrl,
       genres: editForm.genres
         ? editForm.genres.split(',').map((g) => g.trim()).filter(Boolean)
         : [],
@@ -333,6 +340,7 @@ function BookDetails() {
       const { data, error: fnError } = await supabase.functions.invoke('fetch-metadata', {
         body: { url: fetchUrl },
       })
+      console.log('fetch-metadata response:', { data, error: fnError })
       if (fnError) throw fnError
       const fallback = {
         title: 'Metadata demo title',
@@ -345,9 +353,11 @@ function BookDetails() {
         last_uploaded_at: null,
       }
       const meta = data?.metadata ?? fallback
+      console.log('Extracted metadata:', meta)
       setFetchedMetadata(meta)
       setFetchSuccess('Metadata fetched. Review below, then apply to fields.')
     } catch (err) {
+      console.error('fetch-metadata error:', err)
       setFetchError(err?.message ?? 'Unable to fetch metadata right now.')
     } finally {
       setFetchLoading(false)

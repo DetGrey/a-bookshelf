@@ -25,6 +25,8 @@ const sortOptions = [
   { value: 'relevance', label: 'Relevance (search)' },
   { value: 'created', label: 'Date Added' },
   { value: 'updated', label: 'Last Updated' },
+  { value: 'score', label: 'Score' },
+  { value: 'chapter_count', label: 'Chapter Count' },
   { value: 'title', label: 'Title (A-Z)' },
   { value: 'status', label: 'Status' },
 ]
@@ -356,6 +358,12 @@ function Bookshelf() {
     switch (sortBy) {
       case 'relevance':
         filtered.sort((a, b) => (relevanceScores.get(b.id) ?? 0) - (relevanceScores.get(a.id) ?? 0))
+        break
+      case 'score':
+        filtered.sort((a, b) => Number(b.score ?? -1) - Number(a.score ?? -1))
+        break
+      case 'chapter_count':
+        filtered.sort((a, b) => Number(b.chapter_count ?? -1) - Number(a.chapter_count ?? -1))
         break
       case 'title':
         filtered.sort((a, b) => a.title.localeCompare(b.title))

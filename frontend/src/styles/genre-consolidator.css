@@ -8,6 +8,7 @@
   display: flex;
   align-items: center;
   gap: 1rem;
+  min-width: 0;
 }
 
 .genre-pair-checkbox input[type="checkbox"] {
@@ -16,16 +17,20 @@
 
 .genre-pair-content {
   flex: 1;
+  min-width: 0;
 }
 
 .genre-pair-names {
   display: flex;
   align-items: center;
   gap: 0.5rem;
+  flex-wrap: wrap;
 }
 
 .genre-name {
   font-weight: 500;
+  overflow-wrap: anywhere;
+  word-break: break-word;
 }
 
 .genre-arrow {

@@ -54,6 +54,15 @@ function GenreConsolidator({ books, loading, onRefresh }) {
     setConsolidateMessage('')
     setSelectedPairs(new Set())
 
+    // Count how many books use each exact genre
+    const genreCounts = new Map()
+    books.forEach((book) => {
+      const uniqueGenres = new Set((book.genres ?? []).map((g) => g.trim()).filter(Boolean))
+      uniqueGenres.forEach((genre) => {
+        genreCounts.set(genre, (genreCounts.get(genre) ?? 0) + 1)
+      })
+    })
+
     // Get all unique genres from books
     const genresSet = new Map() // Map of normalized -> original
     books.forEach((book) => {
@@ -75,9 +84,20 @@ function GenreConsolidator({ books, loading, onRefresh }) {
       for (let j = i + 1; j < genres.length; j++) {
         const similarity = stringSimilarity(genres[i], genres[j])
         if (similarity >= 0.75) {
+          const genre1 = genres[i]
+          const genre2 = genres[j]
+          const count1 = genreCounts.get(genre1) ?? 0
+          const count2 = genreCounts.get(genre2) ?? 0
+          const keepGenre = count1 >= count2 ? genre1 : genre2
+          const mergeGenre = keepGenre === genre1 ? genre2 : genre1
+          const keepCount = keepGenre === genre1 ? count1 : count2
+          const mergeCount = mergeGenre === genre1 ? count1 : count2
+
           pairs.push({
-            genre1: genres[i],
-            genre2: genres[j],
+            keepGenre,
+            mergeGenre,
+            keepCount,
+            mergeCount,
             similarity,
           })
         }
@@ -112,14 +132,14 @@ function GenreConsolidator({ books, loading, onRefresh }) {
     const pairsToMerge = Array.from(selectedPairs).map((idx) => similarGenres[idx])
 
     try {
-      // For each pair, update all books with genre2 to use genre1
+      // For each pair, update all books with mergeGenre to use keepGenre
       for (const pair of pairsToMerge) {
-        // Find all books with genre2
-        const booksWithGenre2 = books.filter((b) => (b.genres ?? []).includes(pair.genre2))
+        // Find all books with mergeGenre
+        const booksWithMergeGenre = books.filter((b) => (b.genres ?? []).includes(pair.mergeGenre))
 
-        for (const book of booksWithGenre2) {
+        for (const book of booksWithMergeGenre) {
           const updatedGenres = (book.genres ?? [])
-            .map((g) => (g === pair.genre2 ? pair.genre1 : g))
+            .map((g) => (g === pair.mergeGenre ? pair.keepGenre : g))
             .filter((g, idx, arr) => arr.indexOf(g) === idx) // Remove duplicates
 
           const { error } = await supabase
@@ -216,8 +236,8 @@ function GenreConsolidator({ books, loading, onRefresh }) {
       {similarGenres.length > 0 && (
         <>
           <div className="stack duplicate-results mt-4">
-            {similarGenres.map(({ genre1, genre2, similarity }, idx) => (
-              <label key={`${idx}-${genre1}-${genre2}`} className="card duplicate-item-card genre-pair-checkbox">
+            {similarGenres.map(({ keepGenre, mergeGenre, keepCount, mergeCount, similarity }, idx) => (
+              <label key={`${idx}-${keepGenre}-${mergeGenre}`} className="card duplicate-item-card genre-pair-checkbox">
                 <div className="genre-pair-item">
                   <input
                     type="checkbox"
@@ -228,11 +248,11 @@ function GenreConsolidator({ books, loading, onRefresh }) {
                     <div className="duplicate-titles-wrapper">
                       <div className="duplicate-titles-list">
                         <div className="genre-pair-names">
-                          <span className="genre-name">{genre1}</span>
+                          <span className="genre-name">{mergeGenre}</span>
                           <span className="genre-arrow">→</span>
-                          <span className="genre-name">{genre2}</span>
+                          <span className="genre-name">{keepGenre}</span>
                         </div>
-                        <p className="muted text-small-muted">Merge {genre2} into {genre1}</p>
+                        <p className="muted text-small-muted">Merge {mergeGenre} ({mergeCount}) into {keepGenre} ({keepCount})</p>
                       </div>
                     </div>
                     <span className="pill ghost">{(similarity * 100).toFixed(0)}% match</span>
@@ -272,6 +292,8 @@ function GenreConsolidator({ books, loading, onRefresh }) {
               type="text"
               value={customFrom}
               onChange={(e) => setCustomFrom(e.target.value)}
+              autoCapitalize="words"
+              style={{ textTransform: 'capitalize' }}
               placeholder="e.g. SciFi"
               disabled={customMerging}
             />
@@ -282,6 +304,8 @@ function GenreConsolidator({ books, loading, onRefresh }) {
               type="text"
               value={customTo}
               onChange={(e) => setCustomTo(e.target.value)}
+              autoCapitalize="words"
+              style={{ textTransform: 'capitalize' }}
               placeholder="e.g. Science Fiction"
               disabled={customMerging}
             />

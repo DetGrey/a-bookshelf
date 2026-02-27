@@ -1,6 +1,7 @@
 import { useCallback, useState } from 'react'
 import { Link } from 'react-router-dom'
 import { supabase } from '../lib/supabaseClient.js'
+import { uploadImageToProxy } from '../lib/imageProxy.js'
 
 function QualityChecks({ books, loading }) {
   const [dupeLoading, setDupeLoading] = useState(false)
@@ -8,6 +9,11 @@ function QualityChecks({ books, loading }) {
   const [dupeMessage, setDupeMessage] = useState('')
   const [staleWaitingBooks, setStaleWaitingBooks] = useState([])
   const [staleCheckMessage, setStaleCheckMessage] = useState('')
+  const [coverLoading, setCoverLoading] = useState(false)
+  const [coverResults, setCoverResults] = useState({ failed: [], successful: [] })
+  const [coverMessage, setCoverMessage] = useState('')
+  const [uploadLoading, setUploadLoading] = useState(false)
+  const [uploadMessage, setUploadMessage] = useState('')
 
   // Duplicate title finder (simple Dice coefficient over bigrams + substring check)
   const normalizeTitle = (title = '') => title.toLowerCase().replace(/[^a-z0-9\s]/g, ' ').replace(/\s+/g, ' ').trim()
@@ -178,6 +184,145 @@ function QualityChecks({ books, loading }) {
     sessionStorage.setItem('staleCache', JSON.stringify({ data: staleBooks, timestamp: Date.now() }))
   }
 
+  const handleCheckCovers = async () => {
+    // Check cache first (15 min = 900000ms)
+    const cached = sessionStorage.getItem('coverCache')
+    if (cached) {
+      const { data, timestamp } = JSON.parse(cached)
+      if (Date.now() - timestamp < 900000) {
+        setCoverResults(data)
+        const totalIssues = data.failed.length + data.successful.length
+        setCoverMessage(
+          totalIssues
+            ? `Found ${data.failed.length} failed cover${data.failed.length !== 1 ? 's' : ''} and ${data.successful.length} uploadable cover${data.successful.length !== 1 ? 's' : ''}`
+            : 'All covers are accessible and from Cloudflare'
+        )
+        return
+      }
+    }
+
+    setCoverLoading(true)
+    setCoverResults({ failed: [], successful: [] })
+    setCoverMessage('')
+    setUploadMessage('')
+
+    const workerUrl = import.meta.env.VITE_IMAGE_PROXY_URL
+    const failedCovers = []
+    const successfulNonCloudflare = []
+
+    // Helper to test if an image can be loaded
+    const testImage = (url) => {
+      return new Promise((resolve) => {
+        const img = new Image()
+        img.onload = () => resolve(true)
+        img.onerror = () => resolve(false)
+        // Short timeout (3 seconds)
+        setTimeout(() => resolve(false), 3000)
+        img.src = url
+      })
+    }
+
+    // Test images in parallel batches of 10 to speed up the process
+    const booksWithCovers = books.filter((book) => book.cover_url)
+    const batchSize = 10
+    
+    for (let i = 0; i < booksWithCovers.length; i += batchSize) {
+      const batch = booksWithCovers.slice(i, i + batchSize)
+      const results = await Promise.all(
+        batch.map(async (book) => {
+          const isCloudflare = workerUrl && book.cover_url.startsWith(workerUrl)
+          const canLoad = await testImage(book.cover_url)
+          return { book, canLoad, isCloudflare }
+        })
+      )
+
+      results.forEach(({ book, canLoad, isCloudflare }) => {
+        if (!canLoad) {
+          failedCovers.push(book)
+        } else if (!isCloudflare) {
+          successfulNonCloudflare.push(book)
+        }
+      })
+    }
+
+    const results = {
+      failed: failedCovers,
+      successful: successfulNonCloudflare,
+    }
+
+    setCoverResults(results)
+    const totalIssues = failedCovers.length + successfulNonCloudflare.length
+    setCoverMessage(
+      totalIssues
+        ? `Found ${failedCovers.length} failed cover${failedCovers.length !== 1 ? 's' : ''} and ${successfulNonCloudflare.length} uploadable cover${successfulNonCloudflare.length !== 1 ? 's' : ''}`
+        : 'All covers are accessible and from Cloudflare'
+    )
+
+    // Cache for 15 minutes
+    sessionStorage.setItem('coverCache', JSON.stringify({ data: results, timestamp: Date.now() }))
+    setCoverLoading(false)
+  }
+
+  const handleUploadCovers = async () => {
+    if (coverResults.successful.length === 0) return
+
+    setUploadLoading(true)
+    setUploadMessage('')
+
+    let successCount = 0
+    let failCount = 0
+    const failed = []
+
+    for (const book of coverResults.successful) {
+      try {
+        // Upload to Cloudflare
+        const newUrl = await uploadImageToProxy(book.cover_url)
+        
+        // Check if the upload actually changed the URL (meaning it succeeded)
+        if (newUrl !== book.cover_url) {
+          // Update the database
+          const { error } = await supabase
+            .from('books')
+            .update({ cover_url: newUrl })
+            .eq('id', book.id)
+
+          if (error) {
+            console.error('Database update failed for', book.title, error)
+            failCount++
+            failed.push(book.title)
+          } else {
+            successCount++
+          }
+        } else {
+          // Upload didn't change URL (failed)
+          failCount++
+          failed.push(book.title)
+        }
+      } catch (error) {
+        console.error('Upload failed for', book.title, error)
+        failCount++
+        failed.push(book.title)
+      }
+    }
+
+    setUploadMessage(
+      `Uploaded ${successCount} cover${successCount !== 1 ? 's' : ''} to Cloudflare. ${
+        failCount > 0 ? `${failCount} failed: ${failed.join(', ')}` : ''
+      }`
+    )
+
+    // Remove successfully uploaded books from the successful list
+    setCoverResults((prev) => ({
+      ...prev,
+      successful: prev.successful.filter((book) => failed.includes(book.title)),
+    }))
+
+    // Clear cache to force re-check
+    sessionStorage.removeItem('coverCache')
+
+    setUploadLoading(false)
+  }
+
   return (
     <>
       <section className="card quality-check-section">
@@ -273,6 +418,72 @@ function QualityChecks({ books, loading }) {
                 </div>
               )
             })}
+          </div>
+        )}
+      </section>
+
+      <section className="card quality-check-section">
+        <div className="block-head quality-check-header">
+          <div>
+            <p className="eyebrow m-0">Quality check</p>
+            <h2 className="m-0">Cover image issues</h2>
+            <p className="muted m-0">Find broken cover images and upload external covers to Cloudflare</p>
+          </div>
+          <button
+            className="ghost quality-check-button"
+            onClick={handleCheckCovers}
+            disabled={coverLoading || loading || books.length === 0}
+          >
+            {coverLoading ? 'Checking…' : 'Check covers'}
+          </button>
+        </div>
+        {coverMessage && <p className="muted mt-4">{coverMessage}</p>}
+        {uploadMessage && <p className="muted mt-2">{uploadMessage}</p>}
+
+        {coverResults.failed.length > 0 && (
+          <div className="stack mt-4">
+            <div className="flex items-center gap-2">
+              <h3 className="m-0">Failed covers ({coverResults.failed.length})</h3>
+              <span className="pill ghost">Needs manual fix</span>
+            </div>
+            <div className="stack duplicate-results">
+              {coverResults.failed.map((book) => (
+                <div key={book.id} className="card duplicate-item-card">
+                  <Link to={`/book/${book.id}`}>
+                    <strong>{book.title}</strong>
+                  </Link>
+                </div>
+              ))}
+            </div>
+          </div>
+        )}
+
+        {coverResults.successful.length > 0 && (
+          <div className="stack mt-4">
+            <div className="flex items-center gap-2">
+              <h3 className="m-0">Uploadable to Cloudflare ({coverResults.successful.length})</h3>
+              <button
+                className="primary"
+                onClick={handleUploadCovers}
+                disabled={uploadLoading}
+              >
+                {uploadLoading ? 'Uploading…' : 'Upload to Cloudflare'}
+              </button>
+            </div>
+            <div className="stack duplicate-results">
+              {coverResults.successful.map((book) => (
+                <div key={book.id} className="card duplicate-item-card">
+                  <div className="duplicate-comparison">
+                    <Link to={`/book/${book.id}`}>
+                      <strong>{book.title}</strong>
+                    </Link>
+                    <span className="muted text-small-muted" style={{ wordBreak: 'break-all' }}>
+                      {book.cover_url}
+                    </span>
+                  </div>
+                </div>
+              ))}
+            </div>
           </div>
         )}
       </section>

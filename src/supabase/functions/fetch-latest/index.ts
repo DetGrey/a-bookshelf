@@ -5,37 +5,77 @@ const corsHeaders = {
   'Access-Control-Allow-Headers': 'authorization, x-client-info, apikey, content-type',
 };
 
+// Retry helper with exponential backoff
+const fetchWithRetry = async (url: string, headers: Record<string, string>, maxRetries = 3) => {
+  for (let attempt = 0; attempt < maxRetries; attempt++) {
+    try {
+      const response = await fetch(url, {
+        headers,
+        redirect: 'follow',
+      });
+      
+      // For comix, 403 might be transient; retry with delay
+      if (response.status === 403 && url.includes('comix.to') && attempt < maxRetries - 1) {
+        await new Promise(resolve => setTimeout(resolve, 1000 * (attempt + 1)));
+        continue;
+      }
+      
+      return response;
+    } catch (error) {
+      if (attempt < maxRetries - 1) {
+        await new Promise(resolve => setTimeout(resolve, 500 * (attempt + 1)));
+        continue;
+      }
+      throw error;
+    }
+  }
+  throw new Error('Max retries exceeded');
+};
+
 Deno.serve(async (req) => {
   // 1. Handle CORS
   if (req.method === 'OPTIONS') {
     return new Response('ok', { headers: corsHeaders });
   }
 
+  let url = ''; // Initialize url variable so it's always in scope
+
   try {
-    const { url } = await req.json();
+    const body = await req.json();
+    url = body.url;
     if (!url) throw new Error('No URL provided');
 
-    // 2. Fetch HTML (with dto.to -> bato.ing fallback)
+    // 2. Fetch HTML
     const urlObj = new URL(url);
     let hostname = urlObj.hostname;
 
-    let response = await fetch(url, {
-      headers: {
-        'User-Agent': 'Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/119.0.0.0 Safari/537.36'
-      }
-    });
+    const fetchHeaders: Record<string, string> = {
+      'User-Agent': 'Mozilla/5.0 (X11; Linux x86_64) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/120.0.0.0 Safari/537.36',
+      'Accept': 'text/html,application/xhtml+xml,application/xml;q=0.9,image/webp,image/apng,*/*;q=0.8,application/signed-exchange;v=b3;q=0.7',
+      'Accept-Language': 'en-US,en;q=0.9',
+      'Accept-Encoding': 'gzip, deflate, br',
+      'Sec-Ch-Ua': '"Not_A Brand";v="8", "Chromium";v="120"',
+      'Sec-Ch-Ua-Mobile': '?0',
+      'Sec-Ch-Ua-Platform': '"Linux"',
+      'Sec-Fetch-Dest': 'document',
+      'Sec-Fetch-Mode': 'navigate',
+      'Sec-Fetch-Site': 'none',
+      'Sec-Fetch-User': '?1',
+      'Cache-Control': 'no-cache',
+      'Pragma': 'no-cache',
+      'Connection': 'keep-alive',
+      'Upgrade-Insecure-Requests': '1',
+      'Priority': 'u=0, i'
+    };
 
-    if (!response.ok && response.status === 404 && hostname === 'dto.to') {
-      const fallbackUrl = url.replace('dto.to', 'bato.ing');
-      response = await fetch(fallbackUrl, {
-        headers: {
-          'User-Agent': 'Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/119.0.0.0 Safari/537.36'
-        }
-      });
-      if (response.ok) {
-        hostname = 'bato.ing';
-      }
+    // Add Referer for most sites (but only base domain for comix to avoid some blocks)
+    if (hostname.includes('comix')) {
+      fetchHeaders['Referer'] = `https://${hostname}/`;
+    } else {
+      fetchHeaders['Referer'] = url;
     }
+
+    let response = await fetchWithRetry(url, fetchHeaders);
 
     if (!response.ok) throw new Error(`Failed to fetch site: ${response.status} ${response.statusText}`);
 
@@ -43,7 +83,6 @@ Deno.serve(async (req) => {
     const $ = cheerio.load(html);
 
     // 3. Determine website and extract accordingly
-    // hostname already derived (may be updated after fallback)
 
     let latest_chapter = '';
     let last_uploaded_at: string | null = null;
@@ -107,51 +146,258 @@ Deno.serve(async (req) => {
         chapter_count = bestCount > 0 ? bestCount : null;
       }
     }
-    // --------------------------------------------- BATO.SI / BATO.ING
-    else if (hostname === 'bato.ing' || hostname === 'bato.si') {
-      const chapterList = $('.group.flex.flex-col').first();
+    // --------------------------------------------- MANGAGO
+    else if (hostname.includes('mangago')) {
+      // Get latest chapter from the table
+      const chaptersTable = $('table.left');
+      const chapterLinks: Array<{ text: string; link: string }> = [];
+      
+      chaptersTable.find('td a.chico').each((_: any, el: any) => {
+        const text = $(el).text().trim();
+        const link = $(el).attr('href') || '';
+        if (text) chapterLinks.push({ text, link });
+      });
 
-      if (chapterList.length) {
-        const firstRow = chapterList.children().first();
-
-        // 1. Get Chapter Name
-        const chapterLink = firstRow.find('a.link-hover').first();
-        if (chapterLink.length) {
-          latest_chapter = chapterLink.text().trim();
+      // Find the chapter with the highest chapter number
+      let highestChapterNum = 0;
+      let latestChapterObj: { text: string; link: string } | null = null;
+      
+      chapterLinks.forEach((item) => {
+        const match = item.text.match(/Ch\.(\d+)/);
+        if (match) {
+          const num = parseInt(match[1], 10);
+          if (num > highestChapterNum) {
+            highestChapterNum = num;
+            latestChapterObj = item;
+          }
         }
+      });
 
-        // 2. Get Upload Date - check time attribute first (ISO format), then data-time
-        const timeTag = firstRow.find('time').first();
-        const ts = timeTag.attr('time') || timeTag.attr('data-time') || timeTag.attr('datetime');
+      if (latestChapterObj) {
+        latest_chapter = latestChapterObj.text;
+        chapter_count = highestChapterNum;
+      } else if (chapterLinks.length > 0) {
+        // Fallback to first link if chapter number extraction fails
+        latest_chapter = chapterLinks[0].text;
+        chapter_count = chapterLinks.length;
+      }
 
-        if (ts) {
-          const millis = Number(ts);
-          if (!Number.isNaN(millis)) {
-            last_uploaded_at = new Date(millis).toISOString();
-          } else {
-            const iso = new Date(ts);
-            if (!Number.isNaN(iso.getTime())) {
-              last_uploaded_at = iso.toISOString();
+      // -- Upload Date --
+      // Find the row containing the latest chapter and extract the date from it
+      const chapterRows = chaptersTable.find('tr');
+      let dateFound = false;
+      chapterRows.each((_: any, row: any) => {
+        if (dateFound) return;
+        const rowText = $(row).text();
+        // Check if this row contains our latest chapter
+        if (rowText.includes(latest_chapter)) {
+          // Look for date pattern like "Sep 27, 2025" or "27 Sep 2025"
+          const dateMatch = rowText.match(/([A-Za-z]+)\s+(\d{1,2}),?\s+(\d{4})|(\d{1,2})\s+([A-Za-z]+)\s+(\d{4})/);
+          if (dateMatch) {
+            try {
+              let month = '', day = '', year = '';
+              if (dateMatch[1]) {
+                // Format: "Sep 27, 2025"
+                month = dateMatch[1];
+                day = dateMatch[2];
+                year = dateMatch[3];
+              } else {
+                // Format: "27 Sep 2025"
+                day = dateMatch[4];
+                month = dateMatch[5];
+                year = dateMatch[6];
+              }
+              
+              const monthNames = ['January', 'February', 'March', 'April', 'May', 'June',
+                                  'July', 'August', 'September', 'October', 'November', 'December'];
+              const monthIndex = monthNames.findIndex((m) => m.toLowerCase().startsWith(month.toLowerCase()));
+              
+              if (monthIndex !== -1) {
+                const dateObj = new Date(Date.UTC(parseInt(year, 10), monthIndex, parseInt(day, 10), 12, 0, 0, 0));
+                last_uploaded_at = dateObj.toISOString();
+                dateFound = true;
+              }
+            } catch (e) {
+              console.log('[Mangago] Date parsing error:', e);
             }
           }
         }
+      });
+      if (!dateFound) last_uploaded_at = null;
+    }
+    // --------------------------------------------- COMIX
+    else if (hostname.includes('comix')) {
+      // Get latest chapter from chapter list
+      const chapterList = $('ul.chap-list li').toArray();
+      
+      if (chapterList.length > 0) {
+        // First item in the list is the latest
+        const firstChapter = $(chapterList[0]);
+        const chapterTitle = firstChapter.find('a.title b').text().trim();
+        
+        if (chapterTitle) {
+          latest_chapter = chapterTitle;
+          
+          // Extract chapter number
+          const match = chapterTitle.match(/Ch\.\s*(\d+)/);
+          if (match) {
+            chapter_count = parseInt(match[1], 10);
+          }
+        }
 
-        // Count from visible list
-        const count = chapterList.children().length;
-        if (count > 0) chapter_count = count;
+        // -- Upload Date from relative time format --
+        const timeSpan = firstChapter.find('span.meta__time');
+        const timeText = timeSpan.text().trim();
+        
+        if (timeText) {
+          try {
+            const now = new Date();
+            let daysAgo = 0;
+            
+            // Parse "Xd" format (days)
+            const daysMatch = timeText.match(/(\d+)\s*d(?:\s|,|$)/);
+            if (daysMatch) {
+              daysAgo += parseInt(daysMatch[1], 10);
+            }
+            
+            // Parse "Xmo" format (months, approximate as 30 days)
+            const monthsMatch = timeText.match(/(\d+)\s*mo/);
+            if (monthsMatch) {
+              daysAgo += parseInt(monthsMatch[1], 10) * 30;
+            }
+            
+            // Calculate date
+            if (daysAgo > 0) {
+              const uploadDate = new Date(now.getTime() - daysAgo * 24 * 60 * 60 * 1000);
+              // Set to noon UTC
+              uploadDate.setUTCHours(12, 0, 0, 0);
+              last_uploaded_at = uploadDate.toISOString();
+            }
+          } catch (e) {
+            console.log('[Comix] Date parsing error:', e);
+            last_uploaded_at = null;
+          }
+        } else {
+          last_uploaded_at = null;
+        }
       }
 
-      // Heading-based count fallback ("Chapters (50)")
+      // Fall back to checking pagination text for total chapter count
       if (!chapter_count) {
-        const headingCountText = $('b#chapters').next('span').text() || $('b:contains("Chapters")').next('span').text();
-        const match = headingCountText.match(/(\d+)/);
-        if (match) {
-          const parsed = parseInt(match[1], 10);
-          if (Number.isFinite(parsed) && parsed > 0) chapter_count = parsed;
+        const paginationText = $('div.mt-3 b').text();
+        if (paginationText) {
+          const parts = paginationText.match(/of\s+(\d+)/);
+          if (parts) {
+            const totalCount = parseInt(parts[1], 10);
+            if (!isNaN(totalCount)) {
+              chapter_count = totalCount;
+            }
+          }
         }
       }
     }
-    // --------------------------------------------- DEFAULT (BATO V3 STYLE)
+    // --------------------------------------------- ASURACOMIC
+    else if (hostname.includes('asuracomic') || hostname.includes('asurascans')) {
+      const chapterRows = $('div.pl-4.py-2.border.rounded-md, div[class*="pl-4"][class*="py-2"][class*="rounded-md"]')
+        .filter((_: any, el: any) => $(el).find('a[href*="/chapter/"]').length > 0)
+        .toArray();
+
+      const parseAsuraDate = (dateText: string): string | null => {
+        const trimmed = dateText.trim();
+        if (!trimmed) return null;
+        const dateMatch = trimmed.match(/([A-Za-z]+)\s+(\d{1,2})(?:st|nd|rd|th)?(?:,)?\s+(\d{4})/);
+        if (!dateMatch) return null;
+        const monthNames = ['January', 'February', 'March', 'April', 'May', 'June',
+          'July', 'August', 'September', 'October', 'November', 'December'];
+        const monthIndex = monthNames.findIndex((m) => m.toLowerCase().startsWith(dateMatch[1].toLowerCase()));
+        if (monthIndex === -1) return null;
+        const day = parseInt(dateMatch[2], 10);
+        const year = parseInt(dateMatch[3], 10);
+        return new Date(Date.UTC(year, monthIndex, day, 12, 0, 0, 0)).toISOString();
+      };
+
+      let bestChapterNumber = Number.NEGATIVE_INFINITY;
+      let bestChapterText = '';
+      let bestChapterDateIso: string | null = null;
+      const uniqueChapterKeys = new Set<string>();
+
+      chapterRows.forEach((row: any) => {
+        const $row = $(row);
+        const chapterLink = $row.find('a[href*="/chapter/"]').first();
+        const href = chapterLink.attr('href') || '';
+        if (href) uniqueChapterKeys.add(href);
+
+        const text = $row.find('h3.text-sm').first().text().trim().replace(/\s+/g, ' ')
+          || chapterLink.text().trim().replace(/\s+/g, ' ');
+        const chapterMatch = text.match(/chapter\s*(\d+(?:\.\d+)?)/i);
+        const chapterNumber = chapterMatch ? parseFloat(chapterMatch[1]) : Number.NEGATIVE_INFINITY;
+
+        const dateText = $row.find('h3.text-xs').first().text().trim();
+        const dateIso = parseAsuraDate(dateText);
+
+        if (chapterNumber > bestChapterNumber) {
+          bestChapterNumber = chapterNumber;
+          bestChapterText = text;
+          bestChapterDateIso = dateIso;
+        }
+      });
+
+      if (bestChapterText) latest_chapter = bestChapterText;
+      if (Number.isFinite(bestChapterNumber)) chapter_count = Math.floor(bestChapterNumber);
+      if ((!chapter_count || chapter_count <= 0) && uniqueChapterKeys.size > 0) {
+        chapter_count = uniqueChapterKeys.size;
+      }
+      if (bestChapterDateIso) last_uploaded_at = bestChapterDateIso;
+    }
+    // --------------------------------------------- MANGATV
+    else if (hostname.includes('mangatv')) {
+      const chapterItems = $('ul.clstyle li').toArray();
+      
+      if (chapterItems.length > 0) {
+        chapter_count = chapterItems.length;
+
+        // Parse all chapters to find the one with the highest chapter number
+        let highestChapterNum = 0;
+        let latestChapterText = '';
+        let latestChapterDate = '';
+
+        chapterItems.forEach((item: any) => {
+          const $item = $(item);
+          const chapterNums = $item.find('span.chapternum');
+          const chapterText = chapterNums.first().text().trim();
+          const dateText = $item.find('span.chapterdate').text().trim();
+
+          // Extract chapter number from text like "Capítulo 3"
+          const match = chapterText.match(/Cap[íi]tulo\s+(\d+(?:\.\d+)?)/i);
+          if (match) {
+            const num = parseFloat(match[1]);
+            if (num > highestChapterNum) {
+              highestChapterNum = num;
+              latestChapterText = chapterText;
+              latestChapterDate = dateText;
+            }
+          }
+        });
+
+        if (latestChapterText) {
+          latest_chapter = latestChapterText;
+          chapter_count = Math.floor(highestChapterNum);
+        }
+
+        // Parse date (format: YYYY-MM-DD)
+        if (latestChapterDate) {
+          try {
+            const dateObj = new Date(latestChapterDate + 'T12:00:00.000Z');
+            if (!isNaN(dateObj.getTime())) {
+              last_uploaded_at = dateObj.toISOString();
+            }
+          } catch (e) {
+            console.log('[MangaTV] Date parsing error:', e);
+          }
+        }
+      }
+    }
+    // --------------------------------------------- DEFAULT
     else {
       // Find all chapter links (include side stories/creator notes) and pick the newest by timestamp
       const chapterCandidates = $('[name="chapter-list"] a, .scrollable-panel a')
