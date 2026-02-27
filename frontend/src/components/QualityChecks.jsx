@@ -12,6 +12,7 @@ function QualityChecks({ books, loading }) {
   const [coverLoading, setCoverLoading] = useState(false)
   const [coverResults, setCoverResults] = useState({ failed: [], successful: [] })
   const [coverMessage, setCoverMessage] = useState('')
+  const [coverProgress, setCoverProgress] = useState({ checked: 0, total: 0 })
   const [uploadLoading, setUploadLoading] = useState(false)
   const [uploadMessage, setUploadMessage] = useState('')
 
@@ -191,6 +192,7 @@ function QualityChecks({ books, loading }) {
       const { data, timestamp } = JSON.parse(cached)
       if (Date.now() - timestamp < 900000) {
         setCoverResults(data)
+        setCoverProgress({ checked: 0, total: 0 })
         const totalIssues = data.failed.length + data.successful.length
         setCoverMessage(
           totalIssues
@@ -226,6 +228,8 @@ function QualityChecks({ books, loading }) {
     const booksWithCovers = books.filter((book) => book.cover_url)
     const batchSize = 10
     
+    setCoverProgress({ checked: 0, total: booksWithCovers.length })
+    
     for (let i = 0; i < booksWithCovers.length; i += batchSize) {
       const batch = booksWithCovers.slice(i, i + batchSize)
       const results = await Promise.all(
@@ -243,6 +247,9 @@ function QualityChecks({ books, loading }) {
           successfulNonCloudflare.push(book)
         }
       })
+      
+      // Update progress after each batch
+      setCoverProgress({ checked: Math.min(i + batchSize, booksWithCovers.length), total: booksWithCovers.length })
     }
 
     const results = {
@@ -261,6 +268,7 @@ function QualityChecks({ books, loading }) {
     // Cache for 15 minutes
     sessionStorage.setItem('coverCache', JSON.stringify({ data: results, timestamp: Date.now() }))
     setCoverLoading(false)
+    setCoverProgress({ checked: 0, total: 0 })
   }
 
   const handleUploadCovers = async () => {
@@ -437,7 +445,12 @@ function QualityChecks({ books, loading }) {
             {coverLoading ? 'Checking…' : 'Check covers'}
           </button>
         </div>
-        {coverMessage && <p className="muted mt-4">{coverMessage}</p>}
+        {coverLoading && coverProgress.total > 0 && (
+          <p className="muted mt-4">
+            Checking covers: {coverProgress.checked} / {coverProgress.total}
+          </p>
+        )}
+        {!coverLoading && coverMessage && <p className="muted mt-4">{coverMessage}</p>}
         {uploadMessage && <p className="muted mt-2">{uploadMessage}</p>}
 
         {coverResults.failed.length > 0 && (
