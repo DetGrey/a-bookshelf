@@ -1,6 +1,7 @@
 import { ChangeDetectionStrategy, Component, computed, inject, signal } from '@angular/core';
 import { BookService } from '../../core/book/book.service';
 import { Book } from '../../models/book.model';
+import { QualityToolsService } from '../../core/quality/quality-tools.service';
 
 @Component({
   selector: 'app-dashboard-page',
@@ -61,12 +62,15 @@ import { Book } from '../../models/book.model';
 
       <section>
         <h2>Quality hub</h2>
-        <button type="button" data-testid="duplicate-title-scanner">Duplicate title scanner</button>
-        <button type="button" data-testid="stale-waiting-scanner">Stale waiting checker</button>
-        <button type="button" data-testid="cover-checker">Cover checker</button>
+        <button type="button" data-testid="duplicate-title-scanner" (click)="runDuplicateScan()">Duplicate title scanner</button>
+        <button type="button" data-testid="stale-waiting-scanner" (click)="runStaleWaitingScan()">Stale waiting checker</button>
+        <button type="button" data-testid="cover-checker" (click)="runCoverCheck()">Cover checker</button>
         <button type="button" data-testid="backup-download">Download backup</button>
         <button type="button" data-testid="backup-restore">Restore backup</button>
-        <button type="button" data-testid="genre-consolidation">Genre consolidation</button>
+        <button type="button" data-testid="genre-consolidation" (click)="showGenreConsolidationHelp()">Genre consolidation</button>
+        @if (qualityMessage()) {
+          <p>{{ qualityMessage() }}</p>
+        }
       </section>
     </section>
   `,
@@ -74,6 +78,7 @@ import { Book } from '../../models/book.model';
 })
 export class DashboardPageComponent {
   private readonly bookService = inject(BookService);
+  private readonly qualityTools = inject(QualityToolsService);
 
   readonly books = this.bookService.books;
   readonly totalSaved = computed(() => this.books().length);
@@ -83,6 +88,7 @@ export class DashboardPageComponent {
 
   readonly showAllGenres = signal(false);
   readonly showAllSources = signal(false);
+  readonly qualityMessage = signal('');
 
   readonly genreBreakdown = computed(() => this.buildTopBreakdown(this.collectGenres(this.books())));
   readonly sourceBreakdown = computed(() => this.buildTopBreakdown(this.collectSources(this.books())));
@@ -101,6 +107,25 @@ export class DashboardPageComponent {
 
   toggleSources(): void {
     this.showAllSources.update((value) => !value);
+  }
+
+  runDuplicateScan(): void {
+    const result = this.qualityTools.scanDuplicateTitles();
+    this.qualityMessage.set(`Duplicate groups: ${result.duplicateCount}`);
+  }
+
+  runStaleWaitingScan(): void {
+    const result = this.qualityTools.scanStaleWaiting();
+    this.qualityMessage.set(`Stale waiting books: ${result.staleCount}`);
+  }
+
+  runCoverCheck(): void {
+    const result = this.qualityTools.scanCoverHealth();
+    this.qualityMessage.set(`External covers: ${result.externalCount}`);
+  }
+
+  showGenreConsolidationHelp(): void {
+    this.qualityMessage.set('Genre consolidation requires an explicit confirmation step in the quality tools service.');
   }
 
   private collectGenres(books: readonly Book[]): Array<{ name: string; count: number }> {

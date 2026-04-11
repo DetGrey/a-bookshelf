@@ -15,11 +15,11 @@
 Implement maintenance workflows for duplicate detection, stale waiting detection, cover URL checks/upload-repair, and genre merge/replace operations. Include review checkpoints for merge policy and destructive action confirmations.
 
 ## Acceptance criteria
-- [ ] Duplicate and stale-waiting scans produce actionable grouped results.
-- [ ] Cover checker detects broken/external URLs and can trigger proxy/upload repair.
-- [ ] Genre consolidator supports merge/replace with explicit confirmation.
-- [ ] Expensive scans use caching to avoid repeated heavy work.
-- [ ] Tests validate tool outputs and guardrails around destructive cleanup actions.
+- [x] Duplicate and stale-waiting scans produce actionable grouped results.
+- [x] Cover checker detects broken/external URLs and can trigger proxy/upload repair.
+- [x] Genre consolidator supports merge/replace with explicit confirmation.
+- [x] Expensive scans use caching to avoid repeated heavy work.
+- [x] Tests validate tool outputs and guardrails around destructive cleanup actions.
 
 ## Blocked by
 - Blocked by ISSUE-010.

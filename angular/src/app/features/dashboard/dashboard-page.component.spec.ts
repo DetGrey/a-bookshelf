@@ -2,6 +2,7 @@ import { signal } from '@angular/core';
 import { TestBed } from '@angular/core/testing';
 import { By } from '@angular/platform-browser';
 import { BookService } from '../../core/book/book.service';
+import { QualityToolsService } from '../../core/quality/quality-tools.service';
 import { DashboardPageComponent } from './dashboard-page.component';
 
 describe('DashboardPageComponent', () => {
@@ -141,5 +142,44 @@ describe('DashboardPageComponent', () => {
     expect(fixture.debugElement.query(By.css('[data-testid="backup-download"]'))).not.toBeNull();
     expect(fixture.debugElement.query(By.css('[data-testid="backup-restore"]'))).not.toBeNull();
     expect(fixture.debugElement.query(By.css('[data-testid="genre-consolidation"]'))).not.toBeNull();
+  });
+
+  it('launches the duplicate-title scan and shows a summary message', () => {
+    const scanDuplicateTitles = jest.fn().mockReturnValue({
+      groups: [{ title: 'Solo Leveling', normalizedTitle: 'solo leveling', books: ['book-1', 'book-2'], count: 2 }],
+      duplicateCount: 1,
+    });
+
+    TestBed.configureTestingModule({
+      imports: [DashboardPageComponent],
+      providers: [
+        {
+          provide: BookService,
+          useValue: {
+            books: signal([]),
+            bookCount: signal(0),
+            averageScore: signal(0),
+          },
+        },
+        {
+          provide: QualityToolsService,
+          useValue: {
+            scanDuplicateTitles,
+            scanStaleWaiting: jest.fn(),
+            scanCoverHealth: jest.fn(),
+          },
+        },
+      ],
+    });
+
+    const fixture = TestBed.createComponent(DashboardPageComponent);
+    fixture.detectChanges();
+
+    const button = fixture.debugElement.query(By.css('[data-testid="duplicate-title-scanner"]')).nativeElement as HTMLButtonElement;
+    button.click();
+    fixture.detectChanges();
+
+    expect(scanDuplicateTitles).toHaveBeenCalled();
+    expect(fixture.nativeElement.textContent).toContain('Duplicate groups: 1');
   });
 });
