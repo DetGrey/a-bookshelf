@@ -16,152 +16,230 @@ type ConsolidationStep = 'idle' | 'selecting' | 'working';
   standalone: true,
   imports: [FormsModule, BookGridComponent],
   template: `
-    <section class="dashboard-page">
-      <h1>Dashboard</h1>
+    <div class="page dashboard-page">
+      <div class="page-head">
+        <div>
+          <p class="eyebrow">Overview</p>
+          <h1>Dashboard</h1>
+          <p class="muted">Track reading, pull metadata, and jump back into the next chapter fast.</p>
+        </div>
+        <a href="/add" class="primary">Smart Add</a>
+      </div>
 
-      <section class="dashboard-stats">
-        <article>
-          <h2>Total saved</h2>
-          <p>{{ totalSaved() }}</p>
+      @if (qualityMessage()) {
+        <p class="muted">{{ qualityMessage() }}</p>
+      }
+
+      <section class="dashboard-stats stat-grid">
+        <article class="stat">
+          <p class="muted">Total saved</p>
+          <strong>{{ totalSaved() }}</strong>
         </article>
-        <article>
-          <h2>Waiting</h2>
-          <p>{{ waitingCount() }}</p>
+        <article class="stat">
+          <p class="muted">Completed</p>
+          <strong>{{ completedCount() }}</strong>
         </article>
-        <article>
-          <h2>Average score</h2>
-          <p>{{ averageScore() }}</p>
+        <article class="stat">
+          <p class="muted">Waiting for updates</p>
+          <strong>{{ waitingCount() }}</strong>
         </article>
-        <article>
-          <h2>Rated 10</h2>
-          <p>{{ scoreTenCount() }}</p>
+        <article class="stat">
+          <p class="muted">Last updated</p>
+          <strong>{{ lastUpdatedTitle() }}</strong>
         </article>
-        <article>
-          <h2>Completed</h2>
-          <p>{{ completedCount() }}</p>
+        <article class="stat">
+          <p class="muted">Average score</p>
+          <strong>{{ averageScore() }}</strong>
         </article>
-        <article>
-          <h2>Last updated</h2>
-          <p>{{ lastUpdatedTitle() }}</p>
+        <article class="stat">
+          <p class="muted">Score 10 count</p>
+          <strong>{{ scoreTenCount() }}</strong>
         </article>
       </section>
 
-      <section>
-        <h2>Genre breakdown</h2>
-        @for (item of visibleGenres(); track item.name) {
-          <p>{{ item.name }} ({{ item.count }})</p>
-        }
-        @if (hasMoreGenres()) {
-          <button type="button" data-testid="toggle-genres" (click)="toggleGenres()">
-            {{ showAllGenres() ? 'Show top five' : 'Show all' }}
-          </button>
+      <section class="card dashboard-section">
+        <div class="block-head dashboard-section-header">
+          <h2>Genre breakdown</h2>
+          <p class="muted">
+            {{ totalBooks() ? 'Books by genre (% of your library) — books can have multiple genres' : 'No genre data yet' }}
+          </p>
+        </div>
+        @if (totalBooks() > 0 && genreBreakdown().length > 0) {
+          <div class="genre-list-container">
+            @for (item of visibleGenres(); track item.name; let index = $index) {
+              <div class="genre-bar-item">
+                <div class="genre-bar-header">
+                  <span class="genre-bar-name">{{ item.name }}</span>
+                  <span class="muted genre-bar-stats">{{ percentOfLibrary(item.count) }}% ({{ item.count }})</span>
+                  <span class="sr-only">{{ item.name }} ({{ item.count }})</span>
+                </div>
+                <div class="genre-bar-track">
+                  <div
+                    class="genre-bar-fill"
+                    [style.width.%]="barWidthPercent(item.count)"
+                    [style.background-color]="breakdownColor(index)"
+                  ></div>
+                </div>
+              </div>
+            }
+            @if (hasMoreGenres()) {
+              <button type="button" class="ghost genre-more-button" data-testid="toggle-genres" (click)="toggleGenres()">
+                <span>{{ showAllGenres() ? '▼' : '▶' }}</span>
+                <span>
+                  {{ showAllGenres() ? 'Show top five' : '+ ' + (genreBreakdown().length - 5) + ' more genres' }}
+                </span>
+              </button>
+            }
+          </div>
+        } @else {
+          <p class="muted">Add genres to your books to see the breakdown.</p>
         }
       </section>
 
-      <section>
-        <h2>Status breakdown</h2>
-        @for (item of visibleStatuses(); track item.name) {
-          <p>{{ item.name }} ({{ item.count }})</p>
+      <section class="card dashboard-section">
+        <div class="block-head dashboard-section-header">
+          <h2>Sources breakdown</h2>
+          <p class="muted">
+            {{ totalBooks() ? 'Books by source (% of your library) — books can have multiple sources' : 'No source data yet' }}
+          </p>
+        </div>
+        @if (totalBooks() > 0 && sourceBreakdown().length > 0) {
+          <div class="genre-list-container">
+            @for (item of visibleSources(); track item.name; let index = $index) {
+              <div class="genre-bar-item">
+                <div class="genre-bar-header">
+                  <span class="genre-bar-name">{{ item.name }}</span>
+                  <span class="muted genre-bar-stats">{{ percentOfLibrary(item.count) }}% ({{ item.count }})</span>
+                  <span class="sr-only">{{ item.name }} ({{ item.count }})</span>
+                </div>
+                <div class="genre-bar-track">
+                  <div
+                    class="genre-bar-fill"
+                    [style.width.%]="barWidthPercent(item.count)"
+                    [style.background-color]="breakdownColor(index)"
+                  ></div>
+                </div>
+              </div>
+            }
+            @if (hasMoreSources()) {
+              <button type="button" class="ghost genre-more-button" data-testid="toggle-sources" (click)="toggleSources()">
+                <span>{{ showAllSources() ? '▼' : '▶' }}</span>
+                <span>
+                  {{ showAllSources() ? 'Show top five' : '+ ' + (sourceBreakdown().length - 5) + ' more sources' }}
+                </span>
+              </button>
+            }
+          </div>
+        } @else {
+          <p class="muted">Add sources to your books to see the breakdown.</p>
         }
       </section>
 
       @for (section of statusSections(); track section.key) {
         @if (section.books.length > 0) {
-          <section [attr.data-testid]="'status-section-' + section.key">
-            <h2>{{ section.label }}</h2>
+          <section class="block" [attr.data-testid]="'status-section-' + section.key">
+            <div class="block-head">
+              <h2 class="section-heading">{{ statusSectionHeading(section.key, section.label) }}</h2>
+            </div>
             <app-book-grid [books]="section.books" [compact]="true" (opened)="onOpenDetails($event)" />
           </section>
         }
       }
 
-      <section>
-        <h2>Source breakdown</h2>
-        @for (item of visibleSources(); track item.name) {
-          <p>{{ item.name }} ({{ item.count }})</p>
-        }
-        @if (hasMoreSources()) {
-          <button type="button" data-testid="toggle-sources" (click)="toggleSources()">
-            {{ showAllSources() ? 'Show top five' : 'Show all' }}
-          </button>
-        }
-      </section>
+      <section class="card quality-check-section">
+        <div class="block-head quality-check-header">
+          <div>
+            <p class="eyebrow m-0">Tools</p>
+            <h2 class="m-0">Quality checks & tools</h2>
+            <p class="muted m-0">Audit and improve your library</p>
+          </div>
+        </div>
 
-      <section>
-        <h2>Quality hub</h2>
-        <button type="button" data-testid="duplicate-title-scanner" (click)="runDuplicateScan()">Duplicate title scanner</button>
-        <button type="button" data-testid="stale-waiting-scanner" (click)="runStaleWaitingScan()">Stale waiting checker</button>
-
-        <button type="button" data-testid="cover-checker" (click)="runCoverCheck()">Cover checker</button>
-        @if (coverScanResult()?.externalCount) {
-          <button
-            type="button"
-            data-testid="cover-repair"
-            [disabled]="coverRepairRunning()"
-            (click)="repairCovers()"
-          >
-            Repair {{ coverScanResult()!.externalCount }} external {{ coverScanResult()!.externalCount === 1 ? 'cover' : 'covers' }}
-          </button>
-        }
-
-        <button type="button" data-testid="backup-download" (click)="downloadBackup()">Download backup</button>
-        <button type="button" data-testid="backup-restore" (click)="restoreInput.click()">Restore backup</button>
-        <input
-          #restoreInput
-          data-testid="backup-restore-input"
-          type="file"
-          accept="application/json"
-          hidden
-          (change)="onBackupFileSelected($event)"
-        />
-
-        @if (consolidationStep() === 'idle') {
-          <button type="button" data-testid="genre-consolidation" (click)="startGenreConsolidation()">Genre consolidation</button>
-        } @else if (consolidationStep() === 'selecting') {
-          <div data-testid="genre-consolidation-panel">
-            <h3>Select source genres</h3>
-            <ul>
-              @for (item of genreBreakdown(); track item.name) {
-                <li>
-                  <label>
-                    <input
-                      type="checkbox"
-                      [checked]="isSourceGenreSelected(item.name)"
-                      (change)="toggleSourceGenre(item.name)"
-                    />
-                    {{ item.name }} ({{ item.count }})
-                  </label>
-                </li>
-              }
-            </ul>
-            <input
-              data-testid="consolidation-target-input"
-              [(ngModel)]="consolidationTarget"
-              name="consolidationTarget"
-              placeholder="Target genre"
-            />
-            <select data-testid="consolidation-mode-select" [(ngModel)]="consolidationMode" name="consolidationMode">
-              <option value="merge">Merge — add target, keep other genres</option>
-              <option value="replace">Replace — replace all source genres with target</option>
-            </select>
+        <div class="quality-actions-grid">
+          <button type="button" data-testid="duplicate-title-scanner" (click)="runDuplicateScan()">Duplicate title scanner</button>
+          <button type="button" data-testid="stale-waiting-scanner" (click)="runStaleWaitingScan()">Stale waiting checker</button>
+          <button type="button" data-testid="cover-checker" (click)="runCoverCheck()">Cover checker</button>
+          @if (coverScanResult()?.externalCount) {
             <button
               type="button"
-              data-testid="consolidation-confirm"
-              [disabled]="selectedSourceGenres().length === 0 || !consolidationTarget"
-              (click)="confirmGenreConsolidation()"
+              data-testid="cover-repair"
+              [disabled]="coverRepairRunning()"
+              (click)="repairCovers()"
             >
-              Consolidate {{ selectedSourceGenres().length }} genre(s) → {{ consolidationTarget || '…' }}
+              Repair {{ coverScanResult()!.externalCount }} external {{ coverScanResult()!.externalCount === 1 ? 'cover' : 'covers' }}
             </button>
-            <button type="button" data-testid="consolidation-cancel" (click)="cancelGenreConsolidation()">Cancel</button>
-          </div>
-        } @else if (consolidationStep() === 'working') {
-          <p>Consolidating genres…</p>
-        }
+          }
 
-        @if (qualityMessage()) {
-          <p>{{ qualityMessage() }}</p>
-        }
+          @if (consolidationStep() === 'idle') {
+            <button type="button" data-testid="genre-consolidation" (click)="startGenreConsolidation()">Genre consolidation</button>
+          } @else if (consolidationStep() === 'selecting') {
+            <div class="genre-consolidation-panel" data-testid="genre-consolidation-panel">
+              <h3>Select source genres</h3>
+              <ul>
+                @for (item of genreBreakdown(); track item.name) {
+                  <li>
+                    <label>
+                      <input
+                        type="checkbox"
+                        [checked]="isSourceGenreSelected(item.name)"
+                        (change)="toggleSourceGenre(item.name)"
+                      />
+                      {{ item.name }} ({{ item.count }})
+                    </label>
+                  </li>
+                }
+              </ul>
+              <input
+                data-testid="consolidation-target-input"
+                [(ngModel)]="consolidationTarget"
+                name="consolidationTarget"
+                placeholder="Target genre"
+              />
+              <select data-testid="consolidation-mode-select" [(ngModel)]="consolidationMode" name="consolidationMode">
+                <option value="merge">Merge — add target, keep other genres</option>
+                <option value="replace">Replace — replace all source genres with target</option>
+              </select>
+              <div class="genre-consolidation-actions">
+                <button
+                  type="button"
+                  data-testid="consolidation-confirm"
+                  [disabled]="selectedSourceGenres().length === 0 || !consolidationTarget"
+                  (click)="confirmGenreConsolidation()"
+                >
+                  Consolidate {{ selectedSourceGenres().length }} genre(s) → {{ consolidationTarget || '…' }}
+                </button>
+                <button type="button" data-testid="consolidation-cancel" (click)="cancelGenreConsolidation()">Cancel</button>
+              </div>
+            </div>
+          } @else if (consolidationStep() === 'working') {
+            <p class="muted">Consolidating genres…</p>
+          }
+        </div>
       </section>
-    </section>
+
+      <section class="card data-portability-section">
+        <div>
+          <p class="eyebrow m-0">Data portability</p>
+          <p class="muted m-0">Download or upload all your data as JSON (books, shelves, links).</p>
+        </div>
+        <div class="data-portability-buttons">
+          <button type="button" class="ghost quality-check-button" data-testid="backup-restore" (click)="restoreInput.click()">
+            Restore backup
+          </button>
+          <button type="button" class="ghost quality-check-button" data-testid="backup-download" (click)="downloadBackup()">
+            Download backup
+          </button>
+          <input
+            #restoreInput
+            data-testid="backup-restore-input"
+            type="file"
+            accept="application/json"
+            hidden
+            (change)="onBackupFileSelected($event)"
+          />
+        </div>
+      </section>
+    </div>
   `,
   changeDetection: ChangeDetectionStrategy.OnPush,
 })
@@ -174,6 +252,7 @@ export class DashboardPageComponent {
 
   readonly books = this.bookService.books;
   readonly totalSaved = computed(() => this.books().length);
+  readonly totalBooks = computed(() => this.books().length);
   readonly averageScore = computed(() => this.bookService.averageScore());
   readonly waitingCount = computed(() => this.books().filter((book) => book.status === 'waiting').length);
   readonly scoreTenCount = computed(() => this.books().filter((book) => book.score === 10).length);
@@ -191,6 +270,7 @@ export class DashboardPageComponent {
   readonly coverRepairRunning = signal(false);
   readonly consolidationStep = signal<ConsolidationStep>('idle');
   readonly selectedSourceGenres = signal<string[]>([]);
+  readonly breakdownPalette = ['#7c83ff', '#ff8ba7', '#22c55e', '#f6aa1c', '#4cc9f0', '#a855f7', '#ef4444', '#0ea5e9'];
 
   readonly sectionStatuses = [
     { key: 'reading', label: 'Reading' },
@@ -204,11 +284,9 @@ export class DashboardPageComponent {
 
   readonly genreBreakdown = computed(() => this.buildTopBreakdown(this.collectGenres(this.books())));
   readonly sourceBreakdown = computed(() => this.buildTopBreakdown(this.collectSources(this.books())));
-  readonly statusBreakdown = computed(() => this.buildTopBreakdown(this.collectStatuses(this.books()), false));
 
   readonly visibleGenres = computed(() => this.sliceBreakdown(this.genreBreakdown(), this.showAllGenres()));
   readonly visibleSources = computed(() => this.sliceBreakdown(this.sourceBreakdown(), this.showAllSources()));
-  readonly visibleStatuses = computed(() => this.statusBreakdown());
 
   readonly hasMoreGenres = computed(() => this.genreBreakdown().length > 5);
   readonly hasMoreSources = computed(() => this.sourceBreakdown().length > 5);
@@ -245,6 +323,36 @@ export class DashboardPageComponent {
 
   toggleSources(): void {
     this.showAllSources.update((value) => !value);
+  }
+
+  statusSectionHeading(key: string, fallback: string): string {
+    if (key === 'reading') {
+      return 'Currently reading';
+    }
+
+    return fallback;
+  }
+
+  percentOfLibrary(count: number): string {
+    const total = this.totalBooks();
+    if (!total) {
+      return '0.0';
+    }
+
+    return ((count / total) * 100).toFixed(1);
+  }
+
+  barWidthPercent(count: number): number {
+    const total = this.totalBooks();
+    if (!total) {
+      return 0;
+    }
+
+    return Math.min((count / total) * 100, 100);
+  }
+
+  breakdownColor(index: number): string {
+    return this.breakdownPalette[index % this.breakdownPalette.length];
   }
 
   runDuplicateScan(): void {
@@ -373,20 +481,16 @@ export class DashboardPageComponent {
 
   private collectGenres(books: readonly Book[]): Array<{ name: string; count: number }> {
     const counts = new Map<string, number>();
+    const ignoredGenres = new Set(['manhwa', 'manhua', 'webtoon', 'manga', 'full color']);
+
     books.forEach((book) => {
-      book.genres.forEach((genre) => {
+      const uniqueGenres = new Set(book.genres);
+      uniqueGenres.forEach((genre) => {
         const key = genre.trim();
         if (!key) return;
+        if (ignoredGenres.has(key.toLowerCase())) return;
         counts.set(key, (counts.get(key) ?? 0) + 1);
       });
-    });
-    return [...counts.entries()].map(([name, count]) => ({ name, count }));
-  }
-
-  private collectStatuses(books: readonly Book[]): Array<{ name: string; count: number }> {
-    const counts = new Map<string, number>();
-    books.forEach((book) => {
-      counts.set(book.status, (counts.get(book.status) ?? 0) + 1);
     });
     return [...counts.entries()].map(([name, count]) => ({ name, count }));
   }
@@ -395,25 +499,26 @@ export class DashboardPageComponent {
     const counts = new Map<string, number>();
 
     books.forEach((book) => {
-      const sourceHosts = this.extractSourceHosts(book);
-      sourceHosts.forEach((host) => {
-        if (!host) return;
-        counts.set(host, (counts.get(host) ?? 0) + 1);
+      const sourceUrls = [
+        ...(book.sources ?? []).map((source) => source.url),
+        ...(((book as Book & { sourceUrls?: string[] }).sourceUrls) ?? []),
+      ];
+
+      sourceUrls.forEach((url) => {
+        try {
+          const host = new URL(url).hostname.replace(/^www\./, '');
+          if (!host) {
+            return;
+          }
+
+          counts.set(host, (counts.get(host) ?? 0) + 1);
+        } catch {
+          return;
+        }
       });
     });
 
     return [...counts.entries()].map(([name, count]) => ({ name, count }));
-  }
-
-  private extractSourceHosts(book: Book): string[] {
-    const value = book as Book & { sourceHosts?: string[]; sourceUrls?: string[] };
-    return value.sourceHosts ?? value.sourceUrls?.map((url) => {
-      try {
-        return new URL(url).hostname;
-      } catch {
-        return url;
-      }
-    }) ?? [];
   }
 
   private buildTopBreakdown(items: Array<{ name: string; count: number }>, sortDescending = true): Array<{ name: string; count: number }> {

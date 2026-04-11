@@ -138,10 +138,3 @@
   background: var(--bg);
 }
 
-.book-card.compact .card-head {
-  grid-template-columns: 1fr;
-}
-
-.book-card.compact .cover-link {
-  display: none;
-}

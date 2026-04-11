@@ -115,6 +115,12 @@ const SCORE_OPTIONS: Record<number, string> = {
         </div>
 
         <div class="card-links">
+          @for (source of visibleSources(); track source.url) {
+            <a data-testid="source-link" [attr.href]="source.url" target="_blank" rel="noreferrer" class="ghost">
+              {{ source.siteName || 'Source' }}
+            </a>
+          }
+
           @if (customShelves().length > 0 && !compact()) {
             <div class="shelf-menu-container">
               <div class="shelf-button-wrapper">
@@ -173,6 +179,10 @@ export class BookCardComponent {
   readonly showShelfMenu = signal(false);
 
   readonly activeCustomShelves = () => this.customShelves().filter((shelf) => this.isBookOnShelf(shelf));
+  readonly visibleSources = () => {
+    const sources = this.book().sources ?? [];
+    return sources.slice(0, this.compact() ? 2 : 1);
+  };
 
   statusLabel(status: Book['status']): string {
     const labels: Record<Book['status'], string> = {

@@ -27,6 +27,10 @@ export function toBook(record: BookRecord): Book {
     lastRead: record.last_read ?? null,
     originalLanguage: record.original_language ?? null,
     coverUrl: record.cover_url,
+    sources: (record.book_links ?? []).map((link) => ({
+      siteName: link.site_name ?? 'Source',
+      url: link.url,
+    })),
     createdAt: new Date(record.created_at),
     updatedAt: new Date(record.updated_at),
   };
@@ -54,7 +58,7 @@ export function toFormModel(book: Book): BookFormModel {
     latestChapter: book.latestChapter ?? '',
     lastUploadedAt: toDatetimeLocal(book.lastUploadedAt),
     originalLanguage: book.originalLanguage ?? '',
-    sources: [],
+    sources: [...(book.sources ?? [])],
     shelves: [],
     relatedBookIds: [],
   };

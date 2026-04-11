@@ -115,13 +115,13 @@ Angular must align with:
   - `angular/src/app/features/dashboard/dashboard-page.component.ts`
   - `angular/src/styles/_layout.scss`
 - Step checklist:
-  - [ ] Stat card count/order matches React.
-  - [ ] Stat card dimensions, typography, and spacing match React.
-  - [ ] Genre breakdown includes React-equivalent color indicators/diagram cues.
-  - [ ] Status breakdown includes React-equivalent color indicators/diagram cues.
-  - [ ] Source breakdown visual hierarchy and top-five/expand treatment match React.
-  - [ ] Section headings and tool button copy match React.
-  - [ ] Dashboard remains readable and non-overflowing at 375/768/1440 widths.
+  - [x] Stat card count/order matches React.
+  - [x] Stat card dimensions, typography, and spacing match React.
+  - [x] Genre breakdown includes React-equivalent color indicators/diagram cues.
+  - [x] Status breakdown includes React-equivalent color indicators/diagram cues.
+  - [x] Source breakdown visual hierarchy and top-five/expand treatment match React.
+  - [x] Section headings and tool button copy match React.
+  - [x] Dashboard remains readable and non-overflowing at 375/768/1440 widths.
 
 ### Step 4 — Bookshelf screen parity
 - React references:

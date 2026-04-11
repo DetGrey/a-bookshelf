@@ -103,6 +103,22 @@ export class BookService {
     return { success: true, data: mappedBooks };
   }
 
+  async getSources(bookId: string): Promise<Result<Array<{ siteName: string | null; url: string }>>> {
+    const result = await this.repository.getSources(bookId);
+
+    if (!result.success) {
+      return result;
+    }
+
+    return {
+      success: true,
+      data: result.data.map((source) => ({
+        siteName: source.site_name,
+        url: source.url,
+      })),
+    };
+  }
+
   async createBook(form: BookFormModel): Promise<Result<Book>> {
     const user = this.auth.currentUser();
 

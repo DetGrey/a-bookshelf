@@ -21,6 +21,7 @@ const BOOK_SELECT_COLUMNS = [
   'last_read',
   'original_language',
   'cover_url',
+  'book_links(site_name,url)',
   'created_at',
   'updated_at',
 ].join(',');

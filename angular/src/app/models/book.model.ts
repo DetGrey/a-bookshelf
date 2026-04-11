@@ -18,6 +18,7 @@ export interface BookRecord {
   last_read?: string | null;
   original_language?: string | null;
   cover_url: string | null;
+  book_links?: Array<{ site_name: string | null; url: string }>;
   created_at: string;
   updated_at: string;
 }
@@ -40,6 +41,7 @@ export interface Book {
   lastRead: string | null;
   originalLanguage: string | null;
   coverUrl: string | null;
+  sources?: readonly BookSourceDraft[];
   createdAt: Date;
   updatedAt: Date;
 }
