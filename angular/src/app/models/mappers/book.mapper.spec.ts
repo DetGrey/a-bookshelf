@@ -80,6 +80,9 @@ describe('book mapper tracer bullet', () => {
       language: '',
       chapterCount: 50,
       coverUrl: '',
+      sources: [],
+      shelves: [],
+      relatedBookIds: [],
     });
   });
 
@@ -93,6 +96,9 @@ describe('book mapper tracer bullet', () => {
       language: '  ',
       chapterCount: null,
       coverUrl: '',
+      sources: [],
+      shelves: [],
+      relatedBookIds: [],
     };
 
     const result = toSupabasePayload(form);
@@ -107,5 +113,25 @@ describe('book mapper tracer bullet', () => {
       chapter_count: null,
       cover_url: null,
     });
+  });
+
+  it('stores raw cover URL in payload without proxy transformation', () => {
+    const form: BookFormModel = {
+      title: 'Book',
+      description: '',
+      score: null,
+      status: 'plan_to_read',
+      genres: '',
+      language: '',
+      chapterCount: null,
+      coverUrl: 'https://images.example.com/cover.jpg?size=large',
+      sources: [],
+      shelves: [],
+      relatedBookIds: [],
+    };
+
+    const result = toSupabasePayload(form);
+
+    expect(result.cover_url).toBe('https://images.example.com/cover.jpg?size=large');
   });
 });

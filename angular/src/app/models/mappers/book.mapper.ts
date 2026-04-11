@@ -35,6 +35,9 @@ export function toFormModel(book: Book): BookFormModel {
     language: book.language ?? '',
     chapterCount: book.chapterCount,
     coverUrl: book.coverUrl ?? '',
+    sources: [],
+    shelves: [],
+    relatedBookIds: [],
   };
 }
 

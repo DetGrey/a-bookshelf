@@ -1,5 +1,5 @@
 import { inject, Injectable } from '@angular/core';
-import { BookRecord } from '../../models/book.model';
+import { BookRecord, BookSourceDraft } from '../../models/book.model';
 import { ErrorCode, Result } from '../../models/result.model';
 import { SUPABASE_CLIENT } from '../supabase.token';
 
@@ -28,5 +28,109 @@ export class BookRepository {
       success: true,
       data: (data ?? []) as BookRecord[],
     };
+  }
+
+  async create(userId: string, payload: Partial<BookRecord>): Promise<Result<BookRecord>> {
+    const { data, error } = await this.supabase
+      .from('books')
+      .insert({ ...payload, user_id: userId })
+      .select()
+      .single();
+
+    if (error || !data) {
+      return {
+        success: false,
+        error: {
+          code: ErrorCode.Network,
+          message: error?.message ?? 'Failed to create book.',
+          cause: error,
+        },
+      };
+    }
+
+    return {
+      success: true,
+      data: data as BookRecord,
+    };
+  }
+
+  async addSources(bookId: string, sources: readonly BookSourceDraft[]): Promise<Result<void>> {
+    if (sources.length === 0) {
+      return { success: true, data: undefined };
+    }
+
+    const payload = sources.map((source) => ({
+      book_id: bookId,
+      site_name: source.siteName.trim() || null,
+      url: source.url.trim(),
+    }));
+
+    const { error } = await this.supabase.from('book_links').insert(payload);
+
+    if (error) {
+      return {
+        success: false,
+        error: {
+          code: ErrorCode.Network,
+          message: error.message,
+          cause: error,
+        },
+      };
+    }
+
+    return { success: true, data: undefined };
+  }
+
+  async addRelations(bookId: string, relatedBookIds: readonly string[]): Promise<Result<void>> {
+    if (relatedBookIds.length === 0) {
+      return { success: true, data: undefined };
+    }
+
+    const payload = relatedBookIds.map((relatedBookId) => ({
+      book_id: bookId,
+      related_book_id: relatedBookId,
+      relationship_type: 'related',
+    }));
+
+    const { error } = await this.supabase.from('related_books').insert(payload);
+
+    if (error) {
+      return {
+        success: false,
+        error: {
+          code: ErrorCode.Network,
+          message: error.message,
+          cause: error,
+        },
+      };
+    }
+
+    return { success: true, data: undefined };
+  }
+
+  async setShelfLinks(bookId: string, shelfIds: readonly string[]): Promise<Result<void>> {
+    if (shelfIds.length === 0) {
+      return { success: true, data: undefined };
+    }
+
+    const payload = shelfIds.map((shelfId) => ({
+      shelf_id: shelfId,
+      book_id: bookId,
+    }));
+
+    const { error } = await this.supabase.from('shelf_books').insert(payload);
+
+    if (error) {
+      return {
+        success: false,
+        error: {
+          code: ErrorCode.Network,
+          message: error.message,
+          cause: error,
+        },
+      };
+    }
+
+    return { success: true, data: undefined };
   }
 }

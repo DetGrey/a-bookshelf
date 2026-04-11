@@ -15,12 +15,12 @@
 Build an end-to-end manual Add Book flow using typed reactive forms (`BookFormModel`) and sub-components (`BookFormFields`, `SourceManager`, `ShelfSelector`, `BookSearchLinker`), including create + related rows + shelf toggles.
 
 ## Acceptance criteria
-- [ ] Add Book screen supports manual data entry and form validation.
-- [ ] Save flow creates book row, then sources/relations, then shelf links.
-- [ ] The raw cover URL is stored as-is in Supabase at save time — no proxy or transformation is applied during persistence.
-- [ ] `CoverImage` component applies the Cloudflare Worker image proxy at render time, not at save time — these are separate concerns in separate components.
-- [ ] Success navigates to Bookshelf and state refreshes correctly.
-- [ ] Tests cover form mapping (`toSupabasePayload`) and save orchestration.
+- [x] Add Book screen supports manual data entry and form validation.
+- [x] Save flow creates book row, then sources/relations, then shelf links.
+- [x] The raw cover URL is stored as-is in Supabase at save time — no proxy or transformation is applied during persistence.
+- [x] `CoverImage` component applies the Cloudflare Worker image proxy at render time, not at save time — these are separate concerns in separate components.
+- [x] Success navigates to Bookshelf and state refreshes correctly.
+- [x] Tests cover form mapping (`toSupabasePayload`) and save orchestration.
 
 ## Blocked by
 - Blocked by ISSUE-003.

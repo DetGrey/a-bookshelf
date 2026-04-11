@@ -30,6 +30,11 @@ export interface Book {
   updatedAt: Date;
 }
 
+export interface BookSourceDraft {
+  siteName: string;
+  url: string;
+}
+
 export interface BookFormModel {
   title: string;
   description: string;
@@ -39,4 +44,7 @@ export interface BookFormModel {
   language: string;
   chapterCount: number | null;
   coverUrl: string;
+  sources: BookSourceDraft[];
+  shelves: string[];
+  relatedBookIds: string[];
 }
