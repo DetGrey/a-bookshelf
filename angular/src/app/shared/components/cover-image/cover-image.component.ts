@@ -17,6 +17,7 @@ import { NgStyle } from '@angular/common';
   selector: 'app-cover-image',
   standalone: true,
   imports: [NgStyle],
+  styleUrl: './cover-image.component.scss',
   template: `
     <span #holder class="cover-holder">
       @if (showImage()) {

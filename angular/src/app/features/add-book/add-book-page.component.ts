@@ -39,6 +39,7 @@ type AddBookFormGroup = FormGroup<{
 @Component({
   selector: 'app-add-book-page',
   standalone: true,
+  styleUrl: './add-book-page.component.scss',
   imports: [
     ReactiveFormsModule,
     BookFormFieldsComponent,
@@ -49,10 +50,10 @@ type AddBookFormGroup = FormGroup<{
     MetadataFetcherComponent,
   ],
   template: `
-    <section>
+    <section class="page narrow add-book-page">
       <h1>Add Book</h1>
 
-      <form [formGroup]="bookForm" (ngSubmit)="onSubmit()">
+      <form class="card stack" [formGroup]="bookForm" (ngSubmit)="onSubmit()">
         <app-metadata-fetcher [form]="bookForm" />
 
         <app-book-form-fields [form]="bookForm" />
@@ -64,10 +65,10 @@ type AddBookFormGroup = FormGroup<{
         <app-cover-image [src]="bookForm.controls.coverUrl.value" [alt]="bookForm.controls.title.value || 'Book cover preview'" />
 
         @if (localError()) {
-          <p>{{ localError() }}</p>
+          <p class="error">{{ localError() }}</p>
         }
 
-        <button data-testid="save-book-button" type="submit" [disabled]="isSubmitting()">Save book</button>
+        <button class="primary" data-testid="save-book-button" type="submit" [disabled]="isSubmitting()">Save book</button>
       </form>
     </section>
   `,

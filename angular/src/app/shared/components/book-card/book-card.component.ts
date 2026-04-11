@@ -19,6 +19,7 @@ const SCORE_OPTIONS: Record<number, string> = {
 @Component({
   selector: 'app-book-card',
   standalone: true,
+  styleUrl: './book-card.component.scss',
   template: `
     <article class="book-card" [id]="'book-anchor-' + book().id">
       <h3>{{ book().title }}</h3>

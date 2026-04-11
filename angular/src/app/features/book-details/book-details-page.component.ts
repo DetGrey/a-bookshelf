@@ -41,6 +41,7 @@ type EditBookFormGroup = FormGroup<{
 @Component({
   selector: 'app-book-details-page',
   standalone: true,
+  styleUrl: './book-details-page.component.scss',
   imports: [
     RouterLink,
     ReactiveFormsModule,
@@ -52,15 +53,15 @@ type EditBookFormGroup = FormGroup<{
     MetadataFetcherComponent,
   ],
   template: `
-    <section>
+    <section class="page narrow book-details-page">
       @if (!detail()) {
         <h1>Book Details</h1>
-        <p>{{ resolverError() }}</p>
+        <p class="error">{{ resolverError() }}</p>
       } @else {
         @if (isEditMode()) {
           <h1>Edit Book</h1>
 
-          <form [formGroup]="editForm" (ngSubmit)="saveEdit()">
+          <form class="card stack" [formGroup]="editForm" (ngSubmit)="saveEdit()">
             <app-metadata-fetcher [form]="editForm" [compact]="true" />
             <app-book-form-fields [form]="editForm" />
             <app-source-manager [sources]="editForm.controls.sources" />
@@ -68,20 +69,25 @@ type EditBookFormGroup = FormGroup<{
             <app-book-search-linker [control]="editForm.controls.relatedBookIds" />
 
             @if (mutationError()) {
-              <p>{{ mutationError() }}</p>
+              <p class="error">{{ mutationError() }}</p>
             }
 
-            <button data-testid="save-edit" type="submit">Save</button>
-            <button type="button" (click)="cancelEdit()">Cancel</button>
+            <div class="edit-actions">
+              <button class="primary" data-testid="save-edit" type="submit">Save</button>
+              <button class="ghost" type="button" (click)="cancelEdit()">Cancel</button>
+            </div>
           </form>
         } @else {
           <h1>{{ detail()!.book.title }}</h1>
 
-          <button data-testid="enter-edit-mode" type="button" (click)="enterEditMode()">Edit</button>
-          <button data-testid="delete-book" type="button" (click)="deleteCurrentBook()">Delete</button>
+          <div class="read-actions">
+            <button class="ghost" data-testid="enter-edit-mode" type="button" (click)="enterEditMode()">Edit</button>
+            <button class="ghost" data-testid="delete-book" type="button" (click)="deleteCurrentBook()">Delete</button>
+          </div>
 
           @if (detail()!.sources.length > 0) {
             <button
+              class="ghost"
               data-testid="fetch-latest-chapter"
               type="button"
               [disabled]="fetchingLatest()"
@@ -173,7 +179,7 @@ type EditBookFormGroup = FormGroup<{
         }
 
         @if (mutationError() && !isEditMode()) {
-          <p>{{ mutationError() }}</p>
+          <p class="error">{{ mutationError() }}</p>
         }
       }
     </section>

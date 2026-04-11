@@ -1,0 +1,12 @@
+:host {
+  display: block;
+}
+
+.add-book-page h1 {
+  margin-bottom: var(--space-2);
+}
+
+.add-book-page form {
+  display: grid;
+  gap: var(--space-3);
+}

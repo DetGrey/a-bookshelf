@@ -385,17 +385,23 @@ fieldset {
 ---
 
 ## Acceptance criteria
-- [ ] CSS custom properties are defined in `_tokens.scss` and available app-wide.
-- [ ] Body has dark background `#0f1117`, panel cards use `#1a1d27`, text is `#e8eaf0`.
-- [ ] Space Grotesk font loads and is applied to body text.
-- [ ] Dashboard stat grid uses responsive `auto-fill` columns.
-- [ ] Book grid uses responsive `auto-fill` columns (min 260px).
-- [ ] Bookshelf layout uses a 220px sidebar + 1fr main content grid.
-- [ ] Navigation bar is sticky with panel background.
-- [ ] Auth pages are centred on screen with a max-width card.
-- [ ] Pill, ghost, primary, field, card utility classes work consistently.
-- [ ] Cover image component shows correct sizing (80×110px default thumbnail).
-- [ ] No visual regressions to any feature introduced in ISSUE-000–021.
+- [x] CSS custom properties are defined in `_tokens.scss` and available app-wide.
+- [x] Body has dark background `#0f1117`, panel cards use `#1a1d27`, text is `#e8eaf0`.
+- [x] Space Grotesk font loads and is applied to body text.
+- [x] Dashboard stat grid uses responsive `auto-fill` columns.
+- [x] Book grid uses responsive `auto-fill` columns (min 260px).
+- [x] Bookshelf layout uses a 220px sidebar + 1fr main content grid.
+- [x] Navigation bar is sticky with panel background.
+- [x] Auth pages are centred on screen with a max-width card.
+- [x] Pill, ghost, primary, field, card utility classes work consistently.
+- [x] Cover image component shows correct sizing (80×110px default thumbnail).
+- [x] No visual regressions to any feature introduced in ISSUE-000–021.
+
+## Completion notes
+- Added full design token set, utility classes, global base/reset rules, and responsive layout primitives under `src/styles/` while preserving the import-only `styles.scss` contract.
+- Wired component-scoped SCSS for auth pages, `BookCardComponent`, `BookGridComponent`, and `CoverImageComponent`, and updated nav styling in `app.component.scss` for sticky panel parity.
+- Loaded Space Grotesk/Sora fonts in `src/index.html` and aligned major layout surfaces (dashboard stats, bookshelf sidebar/main grid) to the ISSUE spec.
+- Validation: full regression passed (`npm test`): 31/31 suites, 210/210 tests.
 
 ## Blocked by
 - Blocked by ISSUE-021 (all components must exist before final styling pass).

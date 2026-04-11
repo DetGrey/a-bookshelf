@@ -7,6 +7,7 @@ import { Shelf } from '../../../models/shelf.model';
   selector: 'app-book-grid',
   standalone: true,
   imports: [BookCardComponent],
+  styleUrl: './book-grid.component.scss',
   template: `
     <section class="book-grid">
       @for (book of books(); track book.id) {

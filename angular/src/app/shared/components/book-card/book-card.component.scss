@@ -1,0 +1,104 @@
+:host {
+  display: block;
+}
+
+.book-card {
+  background: var(--panel);
+  border: 1px solid var(--border);
+  border-radius: var(--radius);
+  box-shadow: var(--shadow);
+  padding: var(--space-4);
+  display: grid;
+  gap: var(--space-3);
+}
+
+.book-card h3 {
+  font-size: 1rem;
+  font-weight: 600;
+}
+
+.book-card > p {
+  color: var(--text-muted);
+  font-size: 0.92rem;
+}
+
+.genre-row {
+  display: flex;
+  flex-wrap: wrap;
+  gap: var(--space-2);
+}
+
+.genre-pill {
+  border: 1px solid var(--border);
+  background: transparent;
+  color: var(--text-muted);
+  border-radius: 999px;
+  padding: 4px 10px;
+}
+
+.genre-pill.active {
+  background: rgba(108, 99, 255, 0.15);
+  border-color: var(--accent);
+  color: var(--text);
+}
+
+.book-notes {
+  color: var(--text-muted);
+  font-size: 0.9rem;
+}
+
+.card-footer {
+  display: flex;
+  justify-content: space-between;
+  align-items: flex-end;
+  margin-top: var(--space-3);
+  padding-top: var(--space-3);
+  border-top: 1px solid var(--border);
+  gap: var(--space-3);
+}
+
+.footer-left {
+  display: grid;
+  gap: var(--space-1);
+  color: var(--text-muted);
+  font-size: 0.85rem;
+}
+
+.footer-left p:nth-child(even) {
+  color: var(--text);
+  font-size: 0.95rem;
+}
+
+.footer-right {
+  display: flex;
+  flex-direction: column;
+  align-items: flex-end;
+  gap: var(--space-2);
+  position: relative;
+}
+
+.shelf-dropdown {
+  position: absolute;
+  right: 0;
+  top: calc(100% + var(--space-1));
+  background: var(--panel);
+  border: 1px solid var(--border);
+  border-radius: var(--radius-sm);
+  min-width: 160px;
+  z-index: 50;
+  list-style: none;
+  overflow: hidden;
+}
+
+.shelf-dropdown li {
+  display: flex;
+  gap: var(--space-2);
+  padding: var(--space-2) var(--space-3);
+  width: 100%;
+  cursor: pointer;
+  color: var(--text);
+}
+
+.shelf-dropdown li:hover {
+  background: var(--bg);
+}

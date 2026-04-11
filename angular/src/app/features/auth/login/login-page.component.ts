@@ -7,29 +7,34 @@ import { AuthService } from '../../../core/auth/auth.service';
   selector: 'app-login-page',
   standalone: true,
   imports: [ReactiveFormsModule, RouterLink],
+  styleUrl: './login-page.component.scss',
   template: `
-    <section>
-      <h1>Login</h1>
+    <section class="auth-page">
+      <article class="auth-card">
+        <p class="eyebrow">Welcome back</p>
+        <h1>Login</h1>
+        <p class="sub">Sign in to continue to your bookshelf.</p>
 
-      <form [formGroup]="form" (ngSubmit)="submit()">
-        <label>
-          Email
-          <input type="email" formControlName="email" />
-        </label>
+        <form [formGroup]="form" (ngSubmit)="submit()">
+          <label class="field">
+            <span>Email</span>
+            <input type="email" formControlName="email" />
+          </label>
 
-        <label>
-          Password
-          <input type="password" formControlName="password" />
-        </label>
+          <label class="field">
+            <span>Password</span>
+            <input type="password" formControlName="password" />
+          </label>
 
-        <button type="submit" [disabled]="isSubmitting()">{{ isSubmitting() ? 'Signing in...' : 'Sign in' }}</button>
-      </form>
+          <button class="primary" type="submit" [disabled]="isSubmitting()">{{ isSubmitting() ? 'Signing in...' : 'Sign in' }}</button>
+        </form>
 
-      @if (errorMessage()) {
-        <p>{{ errorMessage() }}</p>
-      }
+        @if (errorMessage()) {
+          <p class="error">{{ errorMessage() }}</p>
+        }
 
-      <a routerLink="/signup">Create account</a>
+        <a routerLink="/signup">Create account</a>
+      </article>
     </section>
   `,
   changeDetection: ChangeDetectionStrategy.OnPush,

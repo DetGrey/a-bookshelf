@@ -7,38 +7,43 @@ import { AuthService } from '../../../core/auth/auth.service';
   selector: 'app-signup-page',
   standalone: true,
   imports: [ReactiveFormsModule, RouterLink],
+  styleUrl: './signup-page.component.scss',
   template: `
-    <section>
-      <h1>Signup</h1>
+    <section class="auth-page">
+      <article class="auth-card">
+        <p class="eyebrow">Create account</p>
+        <h1>Signup</h1>
+        <p class="sub">Create your account to start tracking reads.</p>
 
-      <form [formGroup]="form" (ngSubmit)="submit()">
-        <label>
-          Email
-          <input type="email" formControlName="email" />
-        </label>
+        <form [formGroup]="form" (ngSubmit)="submit()">
+          <label class="field">
+            <span>Email</span>
+            <input type="email" formControlName="email" />
+          </label>
 
-        <label>
-          Password
-          <input type="password" formControlName="password" />
-        </label>
+          <label class="field">
+            <span>Password</span>
+            <input type="password" formControlName="password" />
+          </label>
 
-        <label>
-          Confirm password
-          <input type="password" formControlName="confirmPassword" />
-        </label>
+          <label class="field">
+            <span>Confirm password</span>
+            <input type="password" formControlName="confirmPassword" />
+          </label>
 
-        <button type="submit" [disabled]="isSubmitting()">{{ isSubmitting() ? 'Signing up...' : 'Create account' }}</button>
-      </form>
+          <button class="primary" type="submit" [disabled]="isSubmitting()">{{ isSubmitting() ? 'Signing up...' : 'Create account' }}</button>
+        </form>
 
-      @if (errorMessage()) {
-        <p>{{ errorMessage() }}</p>
-      }
+        @if (errorMessage()) {
+          <p class="error">{{ errorMessage() }}</p>
+        }
 
-      @if (successMessage()) {
-        <p>{{ successMessage() }}</p>
-      }
+        @if (successMessage()) {
+          <p class="success">{{ successMessage() }}</p>
+        }
 
-      <a routerLink="/login">Back to login</a>
+        <a routerLink="/login">Back to login</a>
+      </article>
     </section>
   `,
   changeDetection: ChangeDetectionStrategy.OnPush,

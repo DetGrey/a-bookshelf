@@ -1,0 +1,42 @@
+:host {
+  display: block;
+}
+
+.auth-page {
+  display: flex;
+  justify-content: center;
+  align-items: center;
+  min-height: 100vh;
+  padding: var(--space-4);
+}
+
+.auth-card {
+  background: var(--panel);
+  border: 1px solid var(--border);
+  border-radius: var(--radius);
+  box-shadow: var(--shadow);
+  width: 100%;
+  max-width: 400px;
+  padding: var(--space-4);
+  display: grid;
+  gap: var(--space-3);
+
+  .eyebrow {
+    margin-bottom: var(--space-1);
+  }
+
+  h1 {
+    margin-bottom: var(--space-1);
+  }
+
+  .sub {
+    color: var(--text-muted);
+    margin-bottom: var(--space-3);
+    font-size: 0.9rem;
+  }
+
+  form {
+    display: grid;
+    gap: var(--space-3);
+  }
+}
