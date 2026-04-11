@@ -6,6 +6,7 @@ import { BookGridComponent } from '../../shared/components/book-grid/book-grid.c
 import { BookshelfFilterService } from './bookshelf-filter.service';
 import { FormsModule } from '@angular/forms';
 import { Book, BookStatus } from '../../models/book.model';
+import { escapeRegex } from '../../shared/utils/string.util';
 
 @Component({
   selector: 'app-bookshelf-page',
@@ -116,6 +117,9 @@ import { Book, BookStatus } from '../../models/book.model';
             />
 
             <select [value]="filters.sort()" (change)="onSortChange($event)">
+              @if (filters.search()) {
+                <option value="relevance">Relevance</option>
+              }
               <option value="updatedAt">Updated</option>
               <option value="createdAt">Created</option>
               <option value="title">Title</option>
@@ -144,6 +148,28 @@ import { Book, BookStatus } from '../../models/book.model';
                 placeholder="Add genre filter"
               />
               <button type="button" data-testid="add-genre-button" (click)="addGenreFromInput()">Add</button>
+              
+              @if (filters.genres().length > 0) {
+                <div class="genre-mode-toggle">
+                  <button 
+                    type="button" 
+                    data-testid="genre-mode-any" 
+                    [class.active]="filters.genreMode() === 'any'" 
+                    (click)="setGenreMode('any')"
+                  >
+                    Any
+                  </button>
+                  <button 
+                    type="button" 
+                    data-testid="genre-mode-all" 
+                    [class.active]="filters.genreMode() === 'all'" 
+                    (click)="setGenreMode('all')"
+                  >
+                    All
+                  </button>
+                </div>
+              }
+
               @for (genre of filters.genres(); track genre) {
                 <span>
                   {{ genre }}
@@ -152,21 +178,27 @@ import { Book, BookStatus } from '../../models/book.model';
               }
             </div>
 
-            <div>
-              <input
-                type="number"
-                data-testid="chapter-min-input"
-                [value]="filters.chapterMin() ?? ''"
-                (input)="onChapterMinInput($event)"
-                placeholder="Chapters min"
-              />
-              <input
-                type="number"
-                data-testid="chapter-max-input"
-                [value]="filters.chapterMax() ?? ''"
-                (input)="onChapterMaxInput($event)"
-                placeholder="Chapters max"
-              />
+            <div class="chapter-filters">
+              <div class="chapter-presets">
+                <button type="button" data-testid="chapter-preset-clear" [class.active]="filters.chapterValue() === null" (click)="setChapterValue(null)">Any</button>
+                @for (preset of chapterPresets; track preset) {
+                  <button 
+                    type="button" 
+                    [attr.data-testid]="'chapter-preset-' + preset" 
+                    [class.active]="filters.chapterValue() === preset" 
+                    (click)="setChapterValue(preset)"
+                  >
+                    {{ preset }}
+                  </button>
+                }
+              </div>
+              
+              @if (filters.chapterValue() !== null) {
+                <div class="chapter-mode-toggle">
+                  <button type="button" data-testid="chapter-mode-max" [class.active]="filters.chapterMode() === 'max'" (click)="setChapterMode('max')">Max</button>
+                  <button type="button" data-testid="chapter-mode-min" [class.active]="filters.chapterMode() === 'min'" (click)="setChapterMode('min')">Min</button>
+                </div>
+              }
             </div>
           </div>
 
@@ -212,6 +244,7 @@ export class BookshelfPageComponent {
       count: source.filter((book) => book.status === status).length,
     }));
   });
+  
   readonly filteredSortedBooks = computed(() => {
     let collection = [...this.books()];
 
@@ -229,8 +262,10 @@ export class BookshelfPageComponent {
     const search = this.filters.search().trim().toLowerCase();
     const language = this.filters.language().trim().toLowerCase();
     const genres = this.filters.genres().map((genre) => genre.toLowerCase());
-    const chapterMin = this.filters.chapterMin();
-    const chapterMax = this.filters.chapterMax();
+    const genreMode = this.filters.genreMode ? this.filters.genreMode() : 'all';
+    
+    const chapterValue = this.filters.chapterValue();
+    const chapterMode = this.filters.chapterMode();
 
     if (search) {
       collection = collection.filter((book) =>
@@ -246,16 +281,19 @@ export class BookshelfPageComponent {
     if (genres.length > 0) {
       collection = collection.filter((book) => {
         const bookGenres = book.genres.map((genre) => genre.toLowerCase());
-        return genres.every((genre) => bookGenres.includes(genre));
+        
+        // ISSUE-018: Any vs All genre logic
+        return genreMode === 'any'
+          ? genres.some((genre) => bookGenres.includes(genre))
+          : genres.every((genre) => bookGenres.includes(genre));
       });
     }
 
-    if (chapterMin !== null) {
-      collection = collection.filter((book) => (book.chapterCount ?? 0) >= chapterMin);
-    }
-
-    if (chapterMax !== null) {
-      collection = collection.filter((book) => (book.chapterCount ?? Number.MAX_SAFE_INTEGER) <= chapterMax);
+    if (chapterValue !== null) {
+      collection = collection.filter((book) => {
+        const count = book.chapterCount ?? 0;
+        return chapterMode === 'max' ? count <= chapterValue : count >= chapterValue;
+      });
     }
 
     const direction = this.filters.sortDir() === 'asc' ? 1 : -1;
@@ -409,15 +447,20 @@ export class BookshelfPageComponent {
   removeGenreTag(genre: string): void {
     void this.filters.updateFilter('genres', this.filters.genres().filter((g) => g !== genre));
   }
-
-  onChapterMinInput(event: Event): void {
-    const target = event.target as HTMLInputElement;
-    void this.filters.updateFilter('chapterMin', target.value ? Number(target.value) : null);
+  
+  // ISSUE-018: New Method for Genre Mode
+  setGenreMode(mode: 'any' | 'all'): void {
+    void this.filters.updateFilter('genreMode', mode);
   }
 
-  onChapterMaxInput(event: Event): void {
-    const target = event.target as HTMLInputElement;
-    void this.filters.updateFilter('chapterMax', target.value ? Number(target.value) : null);
+  readonly chapterPresets = [10, 20, 50, 100, 200];
+
+  setChapterValue(value: number | null): void {
+    void this.filters.updateFilter('chapterValue', value);
+  }
+
+  setChapterMode(mode: 'min' | 'max'): void {
+    void this.filters.updateFilter('chapterMode', mode);
   }
 
   setPage(page: number): void {
@@ -452,6 +495,16 @@ export class BookshelfPageComponent {
   }
 
   private compareBooks(left: Book, right: Book, sort: ReturnType<typeof this.filters.sort>): number {
+    if (sort === 'relevance' && this.filters.search()) {
+      const scoreLeft = this.scoreBook(left, this.filters.search());
+      const scoreRight = this.scoreBook(right, this.filters.search());
+      
+      if (scoreLeft !== scoreRight) {
+        return scoreLeft - scoreRight; // Handled by multiplier later to sort desc by default
+      }
+      return left.title.localeCompare(right.title);
+    }
+
     switch (sort) {
       case 'title':
         return left.title.localeCompare(right.title);
@@ -467,5 +520,24 @@ export class BookshelfPageComponent {
       default:
         return left.updatedAt.getTime() - right.updatedAt.getTime();
     }
+  }
+
+  private scoreBook(book: Book, search: string): number {
+    const query = search.trim().toLowerCase();
+    if (!query) return 0;
+    
+    let score = 0;
+    const safeQuery = escapeRegex(query);
+    const exactRegex = new RegExp(`\\b${safeQuery}\\b`, 'i');
+    
+    // Title matches
+    if (exactRegex.test(book.title)) score += 10;
+    else if (book.title.toLowerCase().includes(query)) score += 5;
+    
+    // Description matches
+    if (book.description && exactRegex.test(book.description)) score += 3;
+    else if (book.description?.toLowerCase().includes(query)) score += 1;
+    
+    return score;
   }
 }

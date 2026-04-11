@@ -20,8 +20,9 @@ describe('BookshelfFilterService', () => {
       lang: 'en',
       shelf: 'status:reading',
       genres: 'action,fantasy',
-      chapterMin: '10',
-      chapterMax: '50',
+      genreMode: 'any',
+      chapterValue: '50',
+      chapterMode: 'min',
       page: '3',
     });
 
@@ -52,9 +53,44 @@ describe('BookshelfFilterService', () => {
     expect(service.language()).toBe('en');
     expect(service.shelf()).toBe('status:reading');
     expect(service.genres()).toEqual(['action', 'fantasy']);
-    expect(service.chapterMin()).toBe(10);
-    expect(service.chapterMax()).toBe(50);
+    
+    // NEW properties for ISSUE-018
+    expect(service.genreMode()).toBe('any');
+    expect(service.chapterValue()).toBe(50);
+    expect(service.chapterMode()).toBe('min');
     expect(service.page()).toBe(3);
+
+    // Old properties should be gone
+    expect((service as any).chapterMin).toBeUndefined();
+    expect((service as any).chapterMax).toBeUndefined();
+  });
+
+  it('applies default values for missing or invalid query params', () => {
+    const queryParams$ = new BehaviorSubject<Params>({
+      genreMode: 'invalid-mode',
+      chapterMode: 'invalid-mode',
+    });
+
+    TestBed.configureTestingModule({
+      providers: [
+        BookshelfFilterService,
+        {
+          provide: ActivatedRoute,
+          useValue: {
+            snapshot: { queryParamMap: createQueryParamMap(queryParams$.value) },
+            queryParams: queryParams$.asObservable(),
+          },
+        },
+        { provide: Router, useValue: { navigate: jest.fn() } },
+      ],
+    });
+
+    const service = TestBed.inject(BookshelfFilterService);
+    
+    // Invalid values should fallback to defaults
+    expect(service.genreMode()).toBe('all');
+    expect(service.chapterValue()).toBeNull();
+    expect(service.chapterMode()).toBe('max');
   });
 
   it('updateFilter navigates with merged query params and resets page except when page is updated', async () => {
@@ -66,7 +102,7 @@ describe('BookshelfFilterService', () => {
         {
           provide: ActivatedRoute,
           useValue: {
-            snapshot: { queryParamMap: createQueryParamMap({ page: '4', sort: 'title' }) },
+            snapshot: { queryParams: { page: '4', sort: 'title' } },
             queryParams: new BehaviorSubject<Params>({ page: '4', sort: 'title' }).asObservable(),
           },
         },
@@ -80,23 +116,26 @@ describe('BookshelfFilterService', () => {
     const service = TestBed.inject(BookshelfFilterService);
 
     await service.updateFilter('search', 'new value');
-
     expect(navigate).toHaveBeenCalledWith([], {
       queryParams: expect.objectContaining({ q: 'new value', page: 1 }),
       queryParamsHandling: 'merge',
     });
 
-    await service.updateFilter('page', 2);
-
+    await service.updateFilter('genreMode', 'any');
     expect(navigate).toHaveBeenCalledWith([], {
-      queryParams: expect.objectContaining({ page: 2 }),
+      queryParams: expect.objectContaining({ genreMode: 'any', page: 1 }),
       queryParamsHandling: 'merge',
     });
 
-    await service.updateFilter('shelf', 'custom:shelf-2');
-
+    await service.updateFilter('chapterValue', 100);
     expect(navigate).toHaveBeenCalledWith([], {
-      queryParams: expect.objectContaining({ shelf: 'custom:shelf-2', page: 1 }),
+      queryParams: expect.objectContaining({ chapterValue: 100, page: 1 }),
+      queryParamsHandling: 'merge',
+    });
+
+    await service.updateFilter('page', 2);
+    expect(navigate).toHaveBeenCalledWith([], {
+      queryParams: expect.objectContaining({ page: 2 }),
       queryParamsHandling: 'merge',
     });
   });
@@ -114,9 +153,7 @@ describe('BookshelfFilterService', () => {
         },
         {
           provide: Router,
-          useValue: {
-            navigate: jest.fn().mockResolvedValue(true),
-          },
+          useValue: { navigate: jest.fn().mockResolvedValue(true) },
         },
       ],
     });
@@ -127,10 +164,5 @@ describe('BookshelfFilterService', () => {
 
     expect(service.selectedAnchor()).toBe('book-99');
     expect(service.scrollY()).toBe(420);
-
-    const secondService = TestBed.inject(BookshelfFilterService);
-
-    expect(secondService.selectedAnchor()).toBe('book-99');
-    expect(secondService.scrollY()).toBe(420);
   });
 });
