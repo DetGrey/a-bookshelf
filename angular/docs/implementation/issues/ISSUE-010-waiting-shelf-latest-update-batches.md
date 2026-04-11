@@ -15,11 +15,11 @@
 Implement waiting-shelf batch updates that process throttled calls to latest-chapter endpoint using first source URL, update only changed fields, and report per-item outcomes.
 
 ## Acceptance criteria
-- [ ] Batch action appears only for waiting shelf context.
-- [ ] Jobs execute in small throttled batches with progress UI.
-- [ ] Only changed fields are persisted; unchanged books remain untouched.
-- [ ] Summary includes updated count, skipped count, and error details.
-- [ ] Tests cover changed-vs-unchanged update behavior.
+- [x] Batch action appears only for waiting shelf context.
+- [x] Jobs execute in small throttled batches with progress UI.
+- [x] Only changed fields are persisted; unchanged books remain untouched.
+- [x] Summary includes updated count, skipped count, and error details.
+- [x] Tests cover changed-vs-unchanged update behavior.
 
 ## Blocked by
 - Blocked by ISSUE-004.

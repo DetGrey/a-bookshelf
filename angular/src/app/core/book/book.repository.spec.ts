@@ -126,4 +126,30 @@ describe('BookRepository read contract', () => {
     expect(from).toHaveBeenCalledWith('related_books');
     expect(from).toHaveBeenCalledWith('shelf_books');
   });
+
+  it('returns first source URL for waiting latest-update checks', async () => {
+    const limit = jest.fn().mockResolvedValue({
+      data: [{ url: 'https://source.example/series-1' }],
+      error: null,
+    });
+    const eq = jest.fn().mockReturnValue({ limit });
+    const select = jest.fn().mockReturnValue({ eq });
+    const from = jest.fn().mockReturnValue({ select });
+
+    TestBed.configureTestingModule({
+      providers: [
+        BookRepository,
+        { provide: SUPABASE_CLIENT, useValue: { from } },
+      ],
+    });
+
+    const repository = TestBed.inject(BookRepository);
+    const result = await repository.getPrimarySourceUrl('book-1');
+
+    expect(result).toEqual({ success: true, data: 'https://source.example/series-1' });
+    expect(from).toHaveBeenCalledWith('book_links');
+    expect(select).toHaveBeenCalledWith('url');
+    expect(eq).toHaveBeenCalledWith('book_id', 'book-1');
+    expect(limit).toHaveBeenCalledWith(1);
+  });
 });

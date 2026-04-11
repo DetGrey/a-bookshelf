@@ -1,5 +1,5 @@
-import { afterNextRender, ChangeDetectionStrategy, Component, computed, inject } from '@angular/core';
-import { BookService } from '../../core/book/book.service';
+import { afterNextRender, ChangeDetectionStrategy, Component, computed, inject, signal } from '@angular/core';
+import { BookService, WaitingUpdateProgress, WaitingUpdateSummary } from '../../core/book/book.service';
 import { ShelfService } from '../../core/shelf/shelf.service';
 import { BookGridComponent } from '../../shared/components/book-grid/book-grid.component';
 import { BookshelfFilterService } from './bookshelf-filter.service';
@@ -69,6 +69,43 @@ import { Book, BookStatus } from '../../models/book.model';
         } @else if (books().length === 0) {
           <p>No books yet.</p>
         } @else {
+          @if (isWaitingShelfContext()) {
+            <button
+              data-testid="waiting-updates-button"
+              type="button"
+              [disabled]="waitingUpdatesRunning()"
+              (click)="runWaitingUpdates()"
+            >
+              Check waiting updates
+            </button>
+          }
+
+          @if (waitingUpdateProgress()) {
+            <p>
+              Progress: {{ waitingUpdateProgress()!.processed }} / {{ waitingUpdateProgress()!.total }}
+            </p>
+          }
+
+          @if (waitingUpdateError()) {
+            <p>{{ waitingUpdateError() }}</p>
+          }
+
+          @if (waitingUpdateSummary()) {
+            <div>
+              <p>Updated: {{ waitingUpdateSummary()!.updatedCount }}</p>
+              <p>Skipped: {{ waitingUpdateSummary()!.skippedCount }}</p>
+              <p>Errors: {{ waitingUpdateSummary()!.errorCount }}</p>
+
+              @if (waitingErrorDetails().length > 0) {
+                <ul>
+                  @for (item of waitingErrorDetails(); track item.bookId) {
+                    <li>{{ item.title }}: {{ item.detail }}</li>
+                  }
+                </ul>
+              }
+            </div>
+          }
+
           <div class="bookshelf-controls">
             <input
               data-testid="search-input"
@@ -127,6 +164,9 @@ export class BookshelfPageComponent {
     const shelfReader = (this.filters as Partial<BookshelfFilterService>).shelf;
     return typeof shelfReader === 'function' ? shelfReader() : 'all';
   });
+  readonly isWaitingShelfContext = computed(() => this.selectedShelf() === 'status:waiting');
+  readonly waitingUpdatesRunning = signal(false);
+  readonly waitingErrorDetails = computed(() => this.waitingUpdateSummary()?.outcomes.filter((item) => item.status === 'error') ?? []);
   readonly statusShelves = computed(() => {
     const source = this.books();
     return this.statusOptions.map((status) => ({
@@ -215,6 +255,9 @@ export class BookshelfPageComponent {
   }
 
   newShelfName = '';
+  readonly waitingUpdateProgress = signal<WaitingUpdateProgress | null>(null);
+  readonly waitingUpdateSummary = signal<WaitingUpdateSummary | null>(null);
+  readonly waitingUpdateError = signal<string | null>(null);
 
   readonly statusOptions: readonly BookStatus[] = ['reading', 'plan_to_read', 'waiting', 'completed', 'dropped', 'on_hold'];
 
@@ -256,6 +299,30 @@ export class BookshelfPageComponent {
     if (this.selectedShelf() === `custom:${shelfId}`) {
       await this.filters.updateFilter('shelf', 'all');
     }
+  }
+
+  async runWaitingUpdates(): Promise<void> {
+    const waitingBooks = this.books().filter((book) => book.status === 'waiting');
+    this.waitingUpdatesRunning.set(true);
+    this.waitingUpdateProgress.set({ processed: 0, total: waitingBooks.length, updated: 0, skipped: 0, errors: 0 });
+    this.waitingUpdateSummary.set(null);
+    this.waitingUpdateError.set(null);
+
+    const result = await this.bookService.runWaitingShelfLatestUpdates(waitingBooks, {
+      onProgress: (progress) => {
+        this.waitingUpdateProgress.set(progress);
+      },
+    });
+
+    this.waitingUpdatesRunning.set(false);
+
+    if (!result.success) {
+      this.waitingUpdateError.set(result.error.message);
+      this.waitingUpdateSummary.set(null);
+      return;
+    }
+
+    this.waitingUpdateSummary.set(result.data);
   }
 
   onSearchInput(event: Event): void {

@@ -823,4 +823,196 @@ describe('BookshelfPageComponent', () => {
     expect(fixture.nativeElement.textContent).toContain('Could not create shelf. db unavailable');
     expect(fixture.nativeElement.textContent).toContain('Book A');
   });
+
+  it('shows waiting-update batch action only in waiting shelf context', () => {
+    TestBed.configureTestingModule({
+      imports: [BookshelfPageComponent],
+      providers: [
+        {
+          provide: BookService,
+          useValue: {
+            books: signal([
+              {
+                id: 'book-1',
+                userId: 'user-1',
+                title: 'Book A',
+                description: '',
+                score: 8,
+                status: 'waiting',
+                genres: ['action'],
+                language: 'en',
+                chapterCount: 20,
+                coverUrl: null,
+                createdAt: new Date('2026-01-01T00:00:00.000Z'),
+                updatedAt: new Date('2026-01-02T00:00:00.000Z'),
+              },
+            ]),
+            isLoading: signal(false),
+            errorMessage: signal(null),
+            loadBooks: jest.fn(),
+            runWaitingShelfLatestUpdates: jest.fn(),
+          },
+        },
+        {
+          provide: ShelfService,
+          useValue: {
+            shelves: signal([]),
+            isLoading: signal(false),
+            errorMessage: signal(null),
+            shelfCount: signal(0),
+            loadShelves: jest.fn(),
+            createShelf: jest.fn(),
+            deleteShelf: jest.fn(),
+          },
+        },
+        {
+          provide: BookshelfFilterService,
+          useValue: {
+            search: signal(''),
+            sort: signal('updatedAt'),
+            sortDir: signal('desc'),
+            language: signal(''),
+            genres: signal([]),
+            chapterMin: signal(null),
+            chapterMax: signal(null),
+            shelf: signal('status:waiting'),
+            page: signal(1),
+            pageSize: signal(20),
+            updateFilter: jest.fn().mockResolvedValue(undefined),
+          },
+        },
+      ],
+    });
+
+    const fixture = TestBed.createComponent(BookshelfPageComponent);
+    fixture.detectChanges();
+
+    expect(fixture.debugElement.query(By.css('[data-testid="waiting-updates-button"]'))).not.toBeNull();
+
+    const filter = TestBed.inject(BookshelfFilterService) as unknown as {
+      shelf: ReturnType<typeof signal<string>>;
+    };
+    filter.shelf.set('status:reading');
+    fixture.detectChanges();
+
+    expect(fixture.debugElement.query(By.css('[data-testid="waiting-updates-button"]'))).toBeNull();
+  });
+
+  it('renders waiting update progress and summary with error details', async () => {
+    const runWaitingShelfLatestUpdates = jest.fn().mockImplementation(async (_books, options) => {
+      options.onProgress({
+        processed: 1,
+        total: 2,
+        updated: 1,
+        skipped: 0,
+        errors: 0,
+      });
+
+      return {
+        success: true,
+        data: {
+          updatedCount: 1,
+          skippedCount: 0,
+          errorCount: 1,
+          outcomes: [
+            {
+              bookId: 'book-2',
+              title: 'Book B',
+              status: 'error',
+              detail: 'Timeout while fetching latest chapter.',
+            },
+          ],
+        },
+      };
+    });
+
+    TestBed.configureTestingModule({
+      imports: [BookshelfPageComponent],
+      providers: [
+        {
+          provide: BookService,
+          useValue: {
+            books: signal([
+              {
+                id: 'book-1',
+                userId: 'user-1',
+                title: 'Book A',
+                description: '',
+                score: 8,
+                status: 'waiting',
+                genres: ['action'],
+                language: 'en',
+                chapterCount: 20,
+                coverUrl: null,
+                createdAt: new Date('2026-01-01T00:00:00.000Z'),
+                updatedAt: new Date('2026-01-02T00:00:00.000Z'),
+              },
+              {
+                id: 'book-2',
+                userId: 'user-1',
+                title: 'Book B',
+                description: '',
+                score: 8,
+                status: 'waiting',
+                genres: ['action'],
+                language: 'en',
+                chapterCount: 20,
+                coverUrl: null,
+                createdAt: new Date('2026-01-01T00:00:00.000Z'),
+                updatedAt: new Date('2026-01-02T00:00:00.000Z'),
+              },
+            ]),
+            isLoading: signal(false),
+            errorMessage: signal(null),
+            loadBooks: jest.fn(),
+            runWaitingShelfLatestUpdates,
+          },
+        },
+        {
+          provide: ShelfService,
+          useValue: {
+            shelves: signal([]),
+            isLoading: signal(false),
+            errorMessage: signal(null),
+            shelfCount: signal(0),
+            loadShelves: jest.fn(),
+            createShelf: jest.fn(),
+            deleteShelf: jest.fn(),
+          },
+        },
+        {
+          provide: BookshelfFilterService,
+          useValue: {
+            search: signal(''),
+            sort: signal('updatedAt'),
+            sortDir: signal('desc'),
+            language: signal(''),
+            genres: signal([]),
+            chapterMin: signal(null),
+            chapterMax: signal(null),
+            shelf: signal('status:waiting'),
+            page: signal(1),
+            pageSize: signal(20),
+            updateFilter: jest.fn().mockResolvedValue(undefined),
+          },
+        },
+      ],
+    });
+
+    const fixture = TestBed.createComponent(BookshelfPageComponent);
+    fixture.detectChanges();
+
+    const button = fixture.debugElement.query(By.css('[data-testid="waiting-updates-button"]')).nativeElement as HTMLButtonElement;
+    button.click();
+    fixture.detectChanges();
+    await Promise.resolve();
+    fixture.detectChanges();
+
+    expect(runWaitingShelfLatestUpdates).toHaveBeenCalled();
+    expect(fixture.nativeElement.textContent).toContain('Progress: 1 / 2');
+    expect(fixture.nativeElement.textContent).toContain('Updated: 1');
+    expect(fixture.nativeElement.textContent).toContain('Skipped: 0');
+    expect(fixture.nativeElement.textContent).toContain('Errors: 1');
+    expect(fixture.nativeElement.textContent).toContain('Timeout while fetching latest chapter.');
+  });
 });

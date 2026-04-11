@@ -78,6 +78,32 @@ export class BookRepository {
     };
   }
 
+  async getPrimarySourceUrl(bookId: string): Promise<Result<string | null>> {
+    const { data, error } = await this.supabase
+      .from('book_links')
+      .select('url')
+      .eq('book_id', bookId)
+      .limit(1);
+
+    if (error) {
+      return {
+        success: false,
+        error: {
+          code: ErrorCode.Network,
+          message: error.message,
+          cause: error,
+        },
+      };
+    }
+
+    const rows = (data ?? []) as Array<{ url: string | null }>;
+    const firstUrl = rows[0]?.url ?? null;
+    return {
+      success: true,
+      data: firstUrl,
+    };
+  }
+
   async getRelations(bookId: string): Promise<Result<Array<{ related_book_id: string; relationship_type: string | null }>>> {
     const { data, error } = await this.supabase
       .from('related_books')

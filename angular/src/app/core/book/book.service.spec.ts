@@ -3,6 +3,7 @@ import { signal } from '@angular/core';
 import { AuthService } from '../auth/auth.service';
 import { BookRepository } from './book.repository';
 import { BookService } from './book.service';
+import { SUPABASE_CLIENT } from '../supabase.token';
 
 describe('BookService read state', () => {
   const authUser = { id: 'user-1' };
@@ -474,5 +475,125 @@ describe('BookService read state', () => {
     expect(result.success).toBe(false);
     expect(service.books().length).toBe(1);
     expect(service.errorMessage()).toContain('Could not delete book');
+  });
+
+  it('updates only changed latest fields and skips unchanged waiting books', async () => {
+    const invoke = jest
+      .fn()
+      .mockResolvedValueOnce({
+        data: {
+          latest_chapter: 'Ch 11',
+          chapter_count: 11,
+          last_uploaded_at: '2026-01-03T00:00:00.000Z',
+        },
+        error: null,
+      })
+      .mockResolvedValueOnce({
+        data: {
+          latest_chapter: 'Ch 20',
+          chapter_count: 20,
+          last_uploaded_at: '2026-01-05T00:00:00.000Z',
+        },
+        error: null,
+      });
+
+    const repository = {
+      getPrimarySourceUrl: jest
+        .fn()
+        .mockResolvedValueOnce({ success: true, data: 'https://source.example/book-1' })
+        .mockResolvedValueOnce({ success: true, data: 'https://source.example/book-2' }),
+      update: jest.fn().mockResolvedValue({
+        success: true,
+        data: {
+          id: 'book-1',
+          user_id: 'user-1',
+          title: 'Book 1',
+          description: null,
+          score: null,
+          status: 'waiting',
+          genres: [],
+          language: null,
+          chapter_count: 11,
+          latest_chapter: 'Ch 11',
+          last_uploaded_at: '2026-01-03T00:00:00.000Z',
+          cover_url: null,
+          created_at: '2026-01-01T00:00:00.000Z',
+          updated_at: '2026-01-03T00:00:00.000Z',
+        },
+      }),
+    } as unknown as BookRepository;
+
+    TestBed.configureTestingModule({
+      providers: [
+        BookService,
+        { provide: BookRepository, useValue: repository },
+        {
+          provide: AuthService,
+          useValue: {
+            currentUser: signal(authUser),
+          },
+        },
+        {
+          provide: SUPABASE_CLIENT,
+          useValue: {
+            functions: {
+              invoke,
+            },
+          },
+        },
+      ],
+    });
+
+    const service = TestBed.inject(BookService);
+    service.books.set([
+      {
+        id: 'book-1',
+        userId: 'user-1',
+        title: 'Book 1',
+        description: '',
+        score: null,
+        status: 'waiting',
+        genres: [],
+        language: null,
+        chapterCount: 10,
+        latestChapter: 'Ch 10',
+        lastUploadedAt: new Date('2026-01-02T00:00:00.000Z'),
+        coverUrl: null,
+        createdAt: new Date('2026-01-01T00:00:00.000Z'),
+        updatedAt: new Date('2026-01-02T00:00:00.000Z'),
+      },
+      {
+        id: 'book-2',
+        userId: 'user-1',
+        title: 'Book 2',
+        description: '',
+        score: null,
+        status: 'waiting',
+        genres: [],
+        language: null,
+        chapterCount: 20,
+        latestChapter: 'Ch 20',
+        lastUploadedAt: new Date('2026-01-05T00:00:00.000Z'),
+        coverUrl: null,
+        createdAt: new Date('2026-01-01T00:00:00.000Z'),
+        updatedAt: new Date('2026-01-02T00:00:00.000Z'),
+      },
+    ]);
+
+    const result = await service.runWaitingShelfLatestUpdates(service.books(), { batchSize: 2, throttleMs: 0 });
+
+    expect(result.success).toBe(true);
+    if (result.success) {
+      expect(result.data.updatedCount).toBe(1);
+      expect(result.data.skippedCount).toBe(1);
+      expect(result.data.errorCount).toBe(0);
+    }
+
+    expect(repository.update).toHaveBeenCalledTimes(1);
+    expect(repository.update).toHaveBeenCalledWith('user-1', 'book-1', {
+      latest_chapter: 'Ch 11',
+      chapter_count: 11,
+      last_uploaded_at: '2026-01-03T00:00:00.000Z',
+    });
   });
 });

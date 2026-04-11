@@ -10,6 +10,9 @@ export interface BookRecord {
   genres: string[] | null;
   language: string | null;
   chapter_count: number | null;
+  latest_chapter?: string | null;
+  last_uploaded_at?: string | null;
+  last_fetched_at?: string | null;
   cover_url: string | null;
   created_at: string;
   updated_at: string;
@@ -25,6 +28,9 @@ export interface Book {
   genres: readonly string[];
   language: string | null;
   chapterCount: number | null;
+  latestChapter?: string | null;
+  lastUploadedAt?: Date | null;
+  lastFetchedAt?: Date | null;
   coverUrl: string | null;
   createdAt: Date;
   updatedAt: Date;

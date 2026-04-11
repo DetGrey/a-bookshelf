@@ -1,14 +1,38 @@
 import { computed, inject, Injectable, signal } from '@angular/core';
 import { AuthService } from '../auth/auth.service';
-import { Book, BookFormModel } from '../../models/book.model';
+import { Book, BookFormModel, BookRecord } from '../../models/book.model';
 import { ErrorCode, Result } from '../../models/result.model';
 import { toBook, toSupabasePayload } from '../../models/mappers/book.mapper';
 import { BookRepository } from './book.repository';
+import { SUPABASE_CLIENT } from '../supabase.token';
+
+export interface WaitingUpdateProgress {
+  processed: number;
+  total: number;
+  updated: number;
+  skipped: number;
+  errors: number;
+}
+
+export interface WaitingUpdateItemOutcome {
+  bookId: string;
+  title: string;
+  status: 'updated' | 'skipped' | 'error';
+  detail: string;
+}
+
+export interface WaitingUpdateSummary {
+  updatedCount: number;
+  skippedCount: number;
+  errorCount: number;
+  outcomes: WaitingUpdateItemOutcome[];
+}
 
 @Injectable({ providedIn: 'root' })
 export class BookService {
   private readonly repository = inject(BookRepository);
   private readonly auth = inject(AuthService);
+  private readonly supabase = inject(SUPABASE_CLIENT, { optional: true });
 
   readonly books = signal<Book[]>([]);
   readonly isLoading = signal(false);
@@ -236,9 +260,213 @@ export class BookService {
     return { success: true, data: undefined };
   }
 
+  async runWaitingShelfLatestUpdates(
+    books: readonly Book[],
+    options?: { batchSize?: number; throttleMs?: number; onProgress?: (progress: WaitingUpdateProgress) => void },
+  ): Promise<Result<WaitingUpdateSummary>> {
+    const user = this.auth.currentUser();
+    if (!user) {
+      const failure: Result<WaitingUpdateSummary> = {
+        success: false,
+        error: {
+          code: ErrorCode.Unauthorized,
+          message: 'Authentication required to check waiting updates.',
+        },
+      };
+      this.errorMessage.set(failure.error.message);
+      return failure;
+    }
+
+    const supabase = this.supabase;
+    if (!supabase?.functions?.invoke) {
+      const failure: Result<WaitingUpdateSummary> = {
+        success: false,
+        error: {
+          code: ErrorCode.Unknown,
+          message: 'Latest-update endpoint is not configured.',
+        },
+      };
+      this.errorMessage.set(failure.error.message);
+      return failure;
+    }
+
+    const waitingBooks = books.filter((book) => book.status === 'waiting');
+    const total = waitingBooks.length;
+    const batchSize = Math.max(1, options?.batchSize ?? 3);
+    const throttleMs = Math.max(0, options?.throttleMs ?? 250);
+
+    const outcomes: WaitingUpdateItemOutcome[] = [];
+    let processed = 0;
+    let updated = 0;
+    let skipped = 0;
+    let errors = 0;
+
+    const emitProgress = () => {
+      options?.onProgress?.({
+        processed,
+        total,
+        updated,
+        skipped,
+        errors,
+      });
+    };
+
+    const processBook = async (book: Book): Promise<void> => {
+      const sourceResult = await this.repository.getPrimarySourceUrl(book.id);
+      if (!sourceResult.success) {
+        errors += 1;
+        outcomes.push({
+          bookId: book.id,
+          title: book.title,
+          status: 'error',
+          detail: sourceResult.error.message,
+        });
+        processed += 1;
+        emitProgress();
+        return;
+      }
+
+      const sourceUrl = sourceResult.data?.trim() ?? '';
+      if (!sourceUrl) {
+        skipped += 1;
+        outcomes.push({
+          bookId: book.id,
+          title: book.title,
+          status: 'skipped',
+          detail: 'No source URL available.',
+        });
+        processed += 1;
+        emitProgress();
+        return;
+      }
+
+      const { data, error } = await supabase.functions.invoke('fetch-latest', {
+        body: { url: sourceUrl },
+      });
+
+      if (error) {
+        errors += 1;
+        outcomes.push({
+          bookId: book.id,
+          title: book.title,
+          status: 'error',
+          detail: error.message ?? 'Latest fetch failed.',
+        });
+        processed += 1;
+        emitProgress();
+        return;
+      }
+
+      const payload = this.buildLatestUpdatePayload(book, (data ?? {}) as {
+        latest_chapter?: string | null;
+        chapter_count?: number | null;
+        last_uploaded_at?: string | null;
+      });
+
+      if (Object.keys(payload).length === 0) {
+        skipped += 1;
+        outcomes.push({
+          bookId: book.id,
+          title: book.title,
+          status: 'skipped',
+          detail: 'No fields changed.',
+        });
+        processed += 1;
+        emitProgress();
+        return;
+      }
+
+      const updateResult = await this.repository.update(user.id, book.id, payload);
+      if (!updateResult.success) {
+        errors += 1;
+        outcomes.push({
+          bookId: book.id,
+          title: book.title,
+          status: 'error',
+          detail: updateResult.error.message,
+        });
+        processed += 1;
+        emitProgress();
+        return;
+      }
+
+      updated += 1;
+      outcomes.push({
+        bookId: book.id,
+        title: book.title,
+        status: 'updated',
+        detail: 'Updated latest fields.',
+      });
+
+      const mapped = toBook(updateResult.data);
+      this.books.update((existing) => existing.map((item) => (item.id === mapped.id ? mapped : item)));
+
+      processed += 1;
+      emitProgress();
+    };
+
+    this.isLoading.set(true);
+    this.errorMessage.set(null);
+    emitProgress();
+
+    for (let start = 0; start < waitingBooks.length; start += batchSize) {
+      const batch = waitingBooks.slice(start, start + batchSize);
+      await Promise.all(batch.map((book) => processBook(book)));
+
+      if (throttleMs > 0 && start + batchSize < waitingBooks.length) {
+        await this.delay(throttleMs);
+      }
+    }
+
+    this.isLoading.set(false);
+
+    return {
+      success: true,
+      data: {
+        updatedCount: updated,
+        skippedCount: skipped,
+        errorCount: errors,
+        outcomes,
+      },
+    };
+  }
+
   private rollbackBooks(previousBooks: Book[], message: string): void {
     this.books.set(previousBooks);
     this.errorMessage.set(message);
     this.isLoading.set(false);
+  }
+
+  private buildLatestUpdatePayload(
+    current: Book,
+    latest: { latest_chapter?: string | null; chapter_count?: number | null; last_uploaded_at?: string | null },
+  ): Partial<BookRecord> {
+    const payload: Partial<BookRecord> = {};
+
+    const nextLatestChapter = typeof latest.latest_chapter === 'string' ? latest.latest_chapter.trim() : '';
+    const currentLatestChapter = current.latestChapter?.trim() ?? '';
+    if (nextLatestChapter && nextLatestChapter !== currentLatestChapter) {
+      payload.latest_chapter = nextLatestChapter;
+    }
+
+    if (typeof latest.chapter_count === 'number' && Number.isFinite(latest.chapter_count)) {
+      if (latest.chapter_count !== current.chapterCount) {
+        payload.chapter_count = latest.chapter_count;
+      }
+    }
+
+    const nextUploadedAt = latest.last_uploaded_at ?? null;
+    const currentUploadedAt = current.lastUploadedAt ? current.lastUploadedAt.toISOString() : null;
+    if (nextUploadedAt && nextUploadedAt !== currentUploadedAt) {
+      payload.last_uploaded_at = nextUploadedAt;
+    }
+
+    return payload;
+  }
+
+  private async delay(milliseconds: number): Promise<void> {
+    await new Promise<void>((resolve) => {
+      setTimeout(() => resolve(), milliseconds);
+    });
   }
 }
