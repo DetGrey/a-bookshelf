@@ -119,4 +119,126 @@ export class BookService {
       data: mappedBook,
     };
   }
+
+  async updateBook(
+    bookId: string,
+    form: BookFormModel,
+    current: { sources: BookFormModel['sources']; relatedBookIds: string[]; shelfIds: string[] },
+  ): Promise<Result<Book>> {
+    const user = this.auth.currentUser();
+    if (!user) {
+      const failure: Result<Book> = {
+        success: false,
+        error: {
+          code: ErrorCode.Unauthorized,
+          message: 'Authentication required to update a book.',
+        },
+      };
+      this.errorMessage.set(failure.error.message);
+      return failure;
+    }
+
+    const previousBooks = this.books();
+    const optimisticUpdatedAt = new Date();
+    this.books.update((books) => books.map((book) => {
+      if (book.id !== bookId) {
+        return book;
+      }
+
+      return {
+        ...book,
+        title: form.title,
+        description: form.description,
+        score: form.score,
+        status: form.status ?? book.status,
+        genres: form.genres.split(',').map((genre) => genre.trim()).filter(Boolean),
+        language: form.language.trim() || null,
+        chapterCount: form.chapterCount,
+        coverUrl: form.coverUrl.trim() || null,
+        updatedAt: optimisticUpdatedAt,
+      };
+    }));
+
+    this.errorMessage.set(null);
+    this.isLoading.set(true);
+
+    const rowResult = await this.repository.update(user.id, bookId, toSupabasePayload(form));
+    if (!rowResult.success) {
+      this.rollbackBooks(previousBooks, `Could not save book. ${rowResult.error.message}`);
+      return rowResult;
+    }
+
+    const currentSourceUrls = new Set(current.sources.map((source) => source.url));
+    const nextSourceUrls = new Set(form.sources.map((source) => source.url));
+    const removedSourceUrls = [...currentSourceUrls].filter((url) => !nextSourceUrls.has(url));
+    const addedSources = form.sources.filter((source) => !currentSourceUrls.has(source.url));
+
+    const removedRelatedIds = current.relatedBookIds.filter((id) => !form.relatedBookIds.includes(id));
+    const addedRelatedIds = form.relatedBookIds.filter((id) => !current.relatedBookIds.includes(id));
+
+    const removedShelfIds = current.shelfIds.filter((id) => !form.shelves.includes(id));
+    const addedShelfIds = form.shelves.filter((id) => !current.shelfIds.includes(id));
+
+    const steps: Array<() => Promise<Result<void>>> = [
+      () => this.repository.removeSources(bookId, removedSourceUrls),
+      () => this.repository.addSources(bookId, addedSources),
+      () => this.repository.removeRelations(bookId, removedRelatedIds),
+      () => this.repository.addRelations(bookId, addedRelatedIds),
+      () => this.repository.removeShelfLinks(bookId, removedShelfIds),
+      () => this.repository.setShelfLinks(bookId, addedShelfIds),
+    ];
+
+    for (const runStep of steps) {
+      const stepResult = await runStep();
+      if (!stepResult.success) {
+        this.rollbackBooks(previousBooks, `Could not save book. ${stepResult.error.message}`);
+        return { success: false, error: stepResult.error };
+      }
+    }
+
+    const mappedBook = toBook(rowResult.data);
+    this.books.update((books) => books.map((book) => (book.id === bookId ? mappedBook : book)));
+
+    this.isLoading.set(false);
+
+    return {
+      success: true,
+      data: mappedBook,
+    };
+  }
+
+  async deleteBook(bookId: string): Promise<Result<void>> {
+    const user = this.auth.currentUser();
+    if (!user) {
+      const failure: Result<void> = {
+        success: false,
+        error: {
+          code: ErrorCode.Unauthorized,
+          message: 'Authentication required to delete a book.',
+        },
+      };
+      this.errorMessage.set(failure.error.message);
+      return failure;
+    }
+
+    const previousBooks = this.books();
+    this.books.update((books) => books.filter((book) => book.id !== bookId));
+    this.errorMessage.set(null);
+    this.isLoading.set(true);
+
+    const result = await this.repository.delete(user.id, bookId);
+    if (!result.success) {
+      this.rollbackBooks(previousBooks, `Could not delete book. ${result.error.message}`);
+      return result;
+    }
+
+    this.isLoading.set(false);
+    return { success: true, data: undefined };
+  }
+
+  private rollbackBooks(previousBooks: Book[], message: string): void {
+    this.books.set(previousBooks);
+    this.errorMessage.set(message);
+    this.isLoading.set(false);
+  }
 }

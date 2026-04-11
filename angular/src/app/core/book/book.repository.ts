@@ -178,6 +178,53 @@ export class BookRepository {
     };
   }
 
+  async update(userId: string, bookId: string, payload: Partial<BookRecord>): Promise<Result<BookRecord>> {
+    const { data, error } = await this.supabase
+      .from('books')
+      .update(payload)
+      .eq('user_id', userId)
+      .eq('id', bookId)
+      .select()
+      .single();
+
+    if (error || !data) {
+      return {
+        success: false,
+        error: {
+          code: ErrorCode.Network,
+          message: error?.message ?? 'Failed to update book.',
+          cause: error,
+        },
+      };
+    }
+
+    return {
+      success: true,
+      data: data as BookRecord,
+    };
+  }
+
+  async delete(userId: string, bookId: string): Promise<Result<void>> {
+    const { error } = await this.supabase
+      .from('books')
+      .delete()
+      .eq('user_id', userId)
+      .eq('id', bookId);
+
+    if (error) {
+      return {
+        success: false,
+        error: {
+          code: ErrorCode.Network,
+          message: error.message,
+          cause: error,
+        },
+      };
+    }
+
+    return { success: true, data: undefined };
+  }
+
   async addSources(bookId: string, sources: readonly BookSourceDraft[]): Promise<Result<void>> {
     if (sources.length === 0) {
       return { success: true, data: undefined };
@@ -190,6 +237,31 @@ export class BookRepository {
     }));
 
     const { error } = await this.supabase.from('book_links').insert(payload);
+
+    if (error) {
+      return {
+        success: false,
+        error: {
+          code: ErrorCode.Network,
+          message: error.message,
+          cause: error,
+        },
+      };
+    }
+
+    return { success: true, data: undefined };
+  }
+
+  async removeSources(bookId: string, urls: readonly string[]): Promise<Result<void>> {
+    if (urls.length === 0) {
+      return { success: true, data: undefined };
+    }
+
+    const { error } = await this.supabase
+      .from('book_links')
+      .delete()
+      .eq('book_id', bookId)
+      .in('url', [...urls]);
 
     if (error) {
       return {
@@ -232,6 +304,31 @@ export class BookRepository {
     return { success: true, data: undefined };
   }
 
+  async removeRelations(bookId: string, relatedBookIds: readonly string[]): Promise<Result<void>> {
+    if (relatedBookIds.length === 0) {
+      return { success: true, data: undefined };
+    }
+
+    const { error } = await this.supabase
+      .from('related_books')
+      .delete()
+      .eq('book_id', bookId)
+      .in('related_book_id', [...relatedBookIds]);
+
+    if (error) {
+      return {
+        success: false,
+        error: {
+          code: ErrorCode.Network,
+          message: error.message,
+          cause: error,
+        },
+      };
+    }
+
+    return { success: true, data: undefined };
+  }
+
   async setShelfLinks(bookId: string, shelfIds: readonly string[]): Promise<Result<void>> {
     if (shelfIds.length === 0) {
       return { success: true, data: undefined };
@@ -243,6 +340,31 @@ export class BookRepository {
     }));
 
     const { error } = await this.supabase.from('shelf_books').insert(payload);
+
+    if (error) {
+      return {
+        success: false,
+        error: {
+          code: ErrorCode.Network,
+          message: error.message,
+          cause: error,
+        },
+      };
+    }
+
+    return { success: true, data: undefined };
+  }
+
+  async removeShelfLinks(bookId: string, shelfIds: readonly string[]): Promise<Result<void>> {
+    if (shelfIds.length === 0) {
+      return { success: true, data: undefined };
+    }
+
+    const { error } = await this.supabase
+      .from('shelf_books')
+      .delete()
+      .eq('book_id', bookId)
+      .in('shelf_id', [...shelfIds]);
 
     if (error) {
       return {

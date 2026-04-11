@@ -16,12 +16,12 @@
 Implement edit mode for details using typed form controls and mutation orchestration: update core row, apply source/related diffs, apply shelf diffs, then sync global state with optimistic updates and rollback. Include delete flow with confirmation.
 
 ## Acceptance criteria
-- [ ] Edit mode toggles cleanly and preloads current values into typed form controls.
-- [ ] Save applies row + relation + shelf diff operations in deterministic order.
-- [ ] Save operations use optimistic updates — `BookService` signals are updated immediately and rolled back if the repository call returns `Result.success === false`.
-- [ ] Delete confirmation prevents accidental removal and returns to bookshelf on success.
-- [ ] Failure in any step surfaces a clear UI error, and any optimistic signal change is fully reverted.
-- [ ] Tests cover save diff logic, optimistic rollback on repository failure, and delete guardrails.
+- [x] Edit mode toggles cleanly and preloads current values into typed form controls.
+- [x] Save applies row + relation + shelf diff operations in deterministic order.
+- [x] Save operations use optimistic updates — `BookService` signals are updated immediately and rolled back if the repository call returns `Result.success === false`.
+- [x] Delete confirmation prevents accidental removal and returns to bookshelf on success.
+- [x] Failure in any step surfaces a clear UI error, and any optimistic signal change is fully reverted.
+- [x] Tests cover save diff logic, optimistic rollback on repository failure, and delete guardrails.
 
 ## Blocked by
 - Blocked by ISSUE-006.
