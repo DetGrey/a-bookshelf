@@ -3,6 +3,7 @@ import { ChangeDetectionStrategy, Component, computed, inject, signal } from '@a
 import { ActivatedRoute, Router, RouterLink } from '@angular/router';
 import { FormArray, FormControl, FormGroup, ReactiveFormsModule, Validators } from '@angular/forms';
 import { BookService } from '../../core/book/book.service';
+import { ShelfService } from '../../core/shelf/shelf.service';
 import { BookSearchLinkerComponent } from '../../shared/components/book-search-linker/book-search-linker.component';
 import { BookFormFieldsComponent } from '../../shared/components/book-form-fields/book-form-fields.component';
 import { ShelfSelectorComponent } from '../../shared/components/shelf-selector/shelf-selector.component';
@@ -53,7 +54,7 @@ type EditBookFormGroup = FormGroup<{
           <form [formGroup]="editForm" (ngSubmit)="saveEdit()">
             <app-book-form-fields [form]="editForm" />
             <app-source-manager [sources]="editForm.controls.sources" />
-            <app-shelf-selector [control]="editForm.controls.shelves" />
+            <app-shelf-selector [control]="editForm.controls.shelves" [availableShelves]="shelfService.shelves()" />
             <app-book-search-linker [control]="editForm.controls.relatedBookIds" />
 
             @if (mutationError()) {
@@ -68,6 +69,20 @@ type EditBookFormGroup = FormGroup<{
 
           <button data-testid="enter-edit-mode" type="button" (click)="enterEditMode()">Edit</button>
           <button data-testid="delete-book" type="button" (click)="deleteCurrentBook()">Delete</button>
+
+          @if (detail()!.sources.length > 0) {
+            <button
+              data-testid="fetch-latest-chapter"
+              type="button"
+              [disabled]="fetchingLatest()"
+              (click)="fetchLatestChapter()"
+            >
+              Fetch latest chapter
+            </button>
+          }
+          @if (fetchLatestResult()) {
+            <p data-testid="fetch-latest-result">{{ fetchLatestResult() }}</p>
+          }
 
           <p>{{ description() }}</p>
 
@@ -142,11 +157,14 @@ export class BookDetailsPageComponent {
   private readonly bookService = inject(BookService);
   private readonly router = inject(Router);
   private readonly document = inject(DOCUMENT);
+  readonly shelfService = inject(ShelfService);
 
   readonly resolved = computed(() => this.route.snapshot.data['book'] as Result<BookDetailResolved>);
   readonly detailState = signal<BookDetailResolved | null>(null);
   readonly isEditMode = signal(false);
   readonly mutationError = signal<string | null>(null);
+  readonly fetchingLatest = signal(false);
+  readonly fetchLatestResult = signal<string | null>(null);
 
   readonly editForm: EditBookFormGroup = new FormGroup({
     title: new FormControl('', { nonNullable: true, validators: [Validators.required] }),
@@ -201,6 +219,8 @@ export class BookDetailsPageComponent {
     if (resolved.success) {
       this.detailState.set(resolved.data);
     }
+
+    void this.shelfService.loadShelves();
   }
 
   enterEditMode(): void {
@@ -271,6 +291,37 @@ export class BookDetailsPageComponent {
 
     this.mutationError.set(null);
     this.isEditMode.set(false);
+  }
+
+  async fetchLatestChapter(): Promise<void> {
+    const detail = this.detail();
+    if (!detail) {
+      return;
+    }
+
+    this.fetchingLatest.set(true);
+    this.fetchLatestResult.set(null);
+
+    const result = await this.bookService.fetchLatestChapterForBook(detail.book.id);
+    this.fetchingLatest.set(false);
+
+    if (!result.success) {
+      this.fetchLatestResult.set(`Failed: ${result.error.message}`);
+      return;
+    }
+
+    this.fetchLatestResult.set(
+      result.data.status === 'updated'
+        ? 'Updated latest chapter info.'
+        : `Skipped: ${result.data.detail}`,
+    );
+
+    if (result.data.status === 'updated') {
+      const updated = this.bookService.books().find((b) => b.id === detail.book.id);
+      if (updated) {
+        this.detailState.set({ ...detail, book: updated });
+      }
+    }
   }
 
   async deleteCurrentBook(): Promise<void> {

@@ -380,6 +380,354 @@ describe('BookDetailsPageComponent', () => {
     confirmSpy.mockRestore();
   });
 
+  it('shows fetch-latest-chapter button only when the book has at least one source', () => {
+    TestBed.configureTestingModule({
+      imports: [BookDetailsPageComponent],
+      providers: [
+        {
+          provide: ActivatedRoute,
+          useValue: {
+            snapshot: {
+              data: {
+                book: {
+                  success: true,
+                  data: {
+                    book: {
+                      id: 'book-1',
+                      userId: 'user-1',
+                      title: 'Solo Leveling',
+                      description: 'Hunters and gates',
+                      score: 9,
+                      status: 'reading',
+                      genres: ['Action'],
+                      language: 'English',
+                      chapterCount: 210,
+                      coverUrl: null,
+                      createdAt: new Date('2026-01-01T00:00:00.000Z'),
+                      updatedAt: new Date('2026-01-02T00:00:00.000Z'),
+                    },
+                    sources: [{ siteName: 'Example', url: 'https://example.com/solo' }],
+                    relatedBooks: [],
+                    shelves: [],
+                  },
+                },
+              },
+            },
+          },
+        },
+        {
+          provide: BookService,
+          useValue: {
+            updateBook: jest.fn(),
+            deleteBook: jest.fn(),
+            fetchLatestChapterForBook: jest.fn(),
+            books: signal([]),
+          },
+        },
+        {
+          provide: SUPABASE_CLIENT,
+          useValue: {
+            functions: { invoke: jest.fn().mockResolvedValue({ data: null, error: null }) },
+          },
+        },
+      ],
+    });
+
+    const fixture = TestBed.createComponent(BookDetailsPageComponent);
+    fixture.detectChanges();
+
+    expect(fixture.nativeElement.querySelector('[data-testid="fetch-latest-chapter"]')).not.toBeNull();
+  });
+
+  it('hides fetch-latest-chapter button when the book has no sources', () => {
+    TestBed.configureTestingModule({
+      imports: [BookDetailsPageComponent],
+      providers: [
+        {
+          provide: ActivatedRoute,
+          useValue: {
+            snapshot: {
+              data: {
+                book: {
+                  success: true,
+                  data: {
+                    book: {
+                      id: 'book-1',
+                      userId: 'user-1',
+                      title: 'Solo Leveling',
+                      description: '',
+                      score: null,
+                      status: 'reading',
+                      genres: [],
+                      language: null,
+                      chapterCount: null,
+                      coverUrl: null,
+                      createdAt: new Date('2026-01-01T00:00:00.000Z'),
+                      updatedAt: new Date('2026-01-02T00:00:00.000Z'),
+                    },
+                    sources: [],
+                    relatedBooks: [],
+                    shelves: [],
+                  },
+                },
+              },
+            },
+          },
+        },
+        {
+          provide: BookService,
+          useValue: {
+            updateBook: jest.fn(),
+            deleteBook: jest.fn(),
+            fetchLatestChapterForBook: jest.fn(),
+            books: signal([]),
+          },
+        },
+        {
+          provide: SUPABASE_CLIENT,
+          useValue: {
+            functions: { invoke: jest.fn().mockResolvedValue({ data: null, error: null }) },
+          },
+        },
+      ],
+    });
+
+    const fixture = TestBed.createComponent(BookDetailsPageComponent);
+    fixture.detectChanges();
+
+    expect(fixture.nativeElement.querySelector('[data-testid="fetch-latest-chapter"]')).toBeNull();
+  });
+
+  it('shows updated message after successful fetch-latest-chapter', async () => {
+    const fetchLatestChapterForBook = jest.fn().mockResolvedValue({
+      success: true,
+      data: { status: 'updated', detail: 'Updated latest chapter info.' },
+    });
+    const updatedBook = {
+      id: 'book-1',
+      userId: 'user-1',
+      title: 'Solo Leveling',
+      description: '',
+      score: null,
+      status: 'reading' as const,
+      genres: [],
+      language: null,
+      chapterCount: 211,
+      coverUrl: null,
+      createdAt: new Date('2026-01-01T00:00:00.000Z'),
+      updatedAt: new Date('2026-01-03T00:00:00.000Z'),
+    };
+
+    TestBed.configureTestingModule({
+      imports: [BookDetailsPageComponent],
+      providers: [
+        {
+          provide: ActivatedRoute,
+          useValue: {
+            snapshot: {
+              data: {
+                book: {
+                  success: true,
+                  data: {
+                    book: {
+                      id: 'book-1',
+                      userId: 'user-1',
+                      title: 'Solo Leveling',
+                      description: '',
+                      score: null,
+                      status: 'reading',
+                      genres: [],
+                      language: null,
+                      chapterCount: 210,
+                      coverUrl: null,
+                      createdAt: new Date('2026-01-01T00:00:00.000Z'),
+                      updatedAt: new Date('2026-01-02T00:00:00.000Z'),
+                    },
+                    sources: [{ siteName: 'Example', url: 'https://example.com/solo' }],
+                    relatedBooks: [],
+                    shelves: [],
+                  },
+                },
+              },
+            },
+          },
+        },
+        {
+          provide: BookService,
+          useValue: {
+            updateBook: jest.fn(),
+            deleteBook: jest.fn(),
+            fetchLatestChapterForBook,
+            books: signal([updatedBook]),
+          },
+        },
+        {
+          provide: SUPABASE_CLIENT,
+          useValue: {
+            functions: { invoke: jest.fn().mockResolvedValue({ data: null, error: null }) },
+          },
+        },
+      ],
+    });
+
+    const fixture = TestBed.createComponent(BookDetailsPageComponent);
+    fixture.detectChanges();
+
+    const button = fixture.nativeElement.querySelector('[data-testid="fetch-latest-chapter"]') as HTMLButtonElement;
+    button.click();
+    fixture.detectChanges();
+
+    await Promise.resolve();
+    fixture.detectChanges();
+
+    expect(fetchLatestChapterForBook).toHaveBeenCalledWith('book-1');
+    expect(fixture.nativeElement.querySelector('[data-testid="fetch-latest-result"]')?.textContent).toContain('Updated');
+  });
+
+  it('shows skip message when fetch-latest-chapter returns skipped', async () => {
+    const fetchLatestChapterForBook = jest.fn().mockResolvedValue({
+      success: true,
+      data: { status: 'skipped', detail: 'No fields changed.' },
+    });
+
+    TestBed.configureTestingModule({
+      imports: [BookDetailsPageComponent],
+      providers: [
+        {
+          provide: ActivatedRoute,
+          useValue: {
+            snapshot: {
+              data: {
+                book: {
+                  success: true,
+                  data: {
+                    book: {
+                      id: 'book-1',
+                      userId: 'user-1',
+                      title: 'Solo Leveling',
+                      description: '',
+                      score: null,
+                      status: 'reading',
+                      genres: [],
+                      language: null,
+                      chapterCount: 210,
+                      coverUrl: null,
+                      createdAt: new Date('2026-01-01T00:00:00.000Z'),
+                      updatedAt: new Date('2026-01-02T00:00:00.000Z'),
+                    },
+                    sources: [{ siteName: 'Example', url: 'https://example.com/solo' }],
+                    relatedBooks: [],
+                    shelves: [],
+                  },
+                },
+              },
+            },
+          },
+        },
+        {
+          provide: BookService,
+          useValue: {
+            updateBook: jest.fn(),
+            deleteBook: jest.fn(),
+            fetchLatestChapterForBook,
+            books: signal([]),
+          },
+        },
+        {
+          provide: SUPABASE_CLIENT,
+          useValue: {
+            functions: { invoke: jest.fn().mockResolvedValue({ data: null, error: null }) },
+          },
+        },
+      ],
+    });
+
+    const fixture = TestBed.createComponent(BookDetailsPageComponent);
+    fixture.detectChanges();
+
+    fixture.nativeElement.querySelector('[data-testid="fetch-latest-chapter"]').click();
+    fixture.detectChanges();
+
+    await Promise.resolve();
+    fixture.detectChanges();
+
+    const result = fixture.nativeElement.querySelector('[data-testid="fetch-latest-result"]');
+    expect(result?.textContent).toContain('Skipped');
+    expect(result?.textContent).toContain('No fields changed');
+  });
+
+  it('shows failure message when fetch-latest-chapter errors', async () => {
+    const fetchLatestChapterForBook = jest.fn().mockResolvedValue({
+      success: false,
+      error: { code: 'unknown', message: 'edge function timeout' },
+    });
+
+    TestBed.configureTestingModule({
+      imports: [BookDetailsPageComponent],
+      providers: [
+        {
+          provide: ActivatedRoute,
+          useValue: {
+            snapshot: {
+              data: {
+                book: {
+                  success: true,
+                  data: {
+                    book: {
+                      id: 'book-1',
+                      userId: 'user-1',
+                      title: 'Solo Leveling',
+                      description: '',
+                      score: null,
+                      status: 'reading',
+                      genres: [],
+                      language: null,
+                      chapterCount: 210,
+                      coverUrl: null,
+                      createdAt: new Date('2026-01-01T00:00:00.000Z'),
+                      updatedAt: new Date('2026-01-02T00:00:00.000Z'),
+                    },
+                    sources: [{ siteName: 'Example', url: 'https://example.com/solo' }],
+                    relatedBooks: [],
+                    shelves: [],
+                  },
+                },
+              },
+            },
+          },
+        },
+        {
+          provide: BookService,
+          useValue: {
+            updateBook: jest.fn(),
+            deleteBook: jest.fn(),
+            fetchLatestChapterForBook,
+            books: signal([]),
+          },
+        },
+        {
+          provide: SUPABASE_CLIENT,
+          useValue: {
+            functions: { invoke: jest.fn().mockResolvedValue({ data: null, error: null }) },
+          },
+        },
+      ],
+    });
+
+    const fixture = TestBed.createComponent(BookDetailsPageComponent);
+    fixture.detectChanges();
+
+    fixture.nativeElement.querySelector('[data-testid="fetch-latest-chapter"]').click();
+    fixture.detectChanges();
+
+    await Promise.resolve();
+    fixture.detectChanges();
+
+    const result = fixture.nativeElement.querySelector('[data-testid="fetch-latest-result"]');
+    expect(result?.textContent).toContain('Failed');
+    expect(result?.textContent).toContain('edge function timeout');
+  });
+
   it('navigates to bookshelf after confirmed successful delete', async () => {
     const deleteBook = jest.fn().mockResolvedValue({ success: true, data: undefined });
     const confirmSpy = jest.spyOn(window, 'confirm').mockReturnValue(true);

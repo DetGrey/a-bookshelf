@@ -1,24 +1,40 @@
-import { ChangeDetectionStrategy, Component, input } from '@angular/core';
-import { FormControl, FormsModule, ReactiveFormsModule } from '@angular/forms';
+// Smart exception: injects BookService to search books by title and resolve IDs to names.
+// Output is still via @Input() FormControl — the parent form owns the value.
+import { ChangeDetectionStrategy, Component, computed, inject, input, signal } from '@angular/core';
+import { FormControl, ReactiveFormsModule } from '@angular/forms';
+import { BookService } from '../../../core/book/book.service';
 
 @Component({
   selector: 'app-book-search-linker',
   standalone: true,
-  imports: [FormsModule, ReactiveFormsModule],
+  imports: [ReactiveFormsModule],
   template: `
     <fieldset>
       <legend>Related books</legend>
+
       <input
         data-testid="related-book-input"
-        [(ngModel)]="pendingRelatedId"
-        name="pendingRelatedBookId"
-        placeholder="Related book ID"
+        [value]="searchQuery()"
+        (input)="onSearchInput($event)"
+        placeholder="Search by title"
       />
-      <button data-testid="add-related-button" type="button" (click)="addRelated()">Add related</button>
+
+      @if (suggestions().length > 0) {
+        <ul data-testid="related-book-suggestions">
+          @for (book of suggestions(); track book.id) {
+            <li>
+              <button type="button" (click)="selectBook(book.id)">{{ book.title }}</button>
+            </li>
+          }
+        </ul>
+      }
 
       <ul>
         @for (relatedId of control().value; track relatedId) {
-          <li>{{ relatedId }}</li>
+          <li>
+            {{ titleForId(relatedId) }}
+            <button type="button" [attr.data-testid]="'remove-related-' + relatedId" (click)="removeRelated(relatedId)">×</button>
+          </li>
         }
       </ul>
     </fieldset>
@@ -26,22 +42,42 @@ import { FormControl, FormsModule, ReactiveFormsModule } from '@angular/forms';
   changeDetection: ChangeDetectionStrategy.OnPush,
 })
 export class BookSearchLinkerComponent {
+  private readonly bookService = inject(BookService);
+
   readonly control = input.required<FormControl<string[]>>();
+  readonly searchQuery = signal('');
 
-  pendingRelatedId = '';
-
-  addRelated(): void {
-    const relatedId = this.pendingRelatedId.trim();
-    if (!relatedId) {
-      return;
+  readonly suggestions = computed(() => {
+    const query = this.searchQuery().trim().toLowerCase();
+    if (!query) {
+      return [];
     }
 
+    const selectedIds = new Set(this.control().value);
+    return this.bookService.books()
+      .filter((book) => !selectedIds.has(book.id) && book.title.toLowerCase().includes(query))
+      .slice(0, 6);
+  });
+
+  onSearchInput(event: Event): void {
+    const target = event.target as HTMLInputElement;
+    this.searchQuery.set(target.value);
+  }
+
+  titleForId(bookId: string): string {
+    return this.bookService.books().find((b) => b.id === bookId)?.title ?? bookId;
+  }
+
+  selectBook(bookId: string): void {
     const current = this.control().value;
-    if (current.includes(relatedId)) {
-      return;
+    if (!current.includes(bookId)) {
+      this.control().setValue([...current, bookId]);
     }
 
-    this.control().setValue([...current, relatedId]);
-    this.pendingRelatedId = '';
+    this.searchQuery.set('');
+  }
+
+  removeRelated(relatedId: string): void {
+    this.control().setValue(this.control().value.filter((id) => id !== relatedId));
   }
 }

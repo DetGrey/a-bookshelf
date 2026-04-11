@@ -904,3 +904,194 @@ describe('BookService read state', () => {
     });
   });
 });
+
+describe('BookService.fetchLatestChapterForBook', () => {
+  const authUser = { id: 'user-1' };
+
+  const existingBook = {
+    id: 'book-1',
+    userId: 'user-1',
+    title: 'Book 1',
+    description: '',
+    score: null,
+    status: 'reading' as const,
+    genres: [],
+    language: null,
+    chapterCount: 10,
+    latestChapter: 'Ch 10',
+    lastUploadedAt: new Date('2026-01-02T00:00:00.000Z'),
+    lastFetchedAt: null,
+    coverUrl: null,
+    createdAt: new Date('2026-01-01T00:00:00.000Z'),
+    updatedAt: new Date('2026-01-02T00:00:00.000Z'),
+  };
+
+  it('returns skipped when no source URL is available for the book', async () => {
+    const repository = {
+      getPrimarySourceUrl: jest.fn().mockResolvedValue({ success: true, data: '' }),
+    } as unknown as BookRepository;
+
+    TestBed.configureTestingModule({
+      providers: [
+        BookService,
+        { provide: BookRepository, useValue: repository },
+        { provide: AuthService, useValue: { currentUser: signal(authUser) } },
+        {
+          provide: SUPABASE_CLIENT,
+          useValue: { functions: { invoke: jest.fn() } },
+        },
+      ],
+    });
+
+    const service = TestBed.inject(BookService);
+    service.books.set([existingBook]);
+
+    const result = await service.fetchLatestChapterForBook('book-1');
+
+    expect(result.success).toBe(true);
+    if (result.success) {
+      expect(result.data.status).toBe('skipped');
+      expect(result.data.detail).toContain('No source URL');
+    }
+  });
+
+  it('returns updated when invoke returns new chapter data and updates the books signal', async () => {
+    const invoke = jest.fn().mockResolvedValue({
+      data: {
+        latest_chapter: 'Ch 11',
+        chapter_count: 11,
+        last_uploaded_at: '2026-01-03T00:00:00.000Z',
+      },
+      error: null,
+    });
+
+    const repository = {
+      getPrimarySourceUrl: jest.fn().mockResolvedValue({ success: true, data: 'https://source.example/book-1' }),
+      update: jest.fn().mockResolvedValue({
+        success: true,
+        data: {
+          id: 'book-1',
+          user_id: 'user-1',
+          title: 'Book 1',
+          description: null,
+          score: null,
+          status: 'reading',
+          genres: [],
+          language: null,
+          chapter_count: 11,
+          latest_chapter: 'Ch 11',
+          last_uploaded_at: '2026-01-03T00:00:00.000Z',
+          last_fetched_at: null,
+          cover_url: null,
+          created_at: '2026-01-01T00:00:00.000Z',
+          updated_at: '2026-01-03T00:00:00.000Z',
+        },
+      }),
+    } as unknown as BookRepository;
+
+    TestBed.configureTestingModule({
+      providers: [
+        BookService,
+        { provide: BookRepository, useValue: repository },
+        { provide: AuthService, useValue: { currentUser: signal(authUser) } },
+        { provide: SUPABASE_CLIENT, useValue: { functions: { invoke } } },
+      ],
+    });
+
+    const service = TestBed.inject(BookService);
+    service.books.set([existingBook]);
+
+    const result = await service.fetchLatestChapterForBook('book-1');
+
+    expect(result.success).toBe(true);
+    if (result.success) {
+      expect(result.data.status).toBe('updated');
+    }
+
+    const updated = service.books().find((b) => b.id === 'book-1');
+    expect(updated?.chapterCount).toBe(11);
+  });
+
+  it('returns skipped when invoke data matches existing book fields', async () => {
+    const invoke = jest.fn().mockResolvedValue({
+      data: {
+        latest_chapter: 'Ch 10',
+        chapter_count: 10,
+        last_uploaded_at: '2026-01-02T00:00:00.000Z',
+      },
+      error: null,
+    });
+
+    const repository = {
+      getPrimarySourceUrl: jest.fn().mockResolvedValue({ success: true, data: 'https://source.example/book-1' }),
+    } as unknown as BookRepository;
+
+    TestBed.configureTestingModule({
+      providers: [
+        BookService,
+        { provide: BookRepository, useValue: repository },
+        { provide: AuthService, useValue: { currentUser: signal(authUser) } },
+        { provide: SUPABASE_CLIENT, useValue: { functions: { invoke } } },
+      ],
+    });
+
+    const service = TestBed.inject(BookService);
+    service.books.set([existingBook]);
+
+    const result = await service.fetchLatestChapterForBook('book-1');
+
+    expect(result.success).toBe(true);
+    if (result.success) {
+      expect(result.data.status).toBe('skipped');
+      expect(result.data.detail).toContain('No fields changed');
+    }
+  });
+
+  it('returns failure when the edge function invocation fails', async () => {
+    const invoke = jest.fn().mockResolvedValue({
+      data: null,
+      error: { message: 'edge function timeout' },
+    });
+
+    const repository = {
+      getPrimarySourceUrl: jest.fn().mockResolvedValue({ success: true, data: 'https://source.example/book-1' }),
+    } as unknown as BookRepository;
+
+    TestBed.configureTestingModule({
+      providers: [
+        BookService,
+        { provide: BookRepository, useValue: repository },
+        { provide: AuthService, useValue: { currentUser: signal(authUser) } },
+        { provide: SUPABASE_CLIENT, useValue: { functions: { invoke } } },
+      ],
+    });
+
+    const service = TestBed.inject(BookService);
+    service.books.set([existingBook]);
+
+    const result = await service.fetchLatestChapterForBook('book-1');
+
+    expect(result.success).toBe(false);
+    if (!result.success) {
+      expect(result.error.message).toContain('edge function timeout');
+    }
+  });
+
+  it('returns failure when not authenticated', async () => {
+    TestBed.configureTestingModule({
+      providers: [
+        BookService,
+        { provide: BookRepository, useValue: {} as unknown as BookRepository },
+        { provide: AuthService, useValue: { currentUser: signal(null) } },
+      ],
+    });
+
+    const service = TestBed.inject(BookService);
+    const result = await service.fetchLatestChapterForBook('book-1');
+
+    expect(result.success).toBe(false);
+    if (!result.success) {
+      expect(result.error.message).toContain('Authentication required');
+    }
+  });
+});

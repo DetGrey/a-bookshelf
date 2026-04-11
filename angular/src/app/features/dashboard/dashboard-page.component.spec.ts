@@ -305,4 +305,219 @@ describe('DashboardPageComponent', () => {
     createSpy.mockRestore();
     clickSpy.mockRestore();
   });
+
+  it('shows cover repair button only after a scan that finds external covers', async () => {
+    const scanCoverHealth = jest.fn().mockReturnValue({
+      issues: [],
+      missingCount: 0,
+      externalCount: 2,
+      proxiedCount: 0,
+    });
+
+    TestBed.configureTestingModule({
+      imports: [DashboardPageComponent],
+      providers: [
+        {
+          provide: BookService,
+          useValue: {
+            books: signal([]),
+            bookCount: signal(0),
+            averageScore: signal(0),
+          },
+        },
+        {
+          provide: QualityToolsService,
+          useValue: {
+            scanDuplicateTitles: jest.fn(),
+            scanStaleWaiting: jest.fn(),
+            scanCoverHealth,
+          },
+        },
+        { provide: BackupRestoreService, useValue: backupRestoreStub },
+      ],
+    });
+
+    const fixture = TestBed.createComponent(DashboardPageComponent);
+    fixture.detectChanges();
+
+    expect(fixture.debugElement.query(By.css('[data-testid="cover-repair"]'))).toBeNull();
+
+    const coverCheckButton = fixture.debugElement.query(By.css('[data-testid="cover-checker"]')).nativeElement as HTMLButtonElement;
+    coverCheckButton.click();
+    fixture.detectChanges();
+
+    expect(fixture.debugElement.query(By.css('[data-testid="cover-repair"]'))).not.toBeNull();
+    expect(fixture.nativeElement.textContent).toContain('Repair 2 external covers');
+  });
+
+  it('executes cover repair and shows the completion summary', async () => {
+    const scanCoverHealth = jest.fn().mockReturnValue({
+      issues: [],
+      missingCount: 0,
+      externalCount: 1,
+      proxiedCount: 0,
+    });
+    const repairExternalCovers = jest.fn().mockResolvedValue({
+      success: true,
+      data: { repairedCount: 1, skippedCount: 0, issues: [] },
+    });
+
+    TestBed.configureTestingModule({
+      imports: [DashboardPageComponent],
+      providers: [
+        {
+          provide: BookService,
+          useValue: {
+            books: signal([]),
+            bookCount: signal(0),
+            averageScore: signal(0),
+          },
+        },
+        {
+          provide: QualityToolsService,
+          useValue: {
+            scanDuplicateTitles: jest.fn(),
+            scanStaleWaiting: jest.fn(),
+            scanCoverHealth,
+            repairExternalCovers,
+          },
+        },
+        { provide: BackupRestoreService, useValue: backupRestoreStub },
+      ],
+    });
+
+    const fixture = TestBed.createComponent(DashboardPageComponent);
+    fixture.detectChanges();
+
+    fixture.debugElement.query(By.css('[data-testid="cover-checker"]')).nativeElement.click();
+    fixture.detectChanges();
+
+    fixture.debugElement.query(By.css('[data-testid="cover-repair"]')).nativeElement.click();
+    fixture.detectChanges();
+
+    await Promise.resolve();
+    fixture.detectChanges();
+
+    expect(repairExternalCovers).toHaveBeenCalledWith(true);
+    expect(fixture.nativeElement.textContent).toContain('Cover repair complete');
+    expect(fixture.nativeElement.textContent).toContain('Repaired: 1');
+    expect(fixture.debugElement.query(By.css('[data-testid="cover-repair"]'))).toBeNull();
+  });
+
+  it('walks through the full genre consolidation flow: start → select → confirm → result', async () => {
+    const consolidateGenres = jest.fn().mockResolvedValue({
+      success: true,
+      data: {
+        updatedCount: 3,
+        targetGenre: 'Fantasy',
+        sourceGenres: ['fantasy', 'high fantasy'],
+        mode: 'merge',
+      },
+    });
+
+    TestBed.configureTestingModule({
+      imports: [DashboardPageComponent],
+      providers: [
+        {
+          provide: BookService,
+          useValue: {
+            books: signal([
+              {
+                id: 'book-1',
+                userId: 'user-1',
+                title: 'Book A',
+                description: '',
+                score: null,
+                status: 'reading',
+                genres: ['fantasy', 'action'],
+                language: 'en',
+                chapterCount: 10,
+                coverUrl: null,
+                createdAt: new Date('2026-01-01T00:00:00.000Z'),
+                updatedAt: new Date('2026-01-02T00:00:00.000Z'),
+              },
+            ]),
+            bookCount: signal(1),
+            averageScore: signal(0),
+          },
+        },
+        {
+          provide: QualityToolsService,
+          useValue: {
+            scanDuplicateTitles: jest.fn(),
+            scanStaleWaiting: jest.fn(),
+            scanCoverHealth: jest.fn(),
+            consolidateGenres,
+          },
+        },
+        { provide: BackupRestoreService, useValue: backupRestoreStub },
+      ],
+    });
+
+    const fixture = TestBed.createComponent(DashboardPageComponent);
+    fixture.detectChanges();
+
+    // Step 1: click Genre consolidation to open the selection panel
+    fixture.debugElement.query(By.css('[data-testid="genre-consolidation"]')).nativeElement.click();
+    fixture.detectChanges();
+
+    expect(fixture.debugElement.query(By.css('[data-testid="genre-consolidation-panel"]'))).not.toBeNull();
+
+    // Step 2: select the 'fantasy' genre using the component's method (toggleSourceGenre is the public API)
+    fixture.componentInstance.toggleSourceGenre('fantasy');
+    fixture.componentInstance.consolidationTarget = 'Fantasy';
+    fixture.detectChanges();
+
+    const confirmButton = fixture.debugElement.query(By.css('[data-testid="consolidation-confirm"]')).nativeElement as HTMLButtonElement;
+    confirmButton.click();
+    fixture.detectChanges();
+
+    await Promise.resolve();
+    fixture.detectChanges();
+
+    expect(consolidateGenres).toHaveBeenCalled();
+    expect(fixture.nativeElement.textContent).toContain('Genre consolidation complete');
+    expect(fixture.nativeElement.textContent).toContain('3 book(s)');
+    // Panel is gone, idle button is back
+    expect(fixture.debugElement.query(By.css('[data-testid="genre-consolidation"]'))).not.toBeNull();
+  });
+
+  it('cancelling genre consolidation resets back to idle state', () => {
+    TestBed.configureTestingModule({
+      imports: [DashboardPageComponent],
+      providers: [
+        {
+          provide: BookService,
+          useValue: {
+            books: signal([]),
+            bookCount: signal(0),
+            averageScore: signal(0),
+          },
+        },
+        {
+          provide: QualityToolsService,
+          useValue: {
+            scanDuplicateTitles: jest.fn(),
+            scanStaleWaiting: jest.fn(),
+            scanCoverHealth: jest.fn(),
+          },
+        },
+        { provide: BackupRestoreService, useValue: backupRestoreStub },
+      ],
+    });
+
+    const fixture = TestBed.createComponent(DashboardPageComponent);
+    fixture.detectChanges();
+
+    fixture.debugElement.query(By.css('[data-testid="genre-consolidation"]')).nativeElement.click();
+    fixture.detectChanges();
+
+    expect(fixture.debugElement.query(By.css('[data-testid="genre-consolidation-panel"]'))).not.toBeNull();
+
+    fixture.debugElement.query(By.css('[data-testid="consolidation-cancel"]')).nativeElement.click();
+    fixture.detectChanges();
+
+    expect(fixture.debugElement.query(By.css('[data-testid="genre-consolidation-panel"]'))).toBeNull();
+    expect(fixture.debugElement.query(By.css('[data-testid="genre-consolidation"]'))).not.toBeNull();
+  });
 });

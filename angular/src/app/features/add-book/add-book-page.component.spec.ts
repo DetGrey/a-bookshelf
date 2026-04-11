@@ -27,6 +27,22 @@ describe('AddBookPageComponent', () => {
             createBook,
             isLoading: signal(false),
             errorMessage: signal(null),
+            books: signal([
+              {
+                id: 'book-99',
+                userId: 'user-1',
+                title: 'Related Title',
+                description: '',
+                score: null,
+                status: 'reading',
+                genres: [],
+                language: null,
+                chapterCount: null,
+                coverUrl: null,
+                createdAt: new Date('2026-01-01T00:00:00.000Z'),
+                updatedAt: new Date('2026-01-02T00:00:00.000Z'),
+              },
+            ]),
           },
         },
         {
@@ -65,12 +81,15 @@ describe('AddBookPageComponent', () => {
     const addShelfButton = fixture.debugElement.query(By.css('[data-testid="add-shelf-button"]')).nativeElement as HTMLButtonElement;
     addShelfButton.click();
 
+    // Search for the related book by title, then select it from suggestions
     const relatedInput = fixture.debugElement.query(By.css('[data-testid="related-book-input"]')).nativeElement as HTMLInputElement;
-    relatedInput.value = 'book-99';
+    relatedInput.value = 'Related';
     relatedInput.dispatchEvent(new Event('input'));
+    fixture.detectChanges();
 
-    const addRelatedButton = fixture.debugElement.query(By.css('[data-testid="add-related-button"]')).nativeElement as HTMLButtonElement;
-    addRelatedButton.click();
+    const suggestionButton = fixture.debugElement.query(By.css('[data-testid="related-book-suggestions"] button')).nativeElement as HTMLButtonElement;
+    suggestionButton.click();
+    fixture.detectChanges();
 
     const saveButton = fixture.debugElement.query(By.css('[data-testid="save-book-button"]')).nativeElement as HTMLButtonElement;
     saveButton.click();

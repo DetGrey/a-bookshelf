@@ -134,6 +134,40 @@ import { Book, BookStatus } from '../../models/book.model';
               (input)="onLanguageInput($event)"
               placeholder="Language"
             />
+
+            <div>
+              <input
+                data-testid="genre-input"
+                [value]="genreInput()"
+                (input)="onGenreInput($event)"
+                (keydown.enter)="onGenreEnter($event)"
+                placeholder="Add genre filter"
+              />
+              <button type="button" data-testid="add-genre-button" (click)="addGenreFromInput()">Add</button>
+              @for (genre of filters.genres(); track genre) {
+                <span>
+                  {{ genre }}
+                  <button type="button" [attr.data-testid]="'remove-genre-' + genre" (click)="removeGenreTag(genre)">×</button>
+                </span>
+              }
+            </div>
+
+            <div>
+              <input
+                type="number"
+                data-testid="chapter-min-input"
+                [value]="filters.chapterMin() ?? ''"
+                (input)="onChapterMinInput($event)"
+                placeholder="Chapters min"
+              />
+              <input
+                type="number"
+                data-testid="chapter-max-input"
+                [value]="filters.chapterMax() ?? ''"
+                (input)="onChapterMaxInput($event)"
+                placeholder="Chapters max"
+              />
+            </div>
           </div>
 
           <p>Shelves: {{ shelfCount() }}</p>
@@ -257,6 +291,7 @@ export class BookshelfPageComponent {
   }
 
   newShelfName = '';
+  readonly genreInput = signal('');
   readonly waitingUpdateProgress = signal<WaitingUpdateProgress | null>(null);
   readonly waitingUpdateSummary = signal<WaitingUpdateSummary | null>(null);
   readonly waitingUpdateError = signal<string | null>(null);
@@ -345,6 +380,44 @@ export class BookshelfPageComponent {
   onLanguageInput(event: Event): void {
     const target = event.target as HTMLInputElement;
     void this.filters.updateFilter('language', target.value);
+  }
+
+  onGenreInput(event: Event): void {
+    const target = event.target as HTMLInputElement;
+    this.genreInput.set(target.value);
+  }
+
+  onGenreEnter(event: Event): void {
+    event.preventDefault();
+    this.addGenreFromInput();
+  }
+
+  addGenreFromInput(): void {
+    const genre = this.genreInput().trim();
+    if (!genre) {
+      return;
+    }
+
+    const current = this.filters.genres();
+    if (!current.includes(genre)) {
+      void this.filters.updateFilter('genres', [...current, genre]);
+    }
+
+    this.genreInput.set('');
+  }
+
+  removeGenreTag(genre: string): void {
+    void this.filters.updateFilter('genres', this.filters.genres().filter((g) => g !== genre));
+  }
+
+  onChapterMinInput(event: Event): void {
+    const target = event.target as HTMLInputElement;
+    void this.filters.updateFilter('chapterMin', target.value ? Number(target.value) : null);
+  }
+
+  onChapterMaxInput(event: Event): void {
+    const target = event.target as HTMLInputElement;
+    void this.filters.updateFilter('chapterMax', target.value ? Number(target.value) : null);
   }
 
   setPage(page: number): void {

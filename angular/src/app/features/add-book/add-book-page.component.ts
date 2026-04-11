@@ -2,6 +2,7 @@ import { ChangeDetectionStrategy, Component, inject, signal } from '@angular/cor
 import { FormArray, FormControl, FormGroup, ReactiveFormsModule, Validators } from '@angular/forms';
 import { Router } from '@angular/router';
 import { BookService } from '../../core/book/book.service';
+import { ShelfService } from '../../core/shelf/shelf.service';
 import { BookSearchLinkerComponent } from '../../shared/components/book-search-linker/book-search-linker.component';
 import { BookFormFieldsComponent } from '../../shared/components/book-form-fields/book-form-fields.component';
 import { CoverImageComponent } from '../../shared/components/cover-image/cover-image.component';
@@ -51,7 +52,7 @@ type AddBookFormGroup = FormGroup<{
         <app-book-form-fields [form]="bookForm" />
 
         <app-source-manager [sources]="bookForm.controls.sources" />
-        <app-shelf-selector [control]="bookForm.controls.shelves" />
+        <app-shelf-selector [control]="bookForm.controls.shelves" [availableShelves]="shelfService.shelves()" />
         <app-book-search-linker [control]="bookForm.controls.relatedBookIds" />
 
         <app-cover-image [src]="bookForm.controls.coverUrl.value" [alt]="bookForm.controls.title.value || 'Book cover preview'" />
@@ -69,6 +70,11 @@ type AddBookFormGroup = FormGroup<{
 export class AddBookPageComponent {
   private readonly bookService = inject(BookService);
   private readonly router = inject(Router);
+  readonly shelfService = inject(ShelfService);
+
+  constructor() {
+    void this.shelfService.loadShelves();
+  }
 
   readonly isSubmitting = signal(false);
   readonly localError = signal<string | null>(null);

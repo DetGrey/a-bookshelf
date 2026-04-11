@@ -1,13 +1,17 @@
 import { DOCUMENT } from '@angular/common';
 import { ChangeDetectionStrategy, Component, computed, inject, signal } from '@angular/core';
+import { FormsModule } from '@angular/forms';
 import { BookService } from '../../core/book/book.service';
 import { Book } from '../../models/book.model';
-import { QualityToolsService } from '../../core/quality/quality-tools.service';
+import { QualityToolsService, CoverHealthScanResult } from '../../core/quality/quality-tools.service';
 import { BackupRestoreService } from '../../core/backup/backup-restore.service';
+
+type ConsolidationStep = 'idle' | 'selecting' | 'working';
 
 @Component({
   selector: 'app-dashboard-page',
   standalone: true,
+  imports: [FormsModule],
   template: `
     <section class="dashboard-page">
       <h1>Dashboard</h1>
@@ -66,7 +70,19 @@ import { BackupRestoreService } from '../../core/backup/backup-restore.service';
         <h2>Quality hub</h2>
         <button type="button" data-testid="duplicate-title-scanner" (click)="runDuplicateScan()">Duplicate title scanner</button>
         <button type="button" data-testid="stale-waiting-scanner" (click)="runStaleWaitingScan()">Stale waiting checker</button>
+
         <button type="button" data-testid="cover-checker" (click)="runCoverCheck()">Cover checker</button>
+        @if (coverScanResult()?.externalCount) {
+          <button
+            type="button"
+            data-testid="cover-repair"
+            [disabled]="coverRepairRunning()"
+            (click)="repairCovers()"
+          >
+            Repair {{ coverScanResult()!.externalCount }} external {{ coverScanResult()!.externalCount === 1 ? 'cover' : 'covers' }}
+          </button>
+        }
+
         <button type="button" data-testid="backup-download" (click)="downloadBackup()">Download backup</button>
         <button type="button" data-testid="backup-restore" (click)="restoreInput.click()">Restore backup</button>
         <input
@@ -77,7 +93,50 @@ import { BackupRestoreService } from '../../core/backup/backup-restore.service';
           hidden
           (change)="onBackupFileSelected($event)"
         />
-        <button type="button" data-testid="genre-consolidation" (click)="showGenreConsolidationHelp()">Genre consolidation</button>
+
+        @if (consolidationStep() === 'idle') {
+          <button type="button" data-testid="genre-consolidation" (click)="startGenreConsolidation()">Genre consolidation</button>
+        } @else if (consolidationStep() === 'selecting') {
+          <div data-testid="genre-consolidation-panel">
+            <h3>Select source genres</h3>
+            <ul>
+              @for (item of genreBreakdown(); track item.name) {
+                <li>
+                  <label>
+                    <input
+                      type="checkbox"
+                      [checked]="isSourceGenreSelected(item.name)"
+                      (change)="toggleSourceGenre(item.name)"
+                    />
+                    {{ item.name }} ({{ item.count }})
+                  </label>
+                </li>
+              }
+            </ul>
+            <input
+              data-testid="consolidation-target-input"
+              [(ngModel)]="consolidationTarget"
+              name="consolidationTarget"
+              placeholder="Target genre"
+            />
+            <select data-testid="consolidation-mode-select" [(ngModel)]="consolidationMode" name="consolidationMode">
+              <option value="merge">Merge — add target, keep other genres</option>
+              <option value="replace">Replace — replace all source genres with target</option>
+            </select>
+            <button
+              type="button"
+              data-testid="consolidation-confirm"
+              [disabled]="selectedSourceGenres().length === 0 || !consolidationTarget"
+              (click)="confirmGenreConsolidation()"
+            >
+              Consolidate {{ selectedSourceGenres().length }} genre(s) → {{ consolidationTarget || '…' }}
+            </button>
+            <button type="button" data-testid="consolidation-cancel" (click)="cancelGenreConsolidation()">Cancel</button>
+          </div>
+        } @else if (consolidationStep() === 'working') {
+          <p>Consolidating genres…</p>
+        }
+
         @if (qualityMessage()) {
           <p>{{ qualityMessage() }}</p>
         }
@@ -101,6 +160,13 @@ export class DashboardPageComponent {
   readonly showAllGenres = signal(false);
   readonly showAllSources = signal(false);
   readonly qualityMessage = signal('');
+  readonly coverScanResult = signal<CoverHealthScanResult | null>(null);
+  readonly coverRepairRunning = signal(false);
+  readonly consolidationStep = signal<ConsolidationStep>('idle');
+  readonly selectedSourceGenres = signal<string[]>([]);
+
+  consolidationTarget = '';
+  consolidationMode: 'merge' | 'replace' = 'merge';
 
   readonly genreBreakdown = computed(() => this.buildTopBreakdown(this.collectGenres(this.books())));
   readonly sourceBreakdown = computed(() => this.buildTopBreakdown(this.collectSources(this.books())));
@@ -133,7 +199,75 @@ export class DashboardPageComponent {
 
   runCoverCheck(): void {
     const result = this.qualityTools.scanCoverHealth();
-    this.qualityMessage.set(`External covers: ${result.externalCount}`);
+    this.coverScanResult.set(result);
+    this.qualityMessage.set(
+      `Missing: ${result.missingCount}, External: ${result.externalCount}, Proxied: ${result.proxiedCount}`,
+    );
+  }
+
+  async repairCovers(): Promise<void> {
+    this.coverRepairRunning.set(true);
+    const result = await this.qualityTools.repairExternalCovers(true);
+    this.coverRepairRunning.set(false);
+    this.coverScanResult.set(null);
+
+    if (!result.success) {
+      this.qualityMessage.set(`Cover repair failed: ${result.error.message}`);
+      return;
+    }
+
+    this.qualityMessage.set(
+      `Cover repair complete. Repaired: ${result.data.repairedCount}, Skipped: ${result.data.skippedCount}`,
+    );
+  }
+
+  startGenreConsolidation(): void {
+    this.selectedSourceGenres.set([]);
+    this.consolidationTarget = '';
+    this.consolidationMode = 'merge';
+    this.qualityMessage.set('');
+    this.consolidationStep.set('selecting');
+  }
+
+  isSourceGenreSelected(genre: string): boolean {
+    return this.selectedSourceGenres().includes(genre);
+  }
+
+  toggleSourceGenre(genre: string): void {
+    const current = this.selectedSourceGenres();
+    if (current.includes(genre)) {
+      this.selectedSourceGenres.set(current.filter((g) => g !== genre));
+    } else {
+      this.selectedSourceGenres.set([...current, genre]);
+    }
+  }
+
+  async confirmGenreConsolidation(): Promise<void> {
+    const sources = this.selectedSourceGenres();
+    const target = this.consolidationTarget.trim();
+
+    if (sources.length === 0 || !target) {
+      return;
+    }
+
+    this.consolidationStep.set('working');
+    const result = await this.qualityTools.consolidateGenres(sources, target, true, this.consolidationMode);
+    this.consolidationStep.set('idle');
+
+    if (!result.success) {
+      this.qualityMessage.set(`Genre consolidation failed: ${result.error.message}`);
+      return;
+    }
+
+    this.qualityMessage.set(
+      `Genre consolidation complete. Updated ${result.data.updatedCount} book(s). "${sources.join(', ')}" → "${result.data.targetGenre}"`,
+    );
+  }
+
+  cancelGenreConsolidation(): void {
+    this.consolidationStep.set('idle');
+    this.selectedSourceGenres.set([]);
+    this.qualityMessage.set('');
   }
 
   async downloadBackup(): Promise<void> {
@@ -175,10 +309,6 @@ export class DashboardPageComponent {
     } catch (error) {
       this.qualityMessage.set('Restore failed: invalid JSON backup file.');
     }
-  }
-
-  showGenreConsolidationHelp(): void {
-    this.qualityMessage.set('Genre consolidation requires an explicit confirmation step in the quality tools service.');
   }
 
   private collectGenres(books: readonly Book[]): Array<{ name: string; count: number }> {

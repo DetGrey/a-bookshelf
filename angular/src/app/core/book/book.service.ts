@@ -457,6 +457,82 @@ export class BookService {
     };
   }
 
+  async fetchLatestChapterForBook(bookId: string): Promise<Result<{ status: 'updated' | 'skipped'; detail: string }>> {
+    const user = this.auth.currentUser();
+    if (!user) {
+      return {
+        success: false,
+        error: { code: ErrorCode.Unauthorized, message: 'Authentication required.' },
+      };
+    }
+
+    const supabase = this.supabase;
+    if (!supabase?.functions?.invoke) {
+      return {
+        success: false,
+        error: { code: ErrorCode.Unknown, message: 'Latest-update endpoint is not configured.' },
+      };
+    }
+
+    const book = this.books().find((b) => b.id === bookId);
+    if (!book) {
+      return {
+        success: false,
+        error: { code: ErrorCode.Unknown, message: 'Book not found in local state.' },
+      };
+    }
+
+    const sourceResult = await this.repository.getPrimarySourceUrl(bookId);
+    if (!sourceResult.success) {
+      return { success: false, error: sourceResult.error };
+    }
+
+    const sourceUrl = sourceResult.data?.trim() ?? '';
+    if (!sourceUrl) {
+      return {
+        success: true,
+        data: { status: 'skipped', detail: 'No source URL available.' },
+      };
+    }
+
+    const { data, error } = await supabase.functions.invoke('fetch-latest', {
+      body: { url: sourceUrl },
+    });
+
+    if (error) {
+      return {
+        success: false,
+        error: { code: ErrorCode.Unknown, message: (error as { message?: string }).message ?? 'Latest fetch failed.' },
+      };
+    }
+
+    const payload = this.buildLatestUpdatePayload(book, (data ?? {}) as {
+      latest_chapter?: string | null;
+      chapter_count?: number | null;
+      last_uploaded_at?: string | null;
+    });
+
+    if (Object.keys(payload).length === 0) {
+      return {
+        success: true,
+        data: { status: 'skipped', detail: 'No fields changed.' },
+      };
+    }
+
+    const updateResult = await this.repository.update(user.id, bookId, payload);
+    if (!updateResult.success) {
+      return { success: false, error: updateResult.error };
+    }
+
+    const mapped = toBook(updateResult.data);
+    this.books.update((existing) => existing.map((item) => (item.id === mapped.id ? mapped : item)));
+
+    return {
+      success: true,
+      data: { status: 'updated', detail: 'Updated latest chapter info.' },
+    };
+  }
+
   private rollbackBooks(previousBooks: Book[], message: string): void {
     this.books.set(previousBooks);
     this.errorMessage.set(message);

@@ -32,13 +32,13 @@ Close the confirmed parity gaps between the React app and Angular app without re
    - Add per-book "Fetch latest chapter" action and result messaging in Book Details.
 
 ## Acceptance criteria
-- [ ] Dashboard exposes actionable genre consolidation workflow (not help-only placeholder).
-- [ ] Dashboard exposes actionable cover-repair workflow (not check-only summary).
-- [ ] Bookshelf UI exposes genre and chapter filters that drive existing URL/filter service state.
-- [ ] Add/Edit flows use shelf/source/related-book UX comparable to React behavior (no raw-ID-only workflows).
-- [ ] Book Details includes per-book latest-chapter fetch action with success/skip/error feedback.
-- [ ] Tests cover newly added parity flows and preserve existing ISSUE-014 pass baseline.
-- [ ] Existing ISSUE-000 through ISSUE-014 markdown files remain unchanged.
+- [x] Dashboard exposes actionable genre consolidation workflow (not help-only placeholder).
+- [x] Dashboard exposes actionable cover-repair workflow (not check-only summary).
+- [x] Bookshelf UI exposes genre and chapter filters that drive existing URL/filter service state.
+- [x] Add/Edit flows use shelf/source/related-book UX comparable to React behavior (no raw-ID-only workflows).
+- [x] Book Details includes per-book latest-chapter fetch action with success/skip/error feedback.
+- [x] Tests cover newly added parity flows and preserve existing ISSUE-014 pass baseline.
+- [x] Existing ISSUE-000 through ISSUE-014 markdown files remain unchanged.
 
 ## Blocked by
 - Blocked by ISSUE-014.
