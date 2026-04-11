@@ -30,6 +30,130 @@ export class BookRepository {
     };
   }
 
+  async getById(userId: string, bookId: string): Promise<Result<BookRecord>> {
+    const { data, error } = await this.supabase
+      .from('books')
+      .select('*')
+      .eq('user_id', userId)
+      .eq('id', bookId)
+      .single();
+
+    if (error || !data) {
+      return {
+        success: false,
+        error: {
+          code: ErrorCode.NotFound,
+          message: error?.message ?? 'Book not found.',
+          cause: error,
+        },
+      };
+    }
+
+    return {
+      success: true,
+      data: data as BookRecord,
+    };
+  }
+
+  async getSources(bookId: string): Promise<Result<Array<{ site_name: string | null; url: string }>>> {
+    const { data, error } = await this.supabase
+      .from('book_links')
+      .select('site_name,url')
+      .eq('book_id', bookId);
+
+    if (error) {
+      return {
+        success: false,
+        error: {
+          code: ErrorCode.Network,
+          message: error.message,
+          cause: error,
+        },
+      };
+    }
+
+    return {
+      success: true,
+      data: (data ?? []) as Array<{ site_name: string | null; url: string }>,
+    };
+  }
+
+  async getRelations(bookId: string): Promise<Result<Array<{ related_book_id: string; relationship_type: string | null }>>> {
+    const { data, error } = await this.supabase
+      .from('related_books')
+      .select('related_book_id,relationship_type')
+      .eq('book_id', bookId);
+
+    if (error) {
+      return {
+        success: false,
+        error: {
+          code: ErrorCode.Network,
+          message: error.message,
+          cause: error,
+        },
+      };
+    }
+
+    return {
+      success: true,
+      data: (data ?? []) as Array<{ related_book_id: string; relationship_type: string | null }>,
+    };
+  }
+
+  async getShelfIds(bookId: string): Promise<Result<string[]>> {
+    const { data, error } = await this.supabase
+      .from('shelf_books')
+      .select('shelf_id')
+      .eq('book_id', bookId);
+
+    if (error) {
+      return {
+        success: false,
+        error: {
+          code: ErrorCode.Network,
+          message: error.message,
+          cause: error,
+        },
+      };
+    }
+
+    const shelfIds = ((data ?? []) as Array<{ shelf_id: string }>).map((row) => row.shelf_id);
+
+    return {
+      success: true,
+      data: shelfIds,
+    };
+  }
+
+  async getShelvesByIds(userId: string, shelfIds: readonly string[]): Promise<Result<Array<{ id: string; name: string }>>> {
+    if (shelfIds.length === 0) {
+      return { success: true, data: [] };
+    }
+
+    const { data, error } = await this.supabase
+      .from('shelves')
+      .select('id,name')
+      .eq('user_id', userId)
+      .in('id', [...shelfIds]);
+
+    if (error) {
+      return {
+        success: false,
+        error: {
+          code: ErrorCode.Network,
+          message: error.message,
+          cause: error,
+        },
+      };
+    }
+
+    return {
+      success: true,
+      data: (data ?? []) as Array<{ id: string; name: string }>,
+    };
+  }
+
   async create(userId: string, payload: Partial<BookRecord>): Promise<Result<BookRecord>> {
     const { data, error } = await this.supabase
       .from('books')

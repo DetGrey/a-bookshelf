@@ -1,5 +1,6 @@
 import { Routes } from '@angular/router';
 import { authGuard } from './core/auth/auth.guard';
+import { bookDetailResolver } from './features/book-details/book-details.resolver';
 
 export const routes: Routes = [
 	{ path: '', redirectTo: 'bookshelf', pathMatch: 'full' },
@@ -12,7 +13,11 @@ export const routes: Routes = [
 			{ path: 'bookshelf', loadComponent: () => import('./features/bookshelf/bookshelf-page.component').then((module) => module.BookshelfPageComponent) },
 			{ path: 'dashboard', loadComponent: () => import('./features/dashboard/dashboard-page.component').then((module) => module.DashboardPageComponent) },
 			{ path: 'add', loadComponent: () => import('./features/add-book/add-book-page.component').then((module) => module.AddBookPageComponent) },
-			{ path: 'book/:bookId', loadComponent: () => import('./features/book-details/book-details-page.component').then((module) => module.BookDetailsPageComponent) },
+			{
+				path: 'book/:bookId',
+				resolve: { book: bookDetailResolver },
+				loadComponent: () => import('./features/book-details/book-details-page.component').then((module) => module.BookDetailsPageComponent),
+			},
 		],
 	},
 	{ path: '**', redirectTo: '' },

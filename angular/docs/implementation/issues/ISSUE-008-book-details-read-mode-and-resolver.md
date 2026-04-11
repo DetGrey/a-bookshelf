@@ -15,11 +15,11 @@
 Implement detail route resolver and read-mode details UI (hero, metadata grid, notes, sources, shelves, related books) so the page receives resolved data before initial render.
 
 ## Acceptance criteria
-- [ ] Route uses resolver to fetch `book/:bookId` before component initial render.
-- [ ] Read mode shows core sections with fallbacks for missing values.
-- [ ] Genre pills can route back to Bookshelf filters.
-- [ ] Resolver and details errors surface appropriately.
-- [ ] Tests cover resolver success/failure and read-mode rendering.
+- [x] Route uses resolver to fetch `book/:bookId` before component initial render.
+- [x] Read mode shows core sections with fallbacks for missing values.
+- [x] Genre pills can route back to Bookshelf filters.
+- [x] Resolver and details errors surface appropriately.
+- [x] Tests cover resolver success/failure and read-mode rendering.
 
 ## Blocked by
 - Blocked by ISSUE-003.

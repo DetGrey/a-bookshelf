@@ -15,6 +15,9 @@ describe('foundation route map and shell', () => {
       'add',
       'book/:bookId',
     ]));
+
+    const detailRoute = guardedChildren.find((route) => route.path === 'book/:bookId');
+    expect(detailRoute?.resolve).toEqual(expect.objectContaining({ book: expect.any(Function) }));
   });
 
   it('renders a minimal shell with nav and outlet placeholders', () => {
