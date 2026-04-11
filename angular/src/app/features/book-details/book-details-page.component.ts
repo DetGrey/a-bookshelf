@@ -9,6 +9,7 @@ import { BookFormFieldsComponent } from '../../shared/components/book-form-field
 import { ShelfSelectorComponent } from '../../shared/components/shelf-selector/shelf-selector.component';
 import { SourceManagerComponent } from '../../shared/components/source-manager/source-manager.component';
 import { MetadataFetcherComponent } from '../../shared/components/metadata-fetcher/metadata-fetcher.component';
+import { CoverImageComponent } from '../../shared/components/cover-image/cover-image.component';
 import { Result } from '../../models/result.model';
 import { BookFormModel, BookSourceDraft } from '../../models/book.model';
 import { BookDetailResolved } from './book-details.resolver';
@@ -51,131 +52,177 @@ type EditBookFormGroup = FormGroup<{
     ShelfSelectorComponent,
     BookSearchLinkerComponent,
     MetadataFetcherComponent,
+    CoverImageComponent,
   ],
   template: `
-    <section class="page narrow book-details-page">
+    <section class="page book-details-page">
       @if (!detail()) {
-        <h1>Book Details</h1>
-        <p class="error">{{ resolverError() }}</p>
+        <div class="centered">
+          <h1>Book Details</h1>
+          <p class="error">{{ resolverError() }}</p>
+        </div>
       } @else {
-        @if (isEditMode()) {
-          <h1>Edit Book</h1>
-
-          <form class="card stack" [formGroup]="editForm" (ngSubmit)="saveEdit()">
-            <app-metadata-fetcher [form]="editForm" [compact]="true" />
-            <app-book-form-fields [form]="editForm" />
-            <app-source-manager [sources]="editForm.controls.sources" />
-            <app-shelf-selector [control]="editForm.controls.shelves" [availableShelves]="shelfService.shelves()" />
-            <app-book-search-linker [control]="editForm.controls.relatedBookIds" />
-
-            @if (mutationError()) {
-              <p class="error">{{ mutationError() }}</p>
-            }
-
-            <div class="edit-actions">
-              <button class="primary" data-testid="save-edit" type="submit">Save</button>
-              <button class="ghost" type="button" (click)="cancelEdit()">Cancel</button>
+        <div class="page-head">
+          <a [routerLink]="['/bookshelf']" class="ghost">← Back to Library</a>
+          @if (!isEditMode()) {
+            <div class="read-actions">
+              <button class="ghost" data-testid="enter-edit-mode" type="button" (click)="enterEditMode()">Edit</button>
+              <button class="ghost delete-action-button" data-testid="delete-book" type="button" (click)="deleteCurrentBook()">Delete</button>
             </div>
-          </form>
-        } @else {
-          <h1>{{ detail()!.book.title }}</h1>
-
-          <div class="read-actions">
-            <button class="ghost" data-testid="enter-edit-mode" type="button" (click)="enterEditMode()">Edit</button>
-            <button class="ghost" data-testid="delete-book" type="button" (click)="deleteCurrentBook()">Delete</button>
-          </div>
-
-          @if (detail()!.sources.length > 0) {
-            <button
-              class="ghost"
-              data-testid="fetch-latest-chapter"
-              type="button"
-              [disabled]="fetchingLatest()"
-              (click)="fetchLatestChapter()"
-            >
-              Fetch latest chapter
-            </button>
           }
-          @if (fetchLatestResult()) {
-            <p data-testid="fetch-latest-result">{{ fetchLatestResult() }}</p>
-          }
+        </div>
 
-          <p>{{ description() }}</p>
+        @if (isEditMode()) {
+          <div class="stack">
+            <h1>Edit Book</h1>
 
-          <div>
-            <p>Status: {{ detail()!.book.status }}</p>
-            <p>Score: {{ scoreLabel() }}</p>
-            <p>Language: {{ languageLabel() }}</p>
-            <p>Chapter count: {{ chapterCountLabel() }}</p>
-            @if (detail()!.book.latestChapter) {
-              <p data-testid="latest-chapter">Latest chapter: {{ detail()!.book.latestChapter }}</p>
-            }
-            @if (detail()!.book.lastUploadedAt) {
-              <p data-testid="last-uploaded-at">Last uploaded: {{ detail()!.book.lastUploadedAt | date:'mediumDate' }}</p>
-            }
-            @if (detail()!.book.originalLanguage) {
-              <p data-testid="original-language">Original language: {{ detail()!.book.originalLanguage }}</p>
-            }
-            @if (detail()!.book.timesRead > 1) {
-              <p data-testid="times-read">Read {{ detail()!.book.timesRead }} times</p>
-            }
-            @if (detail()!.book.lastRead && detail()!.book.status !== 'completed') {
-              <p data-testid="last-read">Last read: {{ detail()!.book.lastRead }}</p>
-            }
-            @if (detail()!.book.notes) {
-              <p data-testid="notes">📝 {{ detail()!.book.notes }}</p>
-            }
-          </div>
+            <form class="stack" [formGroup]="editForm" (ngSubmit)="saveEdit()">
+              <app-metadata-fetcher [form]="editForm" [compact]="true" />
+              <app-book-form-fields [form]="editForm" />
+              <app-shelf-selector [control]="editForm.controls.shelves" [availableShelves]="shelfService.shelves()" />
+              <app-source-manager [sources]="editForm.controls.sources" />
+              <app-book-search-linker [control]="editForm.controls.relatedBookIds" />
 
-          <section>
-            <h2>Genres</h2>
-            @if (detail()!.book.genres.length === 0) {
-              <p>No genres</p>
-            } @else {
-              @for (genre of detail()!.book.genres; track genre) {
-                <a [routerLink]="['/bookshelf']" [queryParams]="{ genres: genre }">{{ genre }}</a>
+              @if (mutationError()) {
+                <p class="error">{{ mutationError() }}</p>
               }
-            }
-          </section>
 
-          <section>
-            <h2>Sources</h2>
-            @if (detail()!.sources.length === 0) {
-              <p>No sources</p>
-            } @else {
-              <ul>
-                @for (source of detail()!.sources; track source.url) {
-                  <li><a [attr.href]="source.url">{{ source.siteName }}</a></li>
-                }
-              </ul>
-            }
-          </section>
+              <div class="edit-actions mt-12">
+                <button class="primary" data-testid="save-edit" type="submit">Save Changes</button>
+                <button class="ghost" type="button" (click)="cancelEdit()">Cancel</button>
+              </div>
+            </form>
+          </div>
+        } @else {
+          <div class="stack">
+            <div class="book-hero">
+              <app-cover-image class="cover" [src]="detail()!.book.coverUrl" [alt]="detail()!.book.title" />
 
-          <section>
-            <h2>Shelves</h2>
-            @if (detail()!.shelves.length === 0) {
-              <p>No shelves</p>
-            } @else {
-              <ul>
-                @for (shelf of detail()!.shelves; track shelf.id) {
-                  <li>{{ shelf.name }}</li>
-                }
-              </ul>
-            }
-          </section>
+              <div class="stack">
+                <div>
+                  <p class="eyebrow">{{ statusLabel(detail()!.book.status) }}</p>
+                  <h1>{{ detail()!.book.title }}</h1>
+                  <p class="muted">{{ description() }}</p>
+                </div>
 
-          <section>
-            <h2>Related books</h2>
-            @if (detail()!.relatedBooks.length === 0) {
-              <p>No related books</p>
-            } @else {
-              <ul>
-                @for (related of detail()!.relatedBooks; track related.bookId) {
-                  <li>{{ relatedTitle(related.bookId) }}</li>
+                <div class="pill-row">
+                  @if (detail()!.book.lastRead && detail()!.book.status !== 'completed') {
+                    <span data-testid="last-read" class="pill">Last read: {{ detail()!.book.lastRead }}</span>
+                  }
+                  @if (detail()!.book.latestChapter) {
+                    <span data-testid="latest-chapter" class="pill ghost">Latest: {{ detail()!.book.latestChapter }}</span>
+                  }
+                </div>
+
+                <div class="pill-row detail-meta-pills">
+                  <span class="pill ghost">Status: {{ detail()!.book.status }}</span>
+                  <span class="pill ghost">Score: {{ detail()!.book.score === null ? 'Unscored' : detail()!.book.score }}</span>
+                  <span class="pill ghost">Language: {{ languageLabel() }}</span>
+                  <span class="pill ghost">Chapter count: {{ chapterCountLabel() }}</span>
+                  @if (detail()!.book.latestChapter) {
+                    <span class="pill ghost" data-testid="latest-chapter">Latest chapter: {{ detail()!.book.latestChapter }}</span>
+                  }
+                  @if (detail()!.book.lastUploadedAt) {
+                    <span class="pill ghost" data-testid="last-uploaded-at">Last uploaded: {{ detail()!.book.lastUploadedAt | date:'mediumDate' }}</span>
+                  }
+                  @if (detail()!.book.originalLanguage) {
+                    <span class="pill ghost" data-testid="original-language">Original language: {{ detail()!.book.originalLanguage }}</span>
+                  }
+                </div>
+
+                @if (detail()!.book.timesRead > 1) {
+                  <p data-testid="times-read" class="muted">Read {{ detail()!.book.timesRead }} times</p>
                 }
-              </ul>
+
+                <div class="related-section-wrapper">
+                  @if (detail()!.sources.length > 0) {
+                    <button
+                      class="primary related-link-preview"
+                      data-testid="fetch-latest-chapter"
+                      type="button"
+                      [disabled]="fetchingLatest()"
+                      (click)="fetchLatestChapter()"
+                    >
+                      {{ fetchingLatest() ? 'Fetching…' : 'Fetch Latest Chapter' }}
+                    </button>
+                  }
+
+                  @if (fetchLatestResult()) {
+                    <p data-testid="fetch-latest-result" class="related-link-title">{{ fetchLatestResult() }}</p>
+                  }
+                </div>
+
+                @if (detail()!.book.genres.length > 0) {
+                  <div class="pill-row genres-section">
+                    @for (genre of detail()!.book.genres; track genre) {
+                      <button
+                        type="button"
+                        class="pill ghost genre-remove-button"
+                        (click)="goToGenre(genre)"
+                      >
+                        {{ genre }}
+                      </button>
+                    }
+                  </div>
+                }
+              </div>
+            </div>
+
+            @if (detail()!.book.notes) {
+              <section class="card">
+                <p class="eyebrow">Personal Notes</p>
+                <p data-testid="notes" class="notes-section">{{ detail()!.book.notes }}</p>
+              </section>
             }
-          </section>
+
+            <section class="card">
+              <p class="eyebrow">Source Links</p>
+              @if (detail()!.sources.length === 0) {
+                <p>No sources</p>
+              } @else {
+                <div class="source-grid">
+                  @for (source of detail()!.sources; track source.url) {
+                    <a class="source-card" [attr.href]="source.url" target="_blank" rel="noreferrer">
+                      <strong>{{ source.siteName }}</strong>
+                      <p class="muted text-small word-break-all">{{ source.url }}</p>
+                    </a>
+                  }
+                </div>
+              }
+            </section>
+
+            <section class="card">
+              <p class="eyebrow">Shelves</p>
+              @if (detail()!.shelves.length === 0) {
+                <p>No shelves</p>
+              } @else {
+                <div class="pill-row">
+                  @for (shelf of detail()!.shelves; track shelf.id) {
+                    <a class="pill ghost" [routerLink]="['/bookshelf']" [queryParams]="{ shelf: shelf.id }">{{ shelf.name }}</a>
+                  }
+                </div>
+              }
+            </section>
+
+            <section class="card">
+              <p class="eyebrow">Related Books</p>
+              @if (detail()!.relatedBooks.length === 0) {
+                <p>No related books</p>
+              } @else {
+                <div class="related-books-grid">
+                  @for (related of detail()!.relatedBooks; track related.bookId) {
+                    <a class="related-book-link" [routerLink]="['/book', related.bookId]">
+                      <app-cover-image class="related-book-cover" [src]="relatedCoverUrl(related.bookId)" [alt]="relatedTitle(related.bookId)" />
+                      <div class="related-book-info">
+                        <strong>{{ relatedTitle(related.bookId) }}</strong>
+                        <small>{{ related.relation }}</small>
+                      </div>
+                    </a>
+                  }
+                </div>
+              }
+            </section>
+          </div>
         }
 
         @if (mutationError() && !isEditMode()) {
@@ -238,7 +285,29 @@ export class BookDetailsPageComponent {
     if (!this.detail()) {
       return 'Unscored';
     }
-    return this.detail()!.book.score === null ? 'Unscored' : String(this.detail()!.book.score);
+    const score = this.detail()!.book.score;
+    if (score === null) {
+      return 'Unscored';
+    }
+
+    if (score === 0) {
+      return '0 — N/A';
+    }
+
+    const labels: Record<number, string> = {
+      10: '10 — Masterpiece',
+      9: '9 — Great',
+      8: '8 — Pretty Good',
+      7: '7 — Good',
+      6: '6 — Fine',
+      5: '5 — Average',
+      4: '4 — Bad',
+      3: '3 — Pretty Bad',
+      2: '2 — Horrible',
+      1: '1 — Appalling',
+    };
+
+    return labels[score] ?? String(score);
   });
   readonly languageLabel = computed(() => {
     if (!this.detail()) {
@@ -392,6 +461,27 @@ export class BookDetailsPageComponent {
 
   relatedTitle(bookId: string): string {
     return this.bookService.books().find((book) => book.id === bookId)?.title ?? bookId;
+  }
+
+  relatedCoverUrl(bookId: string): string | null {
+    return this.bookService.books().find((book) => book.id === bookId)?.coverUrl ?? null;
+  }
+
+  statusLabel(status: string): string {
+    const labels: Record<string, string> = {
+      reading: 'Reading',
+      plan_to_read: 'Plan to Read',
+      waiting: 'Waiting',
+      completed: 'Completed',
+      dropped: 'Dropped',
+      on_hold: 'On Hold',
+    };
+
+    return labels[status] ?? status;
+  }
+
+  goToGenre(genre: string): void {
+    void this.router.navigate(['/bookshelf'], { queryParams: { genre } });
   }
 
   private toFormModel(): BookFormModel {

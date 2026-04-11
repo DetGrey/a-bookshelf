@@ -352,7 +352,7 @@ export class DashboardPageComponent {
   }
 
   breakdownColor(index: number): string {
-    return this.breakdownPalette[index % this.breakdownPalette.length];
+    return this.breakdownPalette[index % this.breakdownPalette.length] ?? '#7c83ff';
   }
 
   runDuplicateScan(): void {
