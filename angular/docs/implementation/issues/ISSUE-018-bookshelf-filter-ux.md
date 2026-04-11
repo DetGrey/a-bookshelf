@@ -157,18 +157,23 @@ Add `escapeRegex(s: string): string` pure helper (escapes `\.+*?[^]$(){}=!<>|:-#
 ---
 
 ## Acceptance criteria
-- [ ] `BookshelfFilterService` exposes `genreMode`, `chapterValue`, `chapterMode` signals read from URL params.
-- [ ] `genreMode` round-trips to/from URL; defaults to `'all'`.
-- [ ] Any/All toggle buttons appear only when at least one genre tag is active.
-- [ ] "All" mode: a book must match every selected genre to appear.
-- [ ] "Any" mode: a book matching at least one selected genre appears.
-- [ ] Chapter preset buttons (10, 20, 50, 100, 200) toggle the `chapterValue` filter on/off.
-- [ ] Min/Max mode buttons appear only when a chapter value is selected; toggle `chapterMode`.
-- [ ] Chapter filter round-trips to/from URL.
-- [ ] Relevance search ranks exact title matches above partial, above description matches.
-- [ ] "Relevance" sort option appears in dropdown only when search query is non-empty.
-- [ ] Tests cover: genre mode filter semantics (any vs all), chapter preset toggle/clear, relevance scoring (exact > partial > description).
-- [ ] Existing filter tests (URL round-trips, pagination, shelf selection) continue to pass.
+- [x] `BookshelfFilterService` exposes `genreMode`, `chapterValue`, `chapterMode` signals read from URL params.
+- [x] `genreMode` round-trips to/from URL; defaults to `'all'`.
+- [x] Any/All toggle buttons appear only when at least one genre tag is active.
+- [x] "All" mode: a book must match every selected genre to appear.
+- [x] "Any" mode: a book matching at least one selected genre appears.
+- [x] Chapter preset buttons (10, 20, 50, 100, 200) toggle the `chapterValue` filter on/off.
+- [x] Min/Max mode buttons appear only when a chapter value is selected; toggle `chapterMode`.
+- [x] Chapter filter round-trips to/from URL.
+- [x] Relevance search ranks exact title matches above partial, above description matches.
+- [x] "Relevance" sort option appears in dropdown only when search query is non-empty.
+- [x] Tests cover: genre mode filter semantics (any vs all), chapter preset toggle/clear, relevance scoring (exact > partial > description).
+- [x] Existing filter tests (URL round-trips, pagination, shelf selection) continue to pass.
+
+## Completion notes
+- `BookshelfPageComponent` now uses toggle-based chapter presets, Any/All genre mode routing, and score-based relevance ordering.
+- `BookshelfFilterService` URL state includes `genreMode`, `chapterValue`, and `chapterMode` with safe defaults and round-trip behavior.
+- Verified by focused suites and full regression (`npm test`): 30/30 suites passed, 206/206 tests passed.
 
 ## Blocked by
 - Blocked by ISSUE-015.

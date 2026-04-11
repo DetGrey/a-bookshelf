@@ -97,4 +97,45 @@ export class ShelfRepository {
 
     return { success: true, data: undefined };
   }
+
+  async addBookToShelf(shelfId: string, bookId: string): Promise<Result<void>> {
+    const { error } = await this.supabase.from('shelf_books').insert({
+      shelf_id: shelfId,
+      book_id: bookId,
+    });
+
+    if (error) {
+      return {
+        success: false,
+        error: {
+          code: ErrorCode.Network,
+          message: error.message,
+          cause: error,
+        },
+      };
+    }
+
+    return { success: true, data: undefined };
+  }
+
+  async removeBookFromShelf(shelfId: string, bookId: string): Promise<Result<void>> {
+    const { error } = await this.supabase
+      .from('shelf_books')
+      .delete()
+      .eq('shelf_id', shelfId)
+      .eq('book_id', bookId);
+
+    if (error) {
+      return {
+        success: false,
+        error: {
+          code: ErrorCode.Network,
+          message: error.message,
+          cause: error,
+        },
+      };
+    }
+
+    return { success: true, data: undefined };
+  }
 }

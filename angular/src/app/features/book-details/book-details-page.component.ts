@@ -139,7 +139,7 @@ type EditBookFormGroup = FormGroup<{
             } @else {
               <ul>
                 @for (source of detail()!.sources; track source.url) {
-                  <li><a [attr.href]="source.url">{{ source.url }}</a></li>
+                  <li><a [attr.href]="source.url">{{ source.siteName }}</a></li>
                 }
               </ul>
             }
@@ -165,7 +165,7 @@ type EditBookFormGroup = FormGroup<{
             } @else {
               <ul>
                 @for (related of detail()!.relatedBooks; track related.bookId) {
-                  <li>{{ related.bookId }}</li>
+                  <li>{{ relatedTitle(related.bookId) }}</li>
                 }
               </ul>
             }
@@ -382,6 +382,10 @@ export class BookDetailsPageComponent {
     }
 
     await this.router.navigate(['/bookshelf']);
+  }
+
+  relatedTitle(bookId: string): string {
+    return this.bookService.books().find((book) => book.id === bookId)?.title ?? bookId;
   }
 
   private toFormModel(): BookFormModel {

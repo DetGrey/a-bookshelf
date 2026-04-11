@@ -54,7 +54,7 @@ export class CoverImageComponent implements OnDestroy {
   );
 
   private observer: IntersectionObserver | null = null;
-  private timeoutId: any = null;
+  private timeoutId: ReturnType<typeof setTimeout> | null = null;
 
   constructor() {
     // Reset state whenever src changes
@@ -106,6 +106,10 @@ export class CoverImageComponent implements OnDestroy {
         this.errored.set(true);
       }
     }, 3000);
+
+    if (typeof this.timeoutId === 'object' && this.timeoutId !== null && 'unref' in this.timeoutId && typeof this.timeoutId.unref === 'function') {
+      this.timeoutId.unref();
+    }
   }
 
   private clearTimeout(): void {

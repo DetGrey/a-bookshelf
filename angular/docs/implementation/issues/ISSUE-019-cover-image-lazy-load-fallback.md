@@ -119,15 +119,20 @@ Import `NgStyle` from `@angular/common` to apply the gradient style object.
 The existing `buildCloudflareImageProxyUrl` utility is used in `QualityToolsService`. Check if `CoverImageComponent` is currently calling it internally. If so, move that responsibility to the parent components that pass `src` (i.e. parents construct the proxy URL before passing it in). The component itself should not know about the proxy.
 
 ## Acceptance criteria
-- [ ] When `lazy=true` (default), image `<img>` is not rendered until the element scrolls within 120px of the viewport.
-- [ ] When `IntersectionObserver` is unavailable, image loads immediately.
-- [ ] When `src` is null or empty, the gradient fallback is shown immediately without attempting to load an image.
-- [ ] When the image errors, the gradient fallback replaces the image.
-- [ ] When 3 seconds pass without `onLoad` firing, `errored` is set and the gradient fallback shows.
-- [ ] The gradient colour is derived from the `alt` text — same input always produces same gradient.
-- [ ] Changing `src` resets errored/loaded state (gradient shows again until new image loads).
-- [ ] Tests cover: lazy flag disables intersection observer path, error → fallback, timeout → fallback, gradient computation determinism.
-- [ ] Existing test baseline preserved.
+- [x] When `lazy=true` (default), image `<img>` is not rendered until the element scrolls within 120px of the viewport.
+- [x] When `IntersectionObserver` is unavailable, image loads immediately.
+- [x] When `src` is null or empty, the gradient fallback is shown immediately without attempting to load an image.
+- [x] When the image errors, the gradient fallback replaces the image.
+- [x] When 3 seconds pass without `onLoad` firing, `errored` is set and the gradient fallback shows.
+- [x] The gradient colour is derived from the `alt` text — same input always produces same gradient.
+- [x] Changing `src` resets errored/loaded state (gradient shows again until new image loads).
+- [x] Tests cover: lazy flag disables intersection observer path, error → fallback, timeout → fallback, gradient computation determinism.
+- [x] Existing test baseline preserved.
+
+## Completion notes
+- `CoverImageComponent` implements lazy loading with `IntersectionObserver`, deterministic gradient fallback, and 3s timeout/error fallback behavior.
+- State resets correctly on `src` changes, and timer cleanup includes `unref()` when available to avoid lingering Jest handles.
+- Verified with focused component tests and full regression (`npm test`): 30/30 suites passed, 206/206 tests passed.
 
 ## Blocked by
 - Blocked by ISSUE-015.

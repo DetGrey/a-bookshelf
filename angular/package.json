@@ -6,7 +6,9 @@
     "start": "ng serve",
     "build": "ng build && cp dist/a-bookshelf/browser/index.html dist/a-bookshelf/browser/404.html",
     "watch": "ng build --watch --configuration development",
-    "test": "jest --passWithNoTests"
+    "lint": "eslint \"src/**/*.{ts,html}\"",
+    "lint:fix": "eslint \"src/**/*.{ts,html}\" --fix",
+    "test": "jest --passWithNoTests --runInBand"
   },
   "private": true,
   "dependencies": {

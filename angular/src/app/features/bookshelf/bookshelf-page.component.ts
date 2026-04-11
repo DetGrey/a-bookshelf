@@ -203,7 +203,14 @@ import { escapeRegex } from '../../shared/utils/string.util';
           </div>
 
           <p>Shelves: {{ shelfCount() }}</p>
-          <app-book-grid [books]="pagedBooks()" (opened)="onOpenDetails($event)" />
+          <app-book-grid
+            [books]="pagedBooks()"
+            [customShelves]="customShelves()"
+            [activeGenres]="filters.genres()"
+            (opened)="onOpenDetails($event)"
+            (genreToggled)="onGenreToggled($event)"
+            (shelfToggled)="onShelfToggled($event)"
+          />
 
           <div class="pagination">
             <button type="button" [disabled]="filters.page() <= 1" (click)="setPage(filters.page() - 1)">Previous</button>
@@ -230,7 +237,8 @@ export class BookshelfPageComponent {
   readonly sidebarMessage = this.shelfService.errorMessage;
   readonly selectedShelf = computed(() => {
     const shelfReader = (this.filters as Partial<BookshelfFilterService>).shelf;
-    return typeof shelfReader === 'function' ? shelfReader() : 'all';
+    const shelf = typeof shelfReader === 'function' ? shelfReader() : null;
+    return shelf ?? 'all';
   });
   readonly isWaitingShelfContext = computed(() => this.selectedShelf() === 'status:waiting');
   readonly waitingUpdatesRunning = signal(false);
@@ -260,7 +268,7 @@ export class BookshelfPageComponent {
     }
 
     const search = this.filters.search().trim().toLowerCase();
-    const language = this.filters.language().trim().toLowerCase();
+    const language = (this.filters.language() ?? '').trim().toLowerCase();
     const genres = this.filters.genres().map((genre) => genre.toLowerCase());
     const genreMode = this.filters.genreMode ? this.filters.genreMode() : 'all';
     
@@ -268,10 +276,7 @@ export class BookshelfPageComponent {
     const chapterMode = this.filters.chapterMode();
 
     if (search) {
-      collection = collection.filter((book) =>
-        book.title.toLowerCase().includes(search)
-        || book.description.toLowerCase().includes(search),
-      );
+      collection = collection.filter((book) => this.scoreBook(book, search) > 0);
     }
 
     if (language) {
@@ -290,10 +295,9 @@ export class BookshelfPageComponent {
     }
 
     if (chapterValue !== null) {
-      collection = collection.filter((book) => {
-        const count = book.chapterCount ?? 0;
-        return chapterMode === 'max' ? count <= chapterValue : count >= chapterValue;
-      });
+      collection = chapterMode === 'max'
+        ? collection.filter((book) => (book.chapterCount ?? Number.MAX_SAFE_INTEGER) <= chapterValue)
+        : collection.filter((book) => (book.chapterCount ?? 0) >= chapterValue);
     }
 
     const direction = this.filters.sortDir() === 'asc' ? 1 : -1;
@@ -456,7 +460,13 @@ export class BookshelfPageComponent {
   readonly chapterPresets = [10, 20, 50, 100, 200];
 
   setChapterValue(value: number | null): void {
-    void this.filters.updateFilter('chapterValue', value);
+    if (value === null) {
+      void this.filters.updateFilter('chapterValue', null);
+      return;
+    }
+
+    const next = this.filters.chapterValue() === value ? null : value;
+    void this.filters.updateFilter('chapterValue', next);
   }
 
   setChapterMode(mode: 'min' | 'max'): void {
@@ -472,6 +482,19 @@ export class BookshelfPageComponent {
     const view = this.document.defaultView;
     this.filters.rememberAnchor(bookId);
     this.filters.rememberScroll(view?.scrollY ?? 0);
+  }
+
+  onGenreToggled(genre: string): void {
+    const current = this.filters.genres();
+    const isActive = current.includes(genre);
+    const next = isActive
+      ? current.filter((item) => item !== genre)
+      : [...current, genre];
+    void this.filters.updateFilter('genres', next);
+  }
+
+  onShelfToggled(payload: { bookId: string; shelfId: string }): void {
+    void this.shelfService.toggleBookOnShelf(payload.bookId, payload.shelfId);
   }
 
   private restoreViewMemory(): void {
@@ -500,9 +523,10 @@ export class BookshelfPageComponent {
       const scoreRight = this.scoreBook(right, this.filters.search());
       
       if (scoreLeft !== scoreRight) {
-        return scoreLeft - scoreRight; // Handled by multiplier later to sort desc by default
+        return scoreLeft - scoreRight;
       }
-      return left.title.localeCompare(right.title);
+
+      return right.updatedAt.getTime() - left.updatedAt.getTime();
     }
 
     switch (sort) {
@@ -524,20 +548,34 @@ export class BookshelfPageComponent {
 
   private scoreBook(book: Book, search: string): number {
     const query = search.trim().toLowerCase();
-    if (!query) return 0;
-    
-    let score = 0;
-    const safeQuery = escapeRegex(query);
-    const exactRegex = new RegExp(`\\b${safeQuery}\\b`, 'i');
-    
-    // Title matches
-    if (exactRegex.test(book.title)) score += 10;
-    else if (book.title.toLowerCase().includes(query)) score += 5;
-    
-    // Description matches
-    if (book.description && exactRegex.test(book.description)) score += 3;
-    else if (book.description?.toLowerCase().includes(query)) score += 1;
-    
-    return score;
+    if (!query) {
+      return 0;
+    }
+
+    const title = book.title.toLowerCase();
+    const description = book.description.toLowerCase();
+
+    if (title === query) {
+      return 1000;
+    }
+
+    if (title.startsWith(query)) {
+      return 500;
+    }
+
+    const boundaryRegex = new RegExp(`\\b${escapeRegex(query)}`);
+    if (boundaryRegex.test(title)) {
+      return 300;
+    }
+
+    if (title.includes(query)) {
+      return 200;
+    }
+
+    if (description.includes(query)) {
+      return 50;
+    }
+
+    return 0;
   }
 }

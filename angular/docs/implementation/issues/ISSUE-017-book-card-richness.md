@@ -110,5 +110,11 @@ The read mode already shows a structured section list. Enrich it to match the ca
 - [x] Tests cover: score colour thresholds, genre toggle wiring, shelf dropdown open/close/toggle, compact mode hiding.
 - [x] Existing test baseline preserved.
 
+## Completion notes
+- `BookCardComponent` now matches the rich card contract for pills, compact behavior, notes/footer content, and shelf/genre interaction outputs.
+- `BookGridComponent` and `BookshelfPageComponent` pass-through/wire `customShelves`, `activeGenres`, `genreToggled`, and `shelfToggled`, including service integration for shelf toggles.
+- `BookDetailsPageComponent` read mode includes enriched metadata display (latest chapter, notes, times read, original language, source naming, related title resolution).
+- Verified by focused suites and full regression (`npm test`): 30/30 suites passed, 206/206 tests passed.
+
 ## Blocked by
 - Blocked by ISSUE-016 (needs `notes`, `timesRead`, `lastRead`, `latestChapter`, `lastUploadedAt`, `originalLanguage` on the `Book` model).

@@ -275,7 +275,7 @@ describe('BookCardComponent', () => {
       const notesEl = fixture.debugElement.query(By.css('[data-testid="book-notes"]'));
       
       expect(notesEl).toBeTruthy();
-      expect(notesEl.nativeElement.textContent.trim()).toBe('A very short note.');
+      expect(notesEl.nativeElement.textContent.trim()).toBe('📝 A very short note.');
     });
 
     it('hides notes when compact is true', () => {
@@ -293,7 +293,7 @@ describe('BookCardComponent', () => {
       fixture.detectChanges();
       
       const notesEl = fixture.debugElement.query(By.css('[data-testid="book-notes"]'));
-      expect(notesEl.nativeElement.textContent.trim()).toBe('One two three four five six seven eight nine ten eleven twelve thirteen fourteen fifteen…');
+      expect(notesEl.nativeElement.textContent.trim()).toBe('📝 One two three four five six seven eight nine ten eleven twelve thirteen fourteen fifteen…');
     });
   });
 });

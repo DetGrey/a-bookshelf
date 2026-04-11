@@ -3,6 +3,28 @@ import { BookRecord, BookSourceDraft } from '../../models/book.model';
 import { ErrorCode, Result } from '../../models/result.model';
 import { SUPABASE_CLIENT } from '../supabase.token';
 
+const BOOK_SELECT_COLUMNS = [
+  'id',
+  'user_id',
+  'title',
+  'description',
+  'score',
+  'status',
+  'genres',
+  'language',
+  'chapter_count',
+  'latest_chapter',
+  'last_uploaded_at',
+  'last_fetched_at',
+  'notes',
+  'times_read',
+  'last_read',
+  'original_language',
+  'cover_url',
+  'created_at',
+  'updated_at',
+].join(',');
+
 @Injectable({ providedIn: 'root' })
 export class BookRepository {
   private readonly supabase = inject(SUPABASE_CLIENT);
@@ -10,7 +32,7 @@ export class BookRepository {
   async getByUserId(userId: string): Promise<Result<BookRecord[]>> {
     const { data, error } = await this.supabase
       .from('books')
-      .select('*')
+      .select(BOOK_SELECT_COLUMNS)
       .eq('user_id', userId);
 
     if (error) {
@@ -33,7 +55,7 @@ export class BookRepository {
   async getById(userId: string, bookId: string): Promise<Result<BookRecord>> {
     const { data, error } = await this.supabase
       .from('books')
-      .select('*')
+      .select(BOOK_SELECT_COLUMNS)
       .eq('user_id', userId)
       .eq('id', bookId)
       .single();

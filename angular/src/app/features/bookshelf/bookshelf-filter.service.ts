@@ -22,6 +22,7 @@ export class BookshelfFilterService {
   readonly chapterMode = signal<ChapterMode>('max');
   
   readonly page = signal<number>(1);
+  readonly pageSize = signal<number>(20);
   
   readonly selectedAnchor = signal<string | null>(null);
   readonly scrollY = signal<number>(0);

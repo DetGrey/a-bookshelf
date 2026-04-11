@@ -65,7 +65,7 @@ describe('BookDetailsPageComponent', () => {
     expect(fixture.nativeElement.textContent).toContain('Solo Leveling');
     expect(fixture.nativeElement.textContent).toContain('Hunters and gates');
     expect(fixture.nativeElement.textContent).toContain('Favorites');
-    expect(fixture.nativeElement.textContent).toContain('https://example.com/solo');
+    expect(fixture.nativeElement.textContent).toContain('Example');
     expect(fixture.nativeElement.textContent).toContain('book-2');
   });
 

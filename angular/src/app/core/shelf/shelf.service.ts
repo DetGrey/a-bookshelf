@@ -131,6 +131,65 @@ export class ShelfService {
     };
   }
 
+  async toggleBookOnShelf(bookId: string, shelfId: string): Promise<Result<void>> {
+    const user = this.auth.currentUser();
+    if (!user) {
+      const failure: Result<void> = {
+        success: false,
+        error: {
+          code: ErrorCode.Unauthorized,
+          message: 'Authentication required to update shelf membership.',
+        },
+      };
+      this.errorMessage.set(failure.error.message);
+      return failure;
+    }
+
+    const shelf = this.shelves().find((entry) => entry.id === shelfId);
+    if (!shelf) {
+      const failure: Result<void> = {
+        success: false,
+        error: {
+          code: ErrorCode.NotFound,
+          message: 'Shelf not found.',
+        },
+      };
+      this.errorMessage.set(failure.error.message);
+      return failure;
+    }
+
+    const existingIds = [...(shelf.bookIds ?? [])];
+    const isLinked = existingIds.includes(bookId);
+
+    this.errorMessage.set(null);
+    const result = isLinked
+      ? await this.repository.removeBookFromShelf(shelfId, bookId)
+      : await this.repository.addBookToShelf(shelfId, bookId);
+
+    if (!result.success) {
+      this.errorMessage.set(`Could not update shelf. ${result.error.message}`);
+      return result;
+    }
+
+    this.shelves.update((entries) => entries.map((entry) => {
+      if (entry.id !== shelfId) {
+        return entry;
+      }
+
+      const nextBookIds = isLinked
+        ? (entry.bookIds ?? []).filter((id) => id !== bookId)
+        : [...(entry.bookIds ?? []), bookId];
+
+      return {
+        ...entry,
+        bookIds: nextBookIds,
+        bookCount: nextBookIds.length,
+      };
+    }));
+
+    return { success: true, data: undefined };
+  }
+
   private mapRecord(record: ShelfRecord): Shelf {
     const bookIds = (record.shelf_books ?? []).map((entry) => entry.book_id);
     return {

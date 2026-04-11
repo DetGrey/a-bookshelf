@@ -95,6 +95,11 @@ notes, times_read, last_read, original_language
 - [x] Tests cover mapper normalisation, form default values, and read-mode display guards.
 - [x] Existing ISSUE-000 through ISSUE-015 test baseline preserved.
 
+## Completion notes
+- Repository reads now use explicit book column selection (including `notes`, `times_read`, `last_read`, `original_language`, `latest_chapter`, `last_uploaded_at`) instead of wildcard selection.
+- Model, mapper, and form layers are aligned for the six ISSUE-016 fields, including `times_read` normalization and empty-string-to-null payload conversion.
+- Verified via focused suites: mapper, form fields, details page, and repository tests all pass (4/4 suites, 38/38 tests).
+
 ## Blocked by
 - Blocked by ISSUE-015.
 

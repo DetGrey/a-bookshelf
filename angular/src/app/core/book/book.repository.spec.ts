@@ -22,7 +22,10 @@ describe('BookRepository read contract', () => {
 
     expect(result).toEqual({ success: true, data: records });
     expect(from).toHaveBeenCalledWith('books');
-    expect(select).toHaveBeenCalledWith('*');
+    expect(select).toHaveBeenCalledWith(expect.stringContaining('notes'));
+    expect(select).toHaveBeenCalledWith(expect.stringContaining('times_read'));
+    expect(select).toHaveBeenCalledWith(expect.stringContaining('last_read'));
+    expect(select).toHaveBeenCalledWith(expect.stringContaining('original_language'));
     expect(eq).toHaveBeenCalledWith('user_id', 'user-1');
   });
 
