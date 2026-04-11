@@ -15,13 +15,13 @@
 Build the first complete data pipeline for library read operations: establish all three type layers and mapper functions, implement repository calls, wire service-owned signals, and render the baseline bookshelf (`BookGrid` + `BookCard`) with loading/empty/error states.
 
 ## Acceptance criteria
-- [ ] All three type layers are defined in `models/book.model.ts`: `BookRecord` (raw Supabase row), `Book` (domain model), `BookFormModel` (form state).
-- [ ] All three mapper functions are implemented in `models/mappers/book.mapper.ts`: `toBook()`, `toFormModel()`, and `toSupabasePayload()`.
-- [ ] Tests cover all three mapper directions — not just `toBook()` but also `toFormModel()` and `toSupabasePayload()` — including edge cases (null fields, empty arrays).
-- [ ] `BookRepository` and `ShelfRepository` return `Promise<Result<T>>` only — no raw Supabase responses leak past the repository boundary.
-- [ ] `BookService`/`ShelfService` expose signal state and derived values (e.g. `bookCount`, `averageScore`).
-- [ ] Bookshelf screen renders fetched books and shelf counts via smart/dumb component split.
-- [ ] Errors are surfaced in smart component UI (not swallowed).
+- [x] All three type layers are defined in `models/book.model.ts`: `BookRecord` (raw Supabase row), `Book` (domain model), `BookFormModel` (form state).
+- [x] All three mapper functions are implemented in `models/mappers/book.mapper.ts`: `toBook()`, `toFormModel()`, and `toSupabasePayload()`.
+- [x] Tests cover all three mapper directions — not just `toBook()` but also `toFormModel()` and `toSupabasePayload()` — including edge cases (null fields, empty arrays).
+- [x] `BookRepository` and `ShelfRepository` return `Promise<Result<T>>` only — no raw Supabase responses leak past the repository boundary.
+- [x] `BookService`/`ShelfService` expose signal state and derived values (e.g. `bookCount`, `averageScore`).
+- [x] Bookshelf screen renders fetched books and shelf counts via smart/dumb component split.
+- [x] Errors are surfaced in smart component UI (not swallowed).
 
 ## Blocked by
 - Blocked by ISSUE-001.

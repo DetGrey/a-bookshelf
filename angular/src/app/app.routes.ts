@@ -1,24 +1,18 @@
 import { Routes } from '@angular/router';
-import { AddBookPageComponent } from './features/add-book/add-book-page.component';
-import { LoginPageComponent } from './features/auth/login/login-page.component';
-import { SignupPageComponent } from './features/auth/signup/signup-page.component';
-import { BookDetailsPageComponent } from './features/book-details/book-details-page.component';
-import { BookshelfPageComponent } from './features/bookshelf/bookshelf-page.component';
-import { DashboardPageComponent } from './features/dashboard/dashboard-page.component';
 import { authGuard } from './core/auth/auth.guard';
 
 export const routes: Routes = [
 	{ path: '', redirectTo: 'bookshelf', pathMatch: 'full' },
-	{ path: 'login', component: LoginPageComponent },
-	{ path: 'signup', component: SignupPageComponent },
+	{ path: 'login', loadComponent: () => import('./features/auth/login/login-page.component').then((module) => module.LoginPageComponent) },
+	{ path: 'signup', loadComponent: () => import('./features/auth/signup/signup-page.component').then((module) => module.SignupPageComponent) },
 	{
 		path: '',
 		canActivate: [authGuard],
 		children: [
-			{ path: 'bookshelf', component: BookshelfPageComponent },
-			{ path: 'dashboard', component: DashboardPageComponent },
-			{ path: 'add', component: AddBookPageComponent },
-			{ path: 'book/:bookId', component: BookDetailsPageComponent },
+			{ path: 'bookshelf', loadComponent: () => import('./features/bookshelf/bookshelf-page.component').then((module) => module.BookshelfPageComponent) },
+			{ path: 'dashboard', loadComponent: () => import('./features/dashboard/dashboard-page.component').then((module) => module.DashboardPageComponent) },
+			{ path: 'add', loadComponent: () => import('./features/add-book/add-book-page.component').then((module) => module.AddBookPageComponent) },
+			{ path: 'book/:bookId', loadComponent: () => import('./features/book-details/book-details-page.component').then((module) => module.BookDetailsPageComponent) },
 		],
 	},
 	{ path: '**', redirectTo: '' },
