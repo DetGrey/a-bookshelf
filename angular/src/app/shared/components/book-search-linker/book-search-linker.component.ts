@@ -8,36 +8,72 @@ import { BookService } from '../../../core/book/book.service';
   selector: 'app-book-search-linker',
   standalone: true,
   imports: [ReactiveFormsModule],
+  styleUrl: './book-search-linker.component.scss',
   template: `
-    <fieldset>
-      <legend>Related books</legend>
+    <section class="card book-search-linker">
+      <button
+        type="button"
+        class="ghost collapsible-header"
+        [class.expanded]="!isCollapsed()"
+        (click)="isCollapsed.set(!isCollapsed())"
+      >
+        <p class="eyebrow">Related Books</p>
+        <span class="collapsible-arrow">{{ isCollapsed() ? '▶' : '▼' }}</span>
+      </button>
 
-      <input
-        data-testid="related-book-input"
-        [value]="searchQuery()"
-        (input)="onSearchInput($event)"
-        placeholder="Search by title"
-      />
+      @if (!isCollapsed()) {
+        <p class="muted text-small mt-8">Link language versions or related books</p>
 
-      @if (suggestions().length > 0) {
-        <ul data-testid="related-book-suggestions">
-          @for (book of suggestions(); track book.id) {
-            <li>
-              <button type="button" (click)="selectBook(book.id)">{{ book.title }}</button>
-            </li>
-          }
-        </ul>
-      }
-
-      <ul>
-        @for (relatedId of control().value; track relatedId) {
-          <li>
-            {{ titleForId(relatedId) }}
-            <button type="button" [attr.data-testid]="'remove-related-' + relatedId" (click)="removeRelated(relatedId)">×</button>
-          </li>
+        @if (control().value.length > 0) {
+          <div class="linked-books">
+            @for (relatedId of control().value; track relatedId) {
+              <div class="linked-book-item">
+                <div class="linked-book-info">
+                  <strong>{{ titleForId(relatedId) }}</strong>
+                  <button
+                    type="button"
+                    class="btn-icon"
+                    [attr.data-testid]="'remove-related-' + relatedId"
+                    (click)="removeRelated(relatedId)"
+                  >
+                    ✕
+                  </button>
+                </div>
+              </div>
+            }
+          </div>
         }
-      </ul>
-    </fieldset>
+
+        <div class="book-search-container">
+          <div class="book-search-fields">
+            <label class="field">
+              <span>Search</span>
+              <input
+                data-testid="related-book-input"
+                [value]="searchQuery()"
+                (input)="onSearchInput($event)"
+                placeholder="Find a book..."
+              />
+            </label>
+          </div>
+
+          @if (suggestions().length > 0) {
+            <ul data-testid="related-book-suggestions" class="search-results-dropdown">
+              @for (book of suggestions(); track book.id) {
+                <li>
+                  <button type="button" class="search-result-item" (click)="selectBook(book.id)">
+                    <span class="search-result-title">{{ book.title }}</span>
+                    @if (book.language) {
+                      <span class="search-result-subtitle">{{ book.language }}</span>
+                    }
+                  </button>
+                </li>
+              }
+            </ul>
+          }
+        </div>
+      }
+    </section>
   `,
   changeDetection: ChangeDetectionStrategy.OnPush,
 })
@@ -46,6 +82,7 @@ export class BookSearchLinkerComponent {
 
   readonly control = input.required<FormControl<string[]>>();
   readonly searchQuery = signal('');
+  readonly isCollapsed = signal(false);
 
   readonly suggestions = computed(() => {
     const query = this.searchQuery().trim().toLowerCase();

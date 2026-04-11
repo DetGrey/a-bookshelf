@@ -3,29 +3,50 @@
 }
 
 .book-card {
-  background: var(--panel);
-  border: 1px solid var(--border);
-  border-radius: var(--radius);
-  box-shadow: var(--shadow);
-  padding: var(--space-4);
   display: grid;
-  gap: var(--space-3);
+  gap: var(--space-4);
+  height: 100%;
 }
 
-.book-card h3 {
+.card-head {
+  display: grid;
+  grid-template-columns: auto 1fr;
+  gap: var(--space-3);
+  align-items: start;
+}
+
+.cover-link {
+  display: inline-flex;
+  flex-shrink: 0;
+}
+
+.thumb {
+  width: 80px;
+  height: 110px;
+}
+
+.title-container {
+  display: grid;
+  gap: var(--space-2);
+  min-width: 0;
+}
+
+.title-text {
   font-size: 1rem;
   font-weight: 600;
 }
 
-.book-card > p {
+.text-break {
+  overflow-wrap: anywhere;
+}
+
+.muted {
   color: var(--text-muted);
   font-size: 0.92rem;
 }
 
 .genre-row {
-  display: flex;
-  flex-wrap: wrap;
-  gap: var(--space-2);
+  margin-top: 2px;
 }
 
 .genre-pill {
@@ -34,6 +55,7 @@
   color: var(--text-muted);
   border-radius: 999px;
   padding: 4px 10px;
+  font-size: 0.75rem;
 }
 
 .genre-pill.active {
@@ -42,7 +64,7 @@
   color: var(--text);
 }
 
-.book-notes {
+.notes-text {
   color: var(--text-muted);
   font-size: 0.9rem;
 }
@@ -50,31 +72,40 @@
 .card-footer {
   display: flex;
   justify-content: space-between;
-  align-items: flex-end;
-  margin-top: var(--space-3);
+  align-items: flex-start;
   padding-top: var(--space-3);
   border-top: 1px solid var(--border);
   gap: var(--space-3);
 }
 
-.footer-left {
-  display: grid;
-  gap: var(--space-1);
-  color: var(--text-muted);
+.mt-8 {
+  margin-top: var(--space-2);
+}
+
+.upload-date {
   font-size: 0.85rem;
+  margin-top: var(--space-1);
 }
 
-.footer-left p:nth-child(even) {
-  color: var(--text);
-  font-size: 0.95rem;
-}
-
-.footer-right {
+.card-links {
   display: flex;
   flex-direction: column;
   align-items: flex-end;
   gap: var(--space-2);
   position: relative;
+}
+
+.card-links > a {
+  text-decoration: none;
+}
+
+.shelf-button-wrapper {
+  display: flex;
+  justify-content: flex-end;
+}
+
+.shelf-button {
+  min-width: 88px;
 }
 
 .shelf-dropdown {
@@ -90,15 +121,27 @@
   overflow: hidden;
 }
 
-.shelf-dropdown li {
+.shelf-dropdown-item {
   display: flex;
+  align-items: center;
   gap: var(--space-2);
-  padding: var(--space-2) var(--space-3);
   width: 100%;
-  cursor: pointer;
+  border: 0;
+  border-radius: 0;
+  background: transparent;
   color: var(--text);
+  padding: var(--space-2) var(--space-3);
+  text-align: left;
 }
 
-.shelf-dropdown li:hover {
+.shelf-dropdown-item:hover {
   background: var(--bg);
+}
+
+.book-card.compact .card-head {
+  grid-template-columns: 1fr;
+}
+
+.book-card.compact .cover-link {
+  display: none;
 }

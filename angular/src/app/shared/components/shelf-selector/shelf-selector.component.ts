@@ -6,40 +6,44 @@ import { Shelf } from '../../../models/shelf.model';
   selector: 'app-shelf-selector',
   standalone: true,
   imports: [FormsModule, ReactiveFormsModule],
+  styleUrl: './shelf-selector.component.scss',
   template: `
-    <fieldset>
-      <legend>Shelves</legend>
+    <fieldset class="shelf-selector">
+      <legend>Add to Shelves (optional)</legend>
 
       @if (availableShelves().length > 0) {
-        <ul>
+        <ul class="pill-row mt-4 shelves-list">
           @for (shelf of availableShelves(); track shelf.id) {
             <li>
-              <label>
+              <label class="pill-toggle" [class.selected]="isSelected(shelf.id)">
                 <input
                   type="checkbox"
                   [attr.data-testid]="'shelf-toggle-' + shelf.id"
                   [checked]="isSelected(shelf.id)"
                   (change)="toggleShelf(shelf.id)"
                 />
-                {{ shelf.name }}
+                <span>{{ isSelected(shelf.id) ? '✓ ' : '' }}{{ shelf.name }}</span>
               </label>
             </li>
           }
         </ul>
       } @else {
-        <input
-          data-testid="shelf-selector-input"
-          [(ngModel)]="pendingShelfId"
-          name="pendingShelfId"
-          placeholder="Shelf ID"
-        />
-        <button data-testid="add-shelf-button" type="button" (click)="addShelf()">Add shelf</button>
+        <label class="field">
+          <span>Shelf ID</span>
+          <input
+            data-testid="shelf-selector-input"
+            [(ngModel)]="pendingShelfId"
+            name="pendingShelfId"
+            placeholder="Shelf ID"
+          />
+        </label>
+        <button data-testid="add-shelf-button" type="button" class="ghost" (click)="addShelf()">Add shelf</button>
 
-        <ul>
+        <ul class="manual-list">
           @for (shelfId of control().value; track shelfId) {
             <li>
               {{ shelfId }}
-              <button type="button" (click)="removeShelf(shelfId)">×</button>
+              <button type="button" (click)="removeShelf(shelfId)">✕</button>
             </li>
           }
         </ul>

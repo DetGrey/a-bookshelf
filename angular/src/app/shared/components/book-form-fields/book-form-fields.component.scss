@@ -1,0 +1,14 @@
+:host {
+  display: block;
+}
+
+.book-form-fields {
+  border: 0;
+  padding: 0;
+}
+
+@media (max-width: 768px) {
+  .book-form-fields .grid-2 {
+    grid-template-columns: 1fr;
+  }
+}

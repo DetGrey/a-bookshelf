@@ -10,39 +10,72 @@ type SourceFormGroup = FormGroup<{
   selector: 'app-source-manager',
   standalone: true,
   imports: [FormsModule, ReactiveFormsModule],
+  styleUrl: './source-manager.component.scss',
   template: `
-    <fieldset>
-      <legend>Sources</legend>
+    <section class="card source-manager">
+      <button
+        type="button"
+        class="ghost collapsible-header"
+        [class.expanded]="!isCollapsed"
+        (click)="isCollapsed = !isCollapsed"
+      >
+        <p class="eyebrow">Source Links</p>
+        <span class="collapsible-arrow">{{ isCollapsed ? '▶' : '▼' }}</span>
+      </button>
 
-      <div>
-        <input
-          data-testid="source-url-input"
-          [(ngModel)]="pendingUrl"
-          name="pendingSourceUrl"
-          placeholder="Source URL"
-          (blur)="suggestSiteName()"
-        />
-        <input
-          data-testid="source-sitename-input"
-          [(ngModel)]="pendingSiteName"
-          name="pendingSiteName"
-          placeholder="Site name (optional)"
-        />
-        <button data-testid="add-source-button" type="button" (click)="addSource()">Add source</button>
-      </div>
-
-      <ul>
-        @for (group of sources().controls; track $index) {
-          <li>
-            <span>{{ group.controls.siteName.value || group.controls.url.value }}</span>
-            <a [attr.href]="group.controls.url.value" target="_blank" rel="noopener noreferrer">
-              {{ group.controls.url.value }}
-            </a>
-            <button type="button" [attr.data-testid]="'remove-source-' + $index" (click)="removeSource($index)">×</button>
-          </li>
+      @if (!isCollapsed) {
+        @if (sources().length > 0) {
+          <div class="source-grid">
+            @for (group of sources().controls; track $index) {
+              <div class="source-card">
+                <div>
+                  <strong>{{ group.controls.siteName.value || group.controls.url.value }}</strong>
+                  <p class="muted text-small word-break-all">{{ group.controls.url.value }}</p>
+                </div>
+                <button
+                  type="button"
+                  class="ghost text-danger"
+                  [attr.data-testid]="'remove-source-' + $index"
+                  (click)="removeSource($index)"
+                >
+                  Remove
+                </button>
+              </div>
+            }
+          </div>
         }
-      </ul>
-    </fieldset>
+
+        <form class="stack mt-8" (submit)="$event.preventDefault(); addSource()">
+          <p class="eyebrow">Add New Source</p>
+          <div class="grid-2">
+            <label class="field">
+              <span>Label</span>
+              <input
+                data-testid="source-sitename-input"
+                [(ngModel)]="pendingSiteName"
+                name="pendingSiteName"
+                placeholder="Official, Scanlation A..."
+                (input)="pendingSiteName = ($any($event.target).value || '')"
+              />
+            </label>
+
+            <label class="field">
+              <span>URL</span>
+              <input
+                data-testid="source-url-input"
+                [(ngModel)]="pendingUrl"
+                name="pendingSourceUrl"
+                placeholder="https://..."
+                (input)="pendingUrl = ($any($event.target).value || '')"
+                (blur)="suggestSiteName()"
+              />
+            </label>
+          </div>
+
+          <button data-testid="add-source-button" type="button" class="ghost" (click)="addSource()">+ Add Source</button>
+        </form>
+      }
+    </section>
   `,
   changeDetection: ChangeDetectionStrategy.OnPush,
 })
@@ -51,6 +84,7 @@ export class SourceManagerComponent {
 
   pendingUrl = '';
   pendingSiteName = '';
+  isCollapsed = false;
 
   suggestSiteName(): void {
     if (this.pendingSiteName) {

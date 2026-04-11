@@ -1,11 +1,11 @@
 :host {
-  display: inline-block;
+  display: inline-flex;
 }
 
 .cover-holder {
-  display: inline-block;
-  width: 80px;
-  height: 110px;
+  display: inline-flex;
+  width: 100%;
+  height: 100%;
   border-radius: var(--radius-sm);
   overflow: hidden;
   flex-shrink: 0;
@@ -24,7 +24,7 @@
   border-radius: var(--radius-sm);
 }
 
-img {
+.cover-image {
   width: 100%;
   height: 100%;
   object-fit: cover;
@@ -32,6 +32,6 @@ img {
   transition: opacity 0.2s;
 }
 
-img.cover-loading {
+.cover-image--loading {
   opacity: 0;
 }

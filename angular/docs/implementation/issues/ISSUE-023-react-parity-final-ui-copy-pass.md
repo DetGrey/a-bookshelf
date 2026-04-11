@@ -184,13 +184,13 @@ Angular must align with:
 - Angular targets:
   - `angular/src/app/shared/components/**`
 - Step checklist:
-  - [ ] `BookCard` card-head/footer geometry, pills, and dropdown visuals match React.
-  - [ ] `BookGrid` min column width, gap, and breakpoint behavior match React.
-  - [ ] `CoverImage` default size and fallback rendering match React in each context.
-  - [ ] `BookFormFields` label/field spacing and control styling match React.
-  - [ ] `SourceManager` row/list/remove controls match React.
-  - [ ] `ShelfSelector` checkbox/list and fallback-id entry mode match React.
-  - [ ] `BookSearchLinker` suggestions/list chip remove visuals match React.
+  - [x] `BookCard` card-head/footer geometry, pills, and dropdown visuals match React.
+  - [x] `BookGrid` min column width, gap, and breakpoint behavior match React.
+  - [x] `CoverImage` default size and fallback rendering match React in each context.
+  - [x] `BookFormFields` label/field spacing and control styling match React.
+  - [x] `SourceManager` row/list/remove controls match React.
+  - [x] `ShelfSelector` checkbox/list and fallback-id entry mode match React.
+  - [x] `BookSearchLinker` suggestions/list chip remove visuals match React.
 
 ---
 
@@ -209,8 +209,8 @@ For each page and breakpoint (`375x812`, `768x1024`, `1440x900`):
 
 ### B. Functional safety
 
-- [ ] Existing Angular tests pass
-- [ ] No regressions in auth, filters, metadata fetch, details edit/read, dashboard tools
+- [x] Existing Angular tests pass
+- [x] No regressions in auth, filters, metadata fetch, details edit/read, dashboard tools
 
 ### C. Optional but recommended
 

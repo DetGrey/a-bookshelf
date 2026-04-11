@@ -1,0 +1,55 @@
+:host {
+  display: block;
+}
+
+.shelf-selector {
+  border: 0;
+  padding: 0;
+}
+
+.mt-4 {
+  margin-top: var(--space-1);
+}
+
+.shelves-list {
+  list-style: none;
+}
+
+.pill-toggle {
+  display: inline-flex;
+  align-items: center;
+  border: 1px solid var(--border);
+  border-radius: 999px;
+  padding: 4px 10px;
+  cursor: pointer;
+  color: var(--text-muted);
+  background: transparent;
+}
+
+.pill-toggle.selected {
+  background: var(--accent);
+  border-color: var(--accent);
+  color: #fff;
+}
+
+.pill-toggle input {
+  position: absolute;
+  opacity: 0;
+  pointer-events: none;
+}
+
+.manual-list {
+  list-style: none;
+  margin-top: var(--space-2);
+  display: grid;
+  gap: var(--space-2);
+}
+
+.manual-list li {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  padding: var(--space-2) var(--space-3);
+  border: 1px solid var(--border);
+  border-radius: var(--radius-sm);
+}

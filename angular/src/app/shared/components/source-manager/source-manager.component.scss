@@ -1,0 +1,58 @@
+:host {
+  display: block;
+}
+
+.source-manager {
+  display: grid;
+  gap: var(--space-3);
+}
+
+.collapsible-header {
+  display: flex;
+  justify-content: space-between;
+  align-items: center;
+  width: 100%;
+}
+
+.collapsible-arrow {
+  font-size: 0.9rem;
+}
+
+.source-grid {
+  display: grid;
+  gap: var(--space-2);
+}
+
+.source-card {
+  display: flex;
+  justify-content: space-between;
+  align-items: center;
+  gap: var(--space-3);
+  border: 1px solid var(--border);
+  border-radius: var(--radius-sm);
+  background: var(--bg);
+  padding: var(--space-3);
+}
+
+.text-small {
+  font-size: 0.85rem;
+}
+
+.word-break-all {
+  overflow-wrap: anywhere;
+}
+
+.text-danger {
+  color: var(--error);
+}
+
+.mt-8 {
+  margin-top: var(--space-2);
+}
+
+@media (max-width: 768px) {
+  .source-card {
+    flex-direction: column;
+    align-items: flex-start;
+  }
+}

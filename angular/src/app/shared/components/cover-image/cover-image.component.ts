@@ -22,9 +22,11 @@ import { NgStyle } from '@angular/common';
     <span #holder class="cover-holder">
       @if (showImage()) {
         <img
+          class="cover-image"
           [src]="src()"
           [alt]="alt()"
-          [class.cover-loading]="!imageLoaded()"
+          [class.cover-image--loading]="!imageLoaded()"
+          loading="lazy"
           (load)="imageLoaded.set(true)"
           (error)="errored.set(true)"
         />

@@ -9,7 +9,7 @@ import { Shelf } from '../../../models/shelf.model';
   imports: [BookCardComponent],
   styleUrl: './book-grid.component.scss',
   template: `
-    <section class="book-grid">
+    <section class="card-grid book-grid">
       @for (book of books(); track book.id) {
         <app-book-card
           [book]="book"
