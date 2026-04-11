@@ -26,19 +26,22 @@ jobs:
         with:
           node-version: 22
           cache: npm
-          cache-dependency-path: frontend/package-lock.json
+          cache-dependency-path: angular/package-lock.json
 
       - name: Install dependencies
         run: npm ci
-        working-directory: frontend
+        working-directory: angular
+
+      - name: Set environment variables
+        run: |
+          sed -i "s|supabaseUrl: ''|supabaseUrl: '${{ secrets.SUPABASE_URL }}'|" src/environments/environment.prod.ts
+          sed -i "s|supabaseAnonKey: ''|supabaseAnonKey: '${{ secrets.SUPABASE_ANON_KEY }}'|" src/environments/environment.prod.ts
+          sed -i "s|imageProxyUrl: ''|imageProxyUrl: '${{ secrets.IMAGE_PROXY_URL }}'|" src/environments/environment.prod.ts
+        working-directory: angular
 
       - name: Build
         run: npm run build
-        working-directory: frontend
-        env:
-          VITE_SUPABASE_URL: ${{ secrets.VITE_SUPABASE_URL }}
-          VITE_SUPABASE_ANON_KEY: ${{ secrets.VITE_SUPABASE_ANON_KEY }}
-          VITE_IMAGE_PROXY_URL: ${{ secrets.VITE_IMAGE_PROXY_URL }}
+        working-directory: angular
 
       - name: Setup Pages
         uses: actions/configure-pages@v4
@@ -46,7 +49,7 @@ jobs:
       - name: Upload artifact
         uses: actions/upload-pages-artifact@v3
         with:
-          path: frontend/dist
+          path: angular/dist/a-bookshelf/browser
 
   deploy:
     environment:

@@ -11,7 +11,7 @@
   - As a developer, pushing to `main` deploys the Angular app to GitHub Pages.
 
 ## What to build
-Scaffold the Angular 19 project inside `angular/` (the project root), replace Karma/Jasmine with Jest, configure environment files for the three runtime secrets, set up the `404.html` SPA routing trick for GitHub Pages, and update the CI deploy workflow to point at the Angular build.
+Scaffold the Angular 21 project inside `angular/` (the project root), replace Karma/Jasmine with Jest, configure environment files for the three runtime secrets, set up the `404.html` SPA routing trick for GitHub Pages, and update the CI deploy workflow to point at the Angular build.
 
 This issue produces no feature code — only project infrastructure.
 
@@ -123,15 +123,15 @@ CI pre-build step to inject secrets into `environment.prod.ts`:
 ```
 
 ## Acceptance criteria
-- [ ] `ng new` has run inside `angular/`; `package.json`, `angular.json`, `tsconfig.json`, and `src/` exist.
-- [ ] `npm start` serves the default Angular app without errors.
-- [ ] Karma and Jasmine are fully removed; `npm test` runs via Jest and exits cleanly with zero tests (no failures).
-- [ ] `jest.config.ts`, `setup-jest.ts`, and `tsconfig.spec.json` exist at `angular/` root.
-- [ ] `src/environments/environment.ts` and `src/environments/environment.prod.ts` exist with all three keys present.
-- [ ] `angular.json` schematics default all generated components to `OnPush`, standalone, and SCSS.
-- [ ] `npm run build` produces output in `dist/` and copies `index.html` to `404.html`.
-- [ ] `.github/workflows/deploy.yml` points at `angular/`, injects secrets into `environment.prod.ts`, and uploads from the correct dist path.
-- [ ] GitHub secrets `SUPABASE_URL`, `SUPABASE_ANON_KEY`, `IMAGE_PROXY_URL` are renamed/added in the repository settings.
+- [x] `ng new` has run inside `angular/`; `package.json`, `angular.json`, `tsconfig.json`, and `src/` exist.
+- [x] `npm start` serves the default Angular app without errors.
+- [x] Karma and Jasmine are fully removed; `npm test` runs via Jest and exits cleanly with zero tests (no failures).
+- [x] `jest.config.ts`, `setup-jest.ts`, and `tsconfig.spec.json` exist at `angular/` root.
+- [x] `src/environments/environment.ts` and `src/environments/environment.prod.ts` exist with all three keys present.
+- [x] `angular.json` schematics default all generated components to `OnPush`, standalone, and SCSS.
+- [x] `npm run build` produces output in `dist/` and copies `index.html` to `404.html`.
+- [x] `.github/workflows/deploy.yml` points at `angular/`, injects secrets into `environment.prod.ts`, and uploads from the correct dist path.
+- [x] GitHub secrets `SUPABASE_URL`, `SUPABASE_ANON_KEY`, `IMAGE_PROXY_URL` are renamed/added in the repository settings.
 
 ## Blocked by
 None — start here.

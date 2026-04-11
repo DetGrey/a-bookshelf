@@ -26,7 +26,7 @@ This document is the authoritative architectural reference for the Angular rewri
 
 | Concern | Decision | Rationale |
 |---|---|---|
-| Framework | Angular 19 | Latest stable |
+| Framework | Angular 21 | Latest stable |
 | Component model | Standalone components | NgModules are being phased out; standalone is the Angular team's default |
 | State management | Services + Signals | Two clear state domains (auth, library); NgRx adds 3× code for the same result |
 | TypeScript | All strict flags | See §12; retrofitting strictness is painful, starting strict is free |
