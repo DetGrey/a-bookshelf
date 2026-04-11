@@ -1,3 +1,4 @@
+import { DOCUMENT } from '@angular/common';
 import { afterNextRender, ChangeDetectionStrategy, Component, computed, inject, signal } from '@angular/core';
 import { BookService, WaitingUpdateProgress, WaitingUpdateSummary } from '../../core/book/book.service';
 import { ShelfService } from '../../core/shelf/shelf.service';
@@ -152,6 +153,7 @@ import { Book, BookStatus } from '../../models/book.model';
 export class BookshelfPageComponent {
   private readonly bookService = inject(BookService);
   private readonly shelfService = inject(ShelfService);
+  private readonly document = inject(DOCUMENT);
   readonly filters = inject(BookshelfFilterService);
 
   readonly books = this.bookService.books;
@@ -351,8 +353,9 @@ export class BookshelfPageComponent {
   }
 
   onOpenDetails(bookId: string): void {
+    const view = this.document.defaultView;
     this.filters.rememberAnchor(bookId);
-    this.filters.rememberScroll(window.scrollY);
+    this.filters.rememberScroll(view?.scrollY ?? 0);
   }
 
   private restoreViewMemory(): void {
@@ -362,7 +365,7 @@ export class BookshelfPageComponent {
     const anchorId = typeof selectedAnchorReader === 'function' ? selectedAnchorReader() : null;
 
     if (anchorId) {
-      const anchorElement = document.getElementById(`book-anchor-${anchorId}`);
+      const anchorElement = this.document.getElementById(`book-anchor-${anchorId}`);
       if (anchorElement) {
         anchorElement.scrollIntoView({ block: 'center' });
         return;
@@ -371,7 +374,7 @@ export class BookshelfPageComponent {
 
     const savedScroll = typeof scrollReader === 'function' ? scrollReader() : 0;
     if (savedScroll > 0) {
-      window.scrollTo({ top: savedScroll, behavior: 'auto' });
+      this.document.defaultView?.scrollTo({ top: savedScroll, behavior: 'auto' });
     }
   }
 

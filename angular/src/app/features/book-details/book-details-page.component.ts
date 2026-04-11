@@ -1,3 +1,4 @@
+import { DOCUMENT } from '@angular/common';
 import { ChangeDetectionStrategy, Component, computed, inject, signal } from '@angular/core';
 import { ActivatedRoute, Router, RouterLink } from '@angular/router';
 import { FormArray, FormControl, FormGroup, ReactiveFormsModule, Validators } from '@angular/forms';
@@ -140,6 +141,7 @@ export class BookDetailsPageComponent {
   private readonly route = inject(ActivatedRoute);
   private readonly bookService = inject(BookService);
   private readonly router = inject(Router);
+  private readonly document = inject(DOCUMENT);
 
   readonly resolved = computed(() => this.route.snapshot.data['book'] as Result<BookDetailResolved>);
   readonly detailState = signal<BookDetailResolved | null>(null);
@@ -277,7 +279,7 @@ export class BookDetailsPageComponent {
       return;
     }
 
-    const confirmed = window.confirm('Delete this book?');
+    const confirmed = this.document.defaultView?.confirm('Delete this book?') ?? false;
     if (!confirmed) {
       return;
     }

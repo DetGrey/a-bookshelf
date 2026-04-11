@@ -35,6 +35,17 @@ module.exports = [
     },
     rules: {
       '@angular-eslint/prefer-on-push-component-change-detection': 'error',
+      'no-restricted-globals': [
+        'error',
+        {
+          name: 'document',
+          message: 'Inject DOCUMENT from @angular/common instead of using the global document object.',
+        },
+        {
+          name: 'window',
+          message: 'Use DOCUMENT.defaultView instead of the global window object.',
+        },
+      ],
       'boundaries/dependencies': [
         'error',
         {

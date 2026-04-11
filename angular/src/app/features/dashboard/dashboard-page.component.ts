@@ -1,3 +1,4 @@
+import { DOCUMENT } from '@angular/common';
 import { ChangeDetectionStrategy, Component, computed, inject, signal } from '@angular/core';
 import { BookService } from '../../core/book/book.service';
 import { Book } from '../../models/book.model';
@@ -89,6 +90,7 @@ export class DashboardPageComponent {
   private readonly bookService = inject(BookService);
   private readonly qualityTools = inject(QualityToolsService);
   private readonly backupRestore = inject(BackupRestoreService);
+  private readonly document = inject(DOCUMENT);
 
   readonly books = this.bookService.books;
   readonly totalSaved = computed(() => this.books().length);
@@ -144,7 +146,7 @@ export class DashboardPageComponent {
     const payload = JSON.stringify(result.data, null, 2);
     const blob = new Blob([payload], { type: 'application/json' });
     const url = URL.createObjectURL(blob);
-    const anchor = document.createElement('a');
+    const anchor = this.document.createElement('a');
     anchor.href = url;
     anchor.download = `a-bookshelf-backup-${new Date().toISOString()}.json`;
     anchor.click();
