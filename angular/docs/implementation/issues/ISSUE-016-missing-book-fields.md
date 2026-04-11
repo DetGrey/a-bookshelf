@@ -84,16 +84,16 @@ notes, times_read, last_read, original_language
 (`latest_chapter`, `last_uploaded_at`, `last_fetched_at` should already be present.)
 
 ## Acceptance criteria
-- [ ] `Book` domain model includes all six new fields with correct TypeScript types.
-- [ ] `BookRecord` includes matching snake_case columns.
-- [ ] `BookFormModel` includes all six fields.
-- [ ] Mapper round-trips correctly: `null` DB → domain default; domain → save payload treats empty strings as `null`.
-- [ ] `times_read` is normalised to minimum 1 in both mapper and form blur handler.
-- [ ] `BookFormFieldsComponent` renders all six fields with correct input types and placeholders.
-- [ ] Book Details read mode displays all six fields (with appropriate "show if non-null / non-default" guards).
-- [ ] Add Book and Book Details edit mode include all six form controls in the FormGroup.
-- [ ] Tests cover mapper normalisation, form default values, and read-mode display guards.
-- [ ] Existing ISSUE-000 through ISSUE-015 test baseline preserved.
+- [x] `Book` domain model includes all six new fields with correct TypeScript types.
+- [x] `BookRecord` includes matching snake_case columns.
+- [x] `BookFormModel` includes all six fields.
+- [x] Mapper round-trips correctly: `null` DB → domain default; domain → save payload treats empty strings as `null`.
+- [x] `times_read` is normalised to minimum 1 in both mapper and form blur handler.
+- [x] `BookFormFieldsComponent` renders all six fields with correct input types and placeholders.
+- [x] Book Details read mode displays all six fields (with appropriate "show if non-null / non-default" guards).
+- [x] Add Book and Book Details edit mode include all six form controls in the FormGroup.
+- [x] Tests cover mapper normalisation, form default values, and read-mode display guards.
+- [x] Existing ISSUE-000 through ISSUE-015 test baseline preserved.
 
 ## Blocked by
 - Blocked by ISSUE-015.
