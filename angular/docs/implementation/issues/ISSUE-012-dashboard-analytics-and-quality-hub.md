@@ -15,11 +15,11 @@
 Implement dashboard view with summary metrics and breakdown sections (genre/source/status), including business rules such as score-average ignoring zero and expandable top-five behavior.
 
 ## Acceptance criteria
-- [ ] Dashboard renders stat cards and breakdown blocks from service data.
-- [ ] Average score excludes unrated/zero values per documented rule.
-- [ ] Breakdown sections support top-five + expandable extras behavior.
-- [ ] Quality tools and backup/restore entry points are visible.
-- [ ] Tests cover key metric calculations and section toggling.
+- [x] Dashboard renders stat cards and breakdown blocks from service data.
+- [x] Average score excludes unrated/zero values per documented rule.
+- [x] Breakdown sections support top-five + expandable extras behavior.
+- [x] Quality tools and backup/restore entry points are visible.
+- [x] Tests cover key metric calculations and section toggling.
 
 ## Blocked by
 - Blocked by ISSUE-003.
