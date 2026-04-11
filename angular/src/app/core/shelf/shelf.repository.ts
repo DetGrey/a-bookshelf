@@ -77,4 +77,24 @@ export class ShelfRepository {
       data: undefined,
     };
   }
+
+  async upsertShelves(records: readonly ShelfRecord[]): Promise<Result<void>> {
+    if (records.length === 0) {
+      return { success: true, data: undefined };
+    }
+
+    const { error } = await this.supabase.from('shelves').upsert(records);
+    if (error) {
+      return {
+        success: false,
+        error: {
+          code: ErrorCode.Network,
+          message: error.message,
+          cause: error,
+        },
+      };
+    }
+
+    return { success: true, data: undefined };
+  }
 }

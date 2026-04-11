@@ -251,6 +251,103 @@ export class BookRepository {
     return { success: true, data: undefined };
   }
 
+  async upsertBooks(records: readonly BookRecord[]): Promise<Result<void>> {
+    if (records.length === 0) {
+      return { success: true, data: undefined };
+    }
+
+    const { error } = await this.supabase.from('books').upsert(records);
+    if (error) {
+      return {
+        success: false,
+        error: {
+          code: ErrorCode.Network,
+          message: error.message,
+          cause: error,
+        },
+      };
+    }
+
+    return { success: true, data: undefined };
+  }
+
+  async upsertBookLinks(records: Array<{ bookId: string; siteName: string | null; url: string }>): Promise<Result<void>> {
+    if (records.length === 0) {
+      return { success: true, data: undefined };
+    }
+
+    const payload = records.map((record) => ({
+      book_id: record.bookId,
+      site_name: record.siteName,
+      url: record.url,
+    }));
+
+    const { error } = await this.supabase.from('book_links').insert(payload);
+    if (error) {
+      return {
+        success: false,
+        error: {
+          code: ErrorCode.Network,
+          message: error.message,
+          cause: error,
+        },
+      };
+    }
+
+    return { success: true, data: undefined };
+  }
+
+  async upsertRelatedBooks(records: Array<{ bookId: string; relatedBookId: string; relationshipType: string | null }>): Promise<Result<void>> {
+    if (records.length === 0) {
+      return { success: true, data: undefined };
+    }
+
+    const payload = records.map((record) => ({
+      book_id: record.bookId,
+      related_book_id: record.relatedBookId,
+      relationship_type: record.relationshipType,
+    }));
+
+    const { error } = await this.supabase.from('related_books').insert(payload);
+    if (error) {
+      return {
+        success: false,
+        error: {
+          code: ErrorCode.Network,
+          message: error.message,
+          cause: error,
+        },
+      };
+    }
+
+    return { success: true, data: undefined };
+  }
+
+  async upsertShelfBooks(records: Array<{ shelfId: string; bookId: string }>): Promise<Result<void>> {
+    if (records.length === 0) {
+      return { success: true, data: undefined };
+    }
+
+    const payload = records.map((record) => ({
+      shelf_id: record.shelfId,
+      book_id: record.bookId,
+    }));
+
+    const { error } = await this.supabase.from('shelf_books').insert(payload);
+    if (error) {
+      return {
+        success: false,
+        error: {
+          code: ErrorCode.Network,
+          message: error.message,
+          cause: error,
+        },
+      };
+    }
+
+    return { success: true, data: undefined };
+  }
+
   async addSources(bookId: string, sources: readonly BookSourceDraft[]): Promise<Result<void>> {
     if (sources.length === 0) {
       return { success: true, data: undefined };

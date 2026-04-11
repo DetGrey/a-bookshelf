@@ -3,7 +3,34 @@ import { TestBed } from '@angular/core/testing';
 import { By } from '@angular/platform-browser';
 import { BookService } from '../../core/book/book.service';
 import { QualityToolsService } from '../../core/quality/quality-tools.service';
+import { BackupRestoreService } from '../../core/backup/backup-restore.service';
 import { DashboardPageComponent } from './dashboard-page.component';
+
+const backupRestoreStub = {
+  exportLibrary: jest.fn().mockResolvedValue({
+    success: true,
+    data: {
+      profile: { id: 'user-1', email: 'reader@example.com' },
+      books: [],
+      shelves: [],
+      bookLinks: [],
+      relatedBooks: [],
+      shelfBooks: [],
+    },
+  }),
+  restoreLibrary: jest.fn().mockResolvedValue({
+    success: true,
+    data: {
+      booksUpserted: 0,
+      shelvesUpserted: 0,
+      bookLinksUpserted: 0,
+      relatedBooksUpserted: 0,
+      shelfBooksUpserted: 0,
+      errorCount: 0,
+      errors: [],
+    },
+  }),
+};
 
 describe('DashboardPageComponent', () => {
   it('renders dashboard stats and ignores zero scores in the average', () => {
@@ -47,9 +74,9 @@ describe('DashboardPageComponent', () => {
             averageScore: signal(8),
           },
         },
+        { provide: BackupRestoreService, useValue: backupRestoreStub },
       ],
     });
-
     const fixture = TestBed.createComponent(DashboardPageComponent);
     fixture.detectChanges();
 
@@ -94,6 +121,7 @@ describe('DashboardPageComponent', () => {
             averageScore: signal(7),
           },
         },
+        { provide: BackupRestoreService, useValue: backupRestoreStub },
       ],
     });
 
@@ -130,6 +158,7 @@ describe('DashboardPageComponent', () => {
             averageScore: signal(0),
           },
         },
+        { provide: BackupRestoreService, useValue: backupRestoreStub },
       ],
     });
 
@@ -169,6 +198,7 @@ describe('DashboardPageComponent', () => {
             scanCoverHealth: jest.fn(),
           },
         },
+        { provide: BackupRestoreService, useValue: backupRestoreStub },
       ],
     });
 
@@ -181,5 +211,98 @@ describe('DashboardPageComponent', () => {
 
     expect(scanDuplicateTitles).toHaveBeenCalled();
     expect(fixture.nativeElement.textContent).toContain('Duplicate groups: 1');
+  });
+
+  it('exports and restores backups from the dashboard controls', async () => {
+    const exportLibrary = jest.fn().mockResolvedValue({
+      success: true,
+      data: {
+        profile: { id: 'user-1', email: 'reader@example.com' },
+        books: [],
+        shelves: [],
+        bookLinks: [],
+        relatedBooks: [],
+        shelfBooks: [],
+      },
+    });
+    const restoreLibrary = jest.fn().mockResolvedValue({
+      success: true,
+      data: {
+        booksUpserted: 1,
+        shelvesUpserted: 1,
+        bookLinksUpserted: 0,
+        relatedBooksUpserted: 0,
+        shelfBooksUpserted: 0,
+        errorCount: 0,
+        errors: [],
+      },
+    });
+
+    TestBed.configureTestingModule({
+      imports: [DashboardPageComponent],
+      providers: [
+        {
+          provide: BookService,
+          useValue: {
+            books: signal([]),
+            bookCount: signal(0),
+            averageScore: signal(0),
+          },
+        },
+        {
+          provide: QualityToolsService,
+          useValue: {
+            scanDuplicateTitles: jest.fn(),
+            scanStaleWaiting: jest.fn(),
+            scanCoverHealth: jest.fn(),
+          },
+        },
+        {
+          provide: BackupRestoreService,
+          useValue: {
+            exportLibrary,
+            restoreLibrary,
+          },
+        },
+      ],
+    });
+
+    Object.defineProperty(URL, 'revokeObjectURL', { value: jest.fn(), configurable: true });
+    const createSpy = jest.fn().mockReturnValue('blob:backup');
+    Object.defineProperty(URL, 'createObjectURL', { value: createSpy, configurable: true });
+    const clickSpy = jest.spyOn(HTMLAnchorElement.prototype, 'click').mockImplementation(() => undefined);
+
+    const fixture = TestBed.createComponent(DashboardPageComponent);
+    fixture.detectChanges();
+
+    await fixture.componentInstance.downloadBackup();
+    fixture.detectChanges();
+
+    expect(exportLibrary).toHaveBeenCalled();
+    expect(createSpy).toHaveBeenCalled();
+    expect(clickSpy).toHaveBeenCalled();
+    expect(fixture.nativeElement.textContent).toContain('Backup exported.');
+
+    const file = {
+      text: jest.fn().mockResolvedValue(JSON.stringify({
+        profile: { id: 'user-1', email: 'reader@example.com' },
+        books: [],
+        shelves: [],
+        bookLinks: [],
+        relatedBooks: [],
+        shelfBooks: [],
+      })),
+    } as unknown as File;
+
+    await fixture.componentInstance.onBackupFileSelected({
+      target: { files: [file] },
+    } as unknown as Event);
+    fixture.detectChanges();
+
+    expect(restoreLibrary).toHaveBeenCalled();
+    expect(fixture.nativeElement.textContent).toContain('Restore complete. Books: 1, shelves: 1');
+
+    createSpy.mockRestore();
+    clickSpy.mockRestore();
   });
 });

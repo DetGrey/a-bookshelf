@@ -17,12 +17,17 @@
 Implement JSON export/import portability flow for profile + books + shelves + joins/links, with chunked restore and validation messaging. Add final QA gates (lint, build, tests, checklist pass) to define release readiness.
 
 ## Acceptance criteria
-- [ ] Export generates a complete JSON payload for all required entities.
-- [ ] Restore supports chunked upsert with error reporting and partial-failure handling.
-- [ ] Round-trip backup/restore preserves key relations and critical fields.
-- [ ] Release checklist includes lint/build/tests and architecture-rule compliance checks.
-- [ ] Final validation notes are documented in the implementation docs folder.
+- [x] Export generates a complete JSON payload for all required entities.
+- [x] Restore supports chunked upsert with error reporting and partial-failure handling.
+- [x] Round-trip backup/restore preserves key relations and critical fields.
+- [x] Release checklist includes lint/build/tests and architecture-rule compliance checks.
+- [x] Final validation notes are documented in the implementation docs folder.
 
 ## Blocked by
 - Blocked by ISSUE-011.
 - Blocked by ISSUE-013.
+
+## Validation notes
+- `npm test -- --runInBand` passed: 24 suites, 98 tests.
+- `npm run build` passed.
+- `npx eslint src/app --ext .ts,.js,.jsx` completed without reported errors.

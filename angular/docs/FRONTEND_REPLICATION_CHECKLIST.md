@@ -73,8 +73,8 @@ Use this as a final pass when recreating the frontend.
 - [ ] Desktop and mobile layouts both feel intentional.
 
 ## Quality assurance
-- [ ] Unit tests pass.
-- [ ] Component tests pass.
-- [ ] Lint passes.
-- [ ] Build passes.
-- [ ] JSON backup/restore round-trips cleanly.
+- [x] Unit tests pass.
+- [x] Component tests pass.
+- [x] Lint passes.
+- [x] Build passes.
+- [x] JSON backup/restore round-trips cleanly.

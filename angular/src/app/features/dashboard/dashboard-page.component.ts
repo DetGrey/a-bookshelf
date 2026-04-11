@@ -2,6 +2,7 @@ import { ChangeDetectionStrategy, Component, computed, inject, signal } from '@a
 import { BookService } from '../../core/book/book.service';
 import { Book } from '../../models/book.model';
 import { QualityToolsService } from '../../core/quality/quality-tools.service';
+import { BackupRestoreService } from '../../core/backup/backup-restore.service';
 
 @Component({
   selector: 'app-dashboard-page',
@@ -65,8 +66,16 @@ import { QualityToolsService } from '../../core/quality/quality-tools.service';
         <button type="button" data-testid="duplicate-title-scanner" (click)="runDuplicateScan()">Duplicate title scanner</button>
         <button type="button" data-testid="stale-waiting-scanner" (click)="runStaleWaitingScan()">Stale waiting checker</button>
         <button type="button" data-testid="cover-checker" (click)="runCoverCheck()">Cover checker</button>
-        <button type="button" data-testid="backup-download">Download backup</button>
-        <button type="button" data-testid="backup-restore">Restore backup</button>
+        <button type="button" data-testid="backup-download" (click)="downloadBackup()">Download backup</button>
+        <button type="button" data-testid="backup-restore" (click)="restoreInput.click()">Restore backup</button>
+        <input
+          #restoreInput
+          data-testid="backup-restore-input"
+          type="file"
+          accept="application/json"
+          hidden
+          (change)="onBackupFileSelected($event)"
+        />
         <button type="button" data-testid="genre-consolidation" (click)="showGenreConsolidationHelp()">Genre consolidation</button>
         @if (qualityMessage()) {
           <p>{{ qualityMessage() }}</p>
@@ -79,6 +88,7 @@ import { QualityToolsService } from '../../core/quality/quality-tools.service';
 export class DashboardPageComponent {
   private readonly bookService = inject(BookService);
   private readonly qualityTools = inject(QualityToolsService);
+  private readonly backupRestore = inject(BackupRestoreService);
 
   readonly books = this.bookService.books;
   readonly totalSaved = computed(() => this.books().length);
@@ -122,6 +132,47 @@ export class DashboardPageComponent {
   runCoverCheck(): void {
     const result = this.qualityTools.scanCoverHealth();
     this.qualityMessage.set(`External covers: ${result.externalCount}`);
+  }
+
+  async downloadBackup(): Promise<void> {
+    const result = await this.backupRestore.exportLibrary();
+    if (!result.success) {
+      this.qualityMessage.set(`Backup export failed: ${result.error.message}`);
+      return;
+    }
+
+    const payload = JSON.stringify(result.data, null, 2);
+    const blob = new Blob([payload], { type: 'application/json' });
+    const url = URL.createObjectURL(blob);
+    const anchor = document.createElement('a');
+    anchor.href = url;
+    anchor.download = `a-bookshelf-backup-${new Date().toISOString()}.json`;
+    anchor.click();
+    const revokeObjectUrl = (URL as typeof URL & { revokeObjectURL?: (value: string) => void }).revokeObjectURL;
+    revokeObjectUrl?.(url);
+    this.qualityMessage.set('Backup exported.');
+  }
+
+  async onBackupFileSelected(event: Event): Promise<void> {
+    const input = event.target as HTMLInputElement;
+    const file = input.files?.[0] ?? null;
+    if (!file) {
+      return;
+    }
+
+    try {
+      const payload = JSON.parse(await file.text()) as Parameters<typeof this.backupRestore.restoreLibrary>[0];
+      const result = await this.backupRestore.restoreLibrary(payload, { chunkSize: 50 });
+
+      if (!result.success) {
+        this.qualityMessage.set(`Restore failed: ${result.error.message}`);
+        return;
+      }
+
+      this.qualityMessage.set(`Restore complete. Books: ${result.data.booksUpserted}, shelves: ${result.data.shelvesUpserted}`);
+    } catch (error) {
+      this.qualityMessage.set('Restore failed: invalid JSON backup file.');
+    }
   }
 
   showGenreConsolidationHelp(): void {
