@@ -108,9 +108,7 @@ export class CoverImageComponent implements OnDestroy {
       }
     }, 3000);
 
-    if (typeof this.timeoutId === 'object' && this.timeoutId !== null && 'unref' in this.timeoutId && typeof this.timeoutId.unref === 'function') {
-      this.timeoutId.unref();
-    }
+    (this.timeoutId as unknown as { unref?: () => void } | null)?.unref?.();
   }
 
   private clearTimeout(): void {

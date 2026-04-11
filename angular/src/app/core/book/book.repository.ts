@@ -48,7 +48,7 @@ export class BookRepository {
 
     return {
       success: true,
-      data: (data ?? []) as BookRecord[],
+      data: (data ?? []) as unknown as BookRecord[],
     };
   }
 
@@ -73,7 +73,7 @@ export class BookRepository {
 
     return {
       success: true,
-      data: data as BookRecord,
+      data: data as unknown as BookRecord,
     };
   }
 

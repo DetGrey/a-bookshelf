@@ -141,7 +141,7 @@ const SCORE_OPTIONS: Record<number, string> = {
 export class BookCardComponent {
   readonly book = input.required<Book>();
   readonly activeGenres = input<string[]>([]);
-  readonly customShelves = input<Shelf[]>([]);
+  readonly customShelves = input<readonly Shelf[]>([]);
   readonly compact = input<boolean>(false);
   
   readonly opened = output<string>();
@@ -200,7 +200,11 @@ export class BookCardComponent {
     this.showShelfMenu.set(false);
   }
 
-  formatDate(value: Date): string {
+  formatDate(value: Date | null): string {
+    if (!value) {
+      return '—';
+    }
+
     return value.toLocaleDateString('en-US', {
       month: 'short',
       day: 'numeric',

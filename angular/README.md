@@ -1,59 +1,101 @@
-# ABookshelf
+# A Bookshelf (Angular)
 
-This project was generated using [Angular CLI](https://github.com/angular/angular-cli) version 19.2.24.
+This folder contains the Angular implementation of **A Bookshelf**: a personal reading-library web app where you can save books, organize shelves, track progress, and fetch metadata from source URLs.
 
-## Development server
+## What this website does
 
-To start a local development server, run:
+The app helps you manage your reading library with:
+
+- Authentication (login/signup)
+- Dashboard stats and quality tools
+- Bookshelf view with advanced filters (search, genre any/all, chapter min/max, sorting, pagination)
+- Add Book flow with metadata fetching from source URLs
+- Book Details read/edit mode (notes, times read, last read, latest chapter, source links, related books)
+- Built-in status shelves + custom shelves
+- Backup/restore and waiting-shelf update flows
+
+It uses Supabase for auth/data and invokes Edge Functions for metadata/latest-chapter scraping.
+
+## Tech stack
+
+- Angular 21 (standalone components, signals, OnPush)
+- TypeScript (strict)
+- Supabase JS client
+- Jest + Angular Testing Library
+- ESLint
+
+## Prerequisites
+
+- Node.js 20+
+- npm
+- A Supabase project (URL + anon key)
+
+## Local setup
+
+1. Install dependencies:
 
 ```bash
-ng serve
+npm install
 ```
 
-Once the server is running, open your browser and navigate to `http://localhost:4200/`. The application will automatically reload whenever you modify any of the source files.
-
-## Code scaffolding
-
-Angular CLI includes powerful code scaffolding tools. To generate a new component, run:
+2. Create local environment files from examples:
 
 ```bash
-ng generate component component-name
+cp src/environments/environment.example.ts src/environments/environment.ts
+cp src/environments/environment.prod.example.ts src/environments/environment.prod.ts
 ```
 
-For a complete list of available schematics (such as `components`, `directives`, or `pipes`), run:
+3. Configure environment values in:
+
+- `src/environments/environment.ts` (local, ignored by git)
+- `src/environments/environment.prod.ts` (local, ignored by git)
+
+Set:
+
+- `supabaseUrl`
+- `supabaseAnonKey`
+- `imageProxyUrl` (optional but recommended if using cover proxy)
+
+## Run locally
+
+Start the dev server:
 
 ```bash
-ng generate --help
+npm start
 ```
 
-## Building
+Open:
 
-To build the project run:
+- `http://localhost:4200/`
 
-```bash
-ng build
-```
+## Useful scripts
 
-This will compile your project and store the build artifacts in the `dist/` directory. By default, the production build optimizes your application for performance and speed.
-
-## Running unit tests
-
-To execute unit tests with Jest, use the following command:
+- Run tests:
 
 ```bash
 npm test
 ```
 
-## Running end-to-end tests
-
-For end-to-end (e2e) testing, run:
+- Lint:
 
 ```bash
-ng e2e
+npm run lint
 ```
 
-Angular CLI does not come with an end-to-end testing framework by default. You can choose one that suits your needs.
+- Lint with auto-fix:
 
-## Additional Resources
+```bash
+npm run lint:fix
+```
 
-For more information on using the Angular CLI, including detailed command references, visit the [Angular CLI Overview and Command Reference](https://angular.dev/tools/cli) page.
+- Production build:
+
+```bash
+npm run build
+```
+
+## Notes
+
+- If Supabase values are empty, authenticated/data-driven pages will fail to load correctly.
+- Real environment files are intentionally ignored by git to prevent accidental secret commits.
+- This Angular app is built to match the existing React product behavior and UI parity.
