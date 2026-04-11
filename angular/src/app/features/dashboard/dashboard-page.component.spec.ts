@@ -33,6 +33,46 @@ const backupRestoreStub = {
 };
 
 describe('DashboardPageComponent', () => {
+  it('renders completed count and last updated title stat cards', () => {
+    TestBed.configureTestingModule({
+      imports: [DashboardPageComponent],
+      providers: [
+        {
+          provide: BookService,
+          useValue: {
+            books: signal([
+              {
+                id: 'book-1', userId: 'user-1', title: 'Older', description: '',
+                score: 7, status: 'completed', genres: ['action'], language: 'en',
+                chapterCount: 10, latestChapter: null, lastUploadedAt: null, lastFetchedAt: null,
+                notes: null, timesRead: 1, lastRead: null, originalLanguage: null,
+                coverUrl: null, createdAt: new Date('2026-01-01T00:00:00.000Z'), updatedAt: new Date('2026-01-02T00:00:00.000Z'),
+              },
+              {
+                id: 'book-2', userId: 'user-1', title: 'Newest', description: '',
+                score: 8, status: 'reading', genres: ['drama'], language: 'en',
+                chapterCount: 20, latestChapter: null, lastUploadedAt: null, lastFetchedAt: null,
+                notes: null, timesRead: 1, lastRead: null, originalLanguage: null,
+                coverUrl: null, createdAt: new Date('2026-01-01T00:00:00.000Z'), updatedAt: new Date('2026-01-03T00:00:00.000Z'),
+              },
+            ]),
+            bookCount: signal(2),
+            averageScore: signal(7.5),
+          },
+        },
+        { provide: BackupRestoreService, useValue: backupRestoreStub },
+      ],
+    });
+
+    const fixture = TestBed.createComponent(DashboardPageComponent);
+    fixture.detectChanges();
+
+    expect(fixture.nativeElement.textContent).toContain('Completed');
+    expect(fixture.nativeElement.textContent).toContain('1');
+    expect(fixture.nativeElement.textContent).toContain('Last updated');
+    expect(fixture.nativeElement.textContent).toContain('Newest');
+  });
+
   it('renders dashboard stats and ignores zero scores in the average', () => {
     TestBed.configureTestingModule({
       imports: [DashboardPageComponent],
@@ -490,5 +530,129 @@ describe('DashboardPageComponent', () => {
 
     expect(fixture.debugElement.query(By.css('[data-testid="genre-consolidation-panel"]'))).toBeNull();
     expect(fixture.debugElement.query(By.css('[data-testid="genre-consolidation"]'))).not.toBeNull();
+  });
+
+  it('renders per-status recent sections and orders books by updatedAt desc', () => {
+    TestBed.configureTestingModule({
+      imports: [DashboardPageComponent],
+      providers: [
+        {
+          provide: BookService,
+          useValue: {
+            books: signal([
+              {
+                id: 'book-r-old', userId: 'user-1', title: 'Reading Old', description: '',
+                score: null, status: 'reading', genres: [], language: null,
+                chapterCount: null, latestChapter: null, lastUploadedAt: null, lastFetchedAt: null,
+                notes: null, timesRead: 1, lastRead: null, originalLanguage: null,
+                coverUrl: null, createdAt: new Date('2026-01-01T00:00:00.000Z'), updatedAt: new Date('2026-01-02T00:00:00.000Z'),
+              },
+              {
+                id: 'book-r-new', userId: 'user-1', title: 'Reading New', description: '',
+                score: null, status: 'reading', genres: [], language: null,
+                chapterCount: null, latestChapter: null, lastUploadedAt: null, lastFetchedAt: null,
+                notes: null, timesRead: 1, lastRead: null, originalLanguage: null,
+                coverUrl: null, createdAt: new Date('2026-01-01T00:00:00.000Z'), updatedAt: new Date('2026-01-03T00:00:00.000Z'),
+              },
+              {
+                id: 'book-plan', userId: 'user-1', title: 'Plan Book', description: '',
+                score: null, status: 'plan_to_read', genres: [], language: null,
+                chapterCount: null, latestChapter: null, lastUploadedAt: null, lastFetchedAt: null,
+                notes: null, timesRead: 1, lastRead: null, originalLanguage: null,
+                coverUrl: null, createdAt: new Date('2026-01-01T00:00:00.000Z'), updatedAt: new Date('2026-01-04T00:00:00.000Z'),
+              },
+              {
+                id: 'book-wait', userId: 'user-1', title: 'Waiting Book', description: '',
+                score: null, status: 'waiting', genres: [], language: null,
+                chapterCount: null, latestChapter: null, lastUploadedAt: null, lastFetchedAt: null,
+                notes: null, timesRead: 1, lastRead: null, originalLanguage: null,
+                coverUrl: null, createdAt: new Date('2026-01-01T00:00:00.000Z'), updatedAt: new Date('2026-01-05T00:00:00.000Z'),
+              },
+            ]),
+            bookCount: signal(4),
+            averageScore: signal(0),
+          },
+        },
+        { provide: BackupRestoreService, useValue: backupRestoreStub },
+      ],
+    });
+
+    const fixture = TestBed.createComponent(DashboardPageComponent);
+    fixture.detectChanges();
+
+    const readingSection = fixture.componentInstance.statusSections().find((section) => section.key === 'reading');
+    expect(readingSection?.books.map((book) => book.title)).toEqual(['Reading New', 'Reading Old']);
+
+    expect(fixture.debugElement.query(By.css('[data-testid="status-section-reading"]'))).not.toBeNull();
+    expect(fixture.debugElement.query(By.css('[data-testid="status-section-plan_to_read"]'))).not.toBeNull();
+    expect(fixture.debugElement.query(By.css('[data-testid="status-section-waiting"]'))).not.toBeNull();
+    expect(fixture.debugElement.query(By.css('[data-testid="status-section-completed"]'))).toBeNull();
+
+    const compactGrids = fixture.debugElement.queryAll(By.css('[data-testid^="status-section-"] app-book-grid'));
+    expect(compactGrids.length).toBe(3);
+  });
+
+  it('uses 4 books per status on wide screens and 3 on narrow screens', async () => {
+    const readingBooks = Array.from({ length: 5 }).map((_, index) => ({
+      id: `reading-${index}`,
+      userId: 'user-1',
+      title: `Reading ${index}`,
+      description: '',
+      score: null,
+      status: 'reading' as const,
+      genres: [],
+      language: null,
+      chapterCount: null,
+      latestChapter: null,
+      lastUploadedAt: null,
+      lastFetchedAt: null,
+      notes: null,
+      timesRead: 1,
+      lastRead: null,
+      originalLanguage: null,
+      coverUrl: null,
+      createdAt: new Date('2026-01-01T00:00:00.000Z'),
+      updatedAt: new Date(`2026-01-0${index + 1}T00:00:00.000Z`),
+    }));
+
+    const originalWidthDescriptor = Object.getOwnPropertyDescriptor(window, 'innerWidth');
+
+    Object.defineProperty(window, 'innerWidth', { configurable: true, value: 1024 });
+
+    TestBed.configureTestingModule({
+      imports: [DashboardPageComponent],
+      providers: [
+        {
+          provide: BookService,
+          useValue: {
+            books: signal(readingBooks),
+            bookCount: signal(readingBooks.length),
+            averageScore: signal(0),
+          },
+        },
+        { provide: BackupRestoreService, useValue: backupRestoreStub },
+      ],
+    });
+
+    const fixture = TestBed.createComponent(DashboardPageComponent);
+    fixture.detectChanges();
+    await Promise.resolve();
+    fixture.detectChanges();
+
+    const readingSection = fixture.componentInstance.statusSections().find((section) => section.key === 'reading');
+    expect(readingSection?.books.length).toBe(4);
+
+    Object.defineProperty(window, 'innerWidth', { configurable: true, value: 600 });
+    window.dispatchEvent(new Event('resize'));
+    fixture.detectChanges();
+
+    const narrowSection = fixture.componentInstance.statusSections().find((section) => section.key === 'reading');
+    expect(narrowSection?.books.length).toBe(3);
+
+    fixture.destroy();
+
+    if (originalWidthDescriptor) {
+      Object.defineProperty(window, 'innerWidth', originalWidthDescriptor);
+    }
   });
 });

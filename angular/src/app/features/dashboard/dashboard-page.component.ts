@@ -1,17 +1,20 @@
 import { DOCUMENT } from '@angular/common';
-import { ChangeDetectionStrategy, Component, computed, inject, signal } from '@angular/core';
+import { afterNextRender, ChangeDetectionStrategy, Component, computed, DestroyRef, inject, signal } from '@angular/core';
+import { takeUntilDestroyed } from '@angular/core/rxjs-interop';
 import { FormsModule } from '@angular/forms';
 import { BookService } from '../../core/book/book.service';
 import { Book } from '../../models/book.model';
 import { QualityToolsService, CoverHealthScanResult } from '../../core/quality/quality-tools.service';
 import { BackupRestoreService } from '../../core/backup/backup-restore.service';
+import { BookGridComponent } from '../../shared/components/book-grid/book-grid.component';
+import { fromEvent } from 'rxjs';
 
 type ConsolidationStep = 'idle' | 'selecting' | 'working';
 
 @Component({
   selector: 'app-dashboard-page',
   standalone: true,
-  imports: [FormsModule],
+  imports: [FormsModule, BookGridComponent],
   template: `
     <section class="dashboard-page">
       <h1>Dashboard</h1>
@@ -33,6 +36,14 @@ type ConsolidationStep = 'idle' | 'selecting' | 'working';
           <h2>Rated 10</h2>
           <p>{{ scoreTenCount() }}</p>
         </article>
+        <article>
+          <h2>Completed</h2>
+          <p>{{ completedCount() }}</p>
+        </article>
+        <article>
+          <h2>Last updated</h2>
+          <p>{{ lastUpdatedTitle() }}</p>
+        </article>
       </section>
 
       <section>
@@ -53,6 +64,15 @@ type ConsolidationStep = 'idle' | 'selecting' | 'working';
           <p>{{ item.name }} ({{ item.count }})</p>
         }
       </section>
+
+      @for (section of statusSections(); track section.key) {
+        @if (section.books.length > 0) {
+          <section [attr.data-testid]="'status-section-' + section.key">
+            <h2>{{ section.label }}</h2>
+            <app-book-grid [books]="section.books" [compact]="true" (opened)="onOpenDetails($event)" />
+          </section>
+        }
+      }
 
       <section>
         <h2>Source breakdown</h2>
@@ -150,20 +170,34 @@ export class DashboardPageComponent {
   private readonly qualityTools = inject(QualityToolsService);
   private readonly backupRestore = inject(BackupRestoreService);
   private readonly document = inject(DOCUMENT);
+  private readonly destroyRef = inject(DestroyRef);
 
   readonly books = this.bookService.books;
   readonly totalSaved = computed(() => this.books().length);
   readonly averageScore = computed(() => this.bookService.averageScore());
   readonly waitingCount = computed(() => this.books().filter((book) => book.status === 'waiting').length);
   readonly scoreTenCount = computed(() => this.books().filter((book) => book.score === 10).length);
+  readonly completedCount = computed(() => this.books().filter((book) => book.status === 'completed').length);
+  readonly lastUpdatedTitle = computed(() => {
+    const sorted = [...this.books()].sort((left, right) => right.updatedAt.getTime() - left.updatedAt.getTime());
+    return sorted[0]?.title ?? '—';
+  });
 
   readonly showAllGenres = signal(false);
   readonly showAllSources = signal(false);
+  readonly booksPerStatus = signal(4);
   readonly qualityMessage = signal('');
   readonly coverScanResult = signal<CoverHealthScanResult | null>(null);
   readonly coverRepairRunning = signal(false);
   readonly consolidationStep = signal<ConsolidationStep>('idle');
   readonly selectedSourceGenres = signal<string[]>([]);
+
+  readonly sectionStatuses = [
+    { key: 'reading', label: 'Reading' },
+    { key: 'plan_to_read', label: 'Plan to Read' },
+    { key: 'waiting', label: 'Waiting' },
+    { key: 'completed', label: 'Completed' },
+  ] as const;
 
   consolidationTarget = '';
   consolidationMode: 'merge' | 'replace' = 'merge';
@@ -178,9 +212,35 @@ export class DashboardPageComponent {
 
   readonly hasMoreGenres = computed(() => this.genreBreakdown().length > 5);
   readonly hasMoreSources = computed(() => this.sourceBreakdown().length > 5);
+  readonly statusSections = computed(() => this.sectionStatuses.map((section) => ({
+    ...section,
+    books: [...this.books()]
+      .filter((book) => book.status === section.key)
+      .sort((left, right) => right.updatedAt.getTime() - left.updatedAt.getTime())
+      .slice(0, this.booksPerStatus()),
+  })));
+
+  constructor() {
+    afterNextRender(() => {
+      this.updateBooksPerStatus();
+
+      const windowRef = this.document.defaultView;
+      if (!windowRef) {
+        return;
+      }
+
+      fromEvent(windowRef, 'resize')
+        .pipe(takeUntilDestroyed(this.destroyRef))
+        .subscribe(() => this.updateBooksPerStatus());
+    });
+  }
 
   toggleGenres(): void {
     this.showAllGenres.update((value) => !value);
+  }
+
+  onOpenDetails(_bookId: string): void {
+    return;
   }
 
   toggleSources(): void {
@@ -370,5 +430,10 @@ export class DashboardPageComponent {
 
   private sliceBreakdown(items: Array<{ name: string; count: number }>, expanded: boolean): Array<{ name: string; count: number }> {
     return expanded ? items : items.slice(0, 5);
+  }
+
+  private updateBooksPerStatus(): void {
+    const width = this.document.defaultView?.innerWidth ?? 1024;
+    this.booksPerStatus.set(width < 768 ? 3 : 4);
   }
 }

@@ -116,16 +116,22 @@ private updateBooksPerStatus(): void {
 Inject `DestroyRef` and use `takeUntilDestroyed` to avoid memory leaks. Import `fromEvent` from `rxjs` and `takeUntilDestroyed` from `@angular/core/rxjs-interop`.
 
 ## Acceptance criteria
-- [ ] Dashboard stat grid shows 6 cards: Total saved, Waiting, Average score, Rated 10, Completed, Last updated.
-- [ ] "Completed" count matches books with `status === 'completed'`.
-- [ ] "Last updated" shows the title of the book with the most recent `updatedAt`.
-- [ ] Per-status sections appear for Reading, Plan to Read, Waiting, Completed.
-- [ ] Each section shows the N most recently updated books for that status (4 on wide screens, 3 on narrow).
-- [ ] Sections with 0 books are hidden entirely.
-- [ ] `BookGridComponent` accepts and forwards a `compact` input to `BookCardComponent`.
-- [ ] Resize listener is torn down on component destroy.
-- [ ] Tests cover: correct book counts in stat cards, section ordering (most recently updated first), compact flag forwarded.
-- [ ] Existing test baseline preserved.
+- [x] Dashboard stat grid shows 6 cards: Total saved, Waiting, Average score, Rated 10, Completed, Last updated.
+- [x] "Completed" count matches books with `status === 'completed'`.
+- [x] "Last updated" shows the title of the book with the most recent `updatedAt`.
+- [x] Per-status sections appear for Reading, Plan to Read, Waiting, Completed.
+- [x] Each section shows the N most recently updated books for that status (4 on wide screens, 3 on narrow).
+- [x] Sections with 0 books are hidden entirely.
+- [x] `BookGridComponent` accepts and forwards a `compact` input to `BookCardComponent`.
+- [x] Resize listener is torn down on component destroy.
+- [x] Tests cover: correct book counts in stat cards, section ordering (most recently updated first), compact flag forwarded.
+- [x] Existing test baseline preserved.
+
+## Completion notes
+- `DashboardPageComponent` now includes `completedCount` and `lastUpdatedTitle` stat cards and renders compact per-status recent-book sections from `statusSections`.
+- Responsive card count is implemented with `booksPerStatus` (`4` wide / `3` narrow) using a window `resize` stream cleaned up via `takeUntilDestroyed` and `DestroyRef`.
+- Added/updated tests for stats coverage, per-status ordering and visibility, responsive section sizing, and `BookGridComponent` compact forwarding.
+- Validation: full regression is green (`npm test`): 31/31 suites passed, 210/210 tests passed.
 
 ## Blocked by
 - Blocked by ISSUE-017 (needs `compact` mode on `BookCardComponent`).
