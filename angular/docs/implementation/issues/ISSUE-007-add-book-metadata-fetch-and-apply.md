@@ -15,11 +15,11 @@
 Implement `MetadataFetcher` as a documented smart exception that calls metadata endpoint, previews payload, and safely patches the parent form without overwriting valid user input unexpectedly.
 
 ## Acceptance criteria
-- [ ] URL fetch action calls metadata endpoint and shows loading/success/error states.
-- [ ] Preview UI displays incoming metadata before apply.
-- [ ] Apply action maps metadata to `BookFormModel` and patches form safely.
-- [ ] Empty/partial metadata payloads do not corrupt existing form fields.
-- [ ] Tests cover mapping and non-destructive apply behavior.
+- [x] URL fetch action calls metadata endpoint and shows loading/success/error states.
+- [x] Preview UI displays incoming metadata before apply.
+- [x] Apply action maps metadata to `BookFormModel` and patches form safely.
+- [x] Empty/partial metadata payloads do not corrupt existing form fields.
+- [x] Tests cover mapping and non-destructive apply behavior.
 
 ## Blocked by
 - Blocked by ISSUE-006.

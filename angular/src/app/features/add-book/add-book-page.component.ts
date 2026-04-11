@@ -5,6 +5,7 @@ import { BookService } from '../../core/book/book.service';
 import { BookSearchLinkerComponent } from '../../shared/components/book-search-linker/book-search-linker.component';
 import { BookFormFieldsComponent } from '../../shared/components/book-form-fields/book-form-fields.component';
 import { CoverImageComponent } from '../../shared/components/cover-image/cover-image.component';
+import { MetadataFetcherComponent } from '../../shared/components/metadata-fetcher/metadata-fetcher.component';
 import { ShelfSelectorComponent } from '../../shared/components/shelf-selector/shelf-selector.component';
 import { SourceManagerComponent } from '../../shared/components/source-manager/source-manager.component';
 import { BookFormModel, BookSourceDraft } from '../../models/book.model';
@@ -38,12 +39,15 @@ type AddBookFormGroup = FormGroup<{
     ShelfSelectorComponent,
     BookSearchLinkerComponent,
     CoverImageComponent,
+    MetadataFetcherComponent,
   ],
   template: `
     <section>
       <h1>Add Book</h1>
 
       <form [formGroup]="bookForm" (ngSubmit)="onSubmit()">
+        <app-metadata-fetcher [form]="bookForm" />
+
         <app-book-form-fields [form]="bookForm" />
 
         <app-source-manager [sources]="bookForm.controls.sources" />

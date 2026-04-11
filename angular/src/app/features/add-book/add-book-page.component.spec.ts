@@ -3,6 +3,7 @@ import { TestBed } from '@angular/core/testing';
 import { By } from '@angular/platform-browser';
 import { Router } from '@angular/router';
 import { BookService } from '../../core/book/book.service';
+import { SUPABASE_CLIENT } from '../../core/supabase.token';
 import { AddBookPageComponent } from './add-book-page.component';
 
 describe('AddBookPageComponent', () => {
@@ -32,6 +33,12 @@ describe('AddBookPageComponent', () => {
           provide: Router,
           useValue: {
             navigate,
+          },
+        },
+        {
+          provide: SUPABASE_CLIENT,
+          useValue: {
+            functions: { invoke: jest.fn().mockResolvedValue({ data: null, error: null }) },
           },
         },
       ],
@@ -97,6 +104,12 @@ describe('AddBookPageComponent', () => {
           provide: Router,
           useValue: {
             navigate: jest.fn(),
+          },
+        },
+        {
+          provide: SUPABASE_CLIENT,
+          useValue: {
+            functions: { invoke: jest.fn().mockResolvedValue({ data: null, error: null }) },
           },
         },
       ],
