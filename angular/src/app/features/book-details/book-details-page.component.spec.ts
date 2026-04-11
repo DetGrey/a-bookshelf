@@ -513,6 +513,13 @@ describe('BookDetailsPageComponent', () => {
       genres: [],
       language: null,
       chapterCount: 211,
+      latestChapter: null,
+      lastUploadedAt: null,
+      lastFetchedAt: null,
+      notes: null,
+      timesRead: 1,
+      lastRead: null,
+      originalLanguage: null,
       coverUrl: null,
       createdAt: new Date('2026-01-01T00:00:00.000Z'),
       updatedAt: new Date('2026-01-03T00:00:00.000Z'),
@@ -726,6 +733,103 @@ describe('BookDetailsPageComponent', () => {
     const result = fixture.nativeElement.querySelector('[data-testid="fetch-latest-result"]');
     expect(result?.textContent).toContain('Failed');
     expect(result?.textContent).toContain('edge function timeout');
+  });
+
+  // ── ISSUE-016: new field display in read mode ──────────────────────────
+
+  it('shows notes, timesRead, lastRead, latestChapter, originalLanguage when non-empty', () => {
+    TestBed.configureTestingModule({
+      imports: [BookDetailsPageComponent],
+      providers: [
+        {
+          provide: ActivatedRoute,
+          useValue: {
+            snapshot: {
+              data: {
+                book: {
+                  success: true,
+                  data: {
+                    book: {
+                      id: 'book-1', userId: 'user-1', title: 'Test', description: '',
+                      score: null, status: 'reading', genres: [], language: null,
+                      chapterCount: null, latestChapter: 'Ch 99', lastUploadedAt: null,
+                      lastFetchedAt: null, notes: 'great book', timesRead: 3, lastRead: 'Ch 50',
+                      originalLanguage: 'Korean', coverUrl: null,
+                      createdAt: new Date('2026-01-01T00:00:00.000Z'),
+                      updatedAt: new Date('2026-01-02T00:00:00.000Z'),
+                    },
+                    sources: [], relatedBooks: [], shelves: [],
+                  },
+                },
+              },
+            },
+          },
+        },
+        {
+          provide: BookService,
+          useValue: { updateBook: jest.fn(), deleteBook: jest.fn(), books: signal([]) },
+        },
+        {
+          provide: SUPABASE_CLIENT,
+          useValue: { functions: { invoke: jest.fn().mockResolvedValue({ data: null, error: null }) } },
+        },
+      ],
+    });
+
+    const fixture = TestBed.createComponent(BookDetailsPageComponent);
+    fixture.detectChanges();
+
+    expect(fixture.nativeElement.querySelector('[data-testid="notes"]')?.textContent).toContain('great book');
+    expect(fixture.nativeElement.querySelector('[data-testid="times-read"]')?.textContent).toContain('3 times');
+    expect(fixture.nativeElement.querySelector('[data-testid="last-read"]')?.textContent).toContain('Ch 50');
+    expect(fixture.nativeElement.querySelector('[data-testid="latest-chapter"]')?.textContent).toContain('Ch 99');
+    expect(fixture.nativeElement.querySelector('[data-testid="original-language"]')?.textContent).toContain('Korean');
+  });
+
+  it('hides timesRead when 1, hides lastRead when status is completed', () => {
+    TestBed.configureTestingModule({
+      imports: [BookDetailsPageComponent],
+      providers: [
+        {
+          provide: ActivatedRoute,
+          useValue: {
+            snapshot: {
+              data: {
+                book: {
+                  success: true,
+                  data: {
+                    book: {
+                      id: 'book-1', userId: 'user-1', title: 'Test', description: '',
+                      score: null, status: 'completed', genres: [], language: null,
+                      chapterCount: null, latestChapter: null, lastUploadedAt: null,
+                      lastFetchedAt: null, notes: null, timesRead: 1, lastRead: 'Ch 200',
+                      originalLanguage: null, coverUrl: null,
+                      createdAt: new Date('2026-01-01T00:00:00.000Z'),
+                      updatedAt: new Date('2026-01-02T00:00:00.000Z'),
+                    },
+                    sources: [], relatedBooks: [], shelves: [],
+                  },
+                },
+              },
+            },
+          },
+        },
+        {
+          provide: BookService,
+          useValue: { updateBook: jest.fn(), deleteBook: jest.fn(), books: signal([]) },
+        },
+        {
+          provide: SUPABASE_CLIENT,
+          useValue: { functions: { invoke: jest.fn().mockResolvedValue({ data: null, error: null }) } },
+        },
+      ],
+    });
+
+    const fixture = TestBed.createComponent(BookDetailsPageComponent);
+    fixture.detectChanges();
+
+    expect(fixture.nativeElement.querySelector('[data-testid="times-read"]')).toBeNull();
+    expect(fixture.nativeElement.querySelector('[data-testid="last-read"]')).toBeNull();
   });
 
   it('navigates to bookshelf after confirmed successful delete', async () => {

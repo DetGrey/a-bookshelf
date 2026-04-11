@@ -1,4 +1,4 @@
-import { DOCUMENT } from '@angular/common';
+import { DatePipe, DOCUMENT } from '@angular/common';
 import { ChangeDetectionStrategy, Component, computed, inject, signal } from '@angular/core';
 import { ActivatedRoute, Router, RouterLink } from '@angular/router';
 import { FormArray, FormControl, FormGroup, ReactiveFormsModule, Validators } from '@angular/forms';
@@ -26,6 +26,12 @@ type EditBookFormGroup = FormGroup<{
   language: FormControl<string>;
   chapterCount: FormControl<number | null>;
   coverUrl: FormControl<string>;
+  notes: FormControl<string>;
+  timesRead: FormControl<number>;
+  lastRead: FormControl<string>;
+  latestChapter: FormControl<string>;
+  lastUploadedAt: FormControl<string>;
+  originalLanguage: FormControl<string>;
   shelves: FormControl<string[]>;
   relatedBookIds: FormControl<string[]>;
   sources: FormArray<SourceFormGroup>;
@@ -37,6 +43,7 @@ type EditBookFormGroup = FormGroup<{
   imports: [
     RouterLink,
     ReactiveFormsModule,
+    DatePipe,
     BookFormFieldsComponent,
     SourceManagerComponent,
     ShelfSelectorComponent,
@@ -91,6 +98,24 @@ type EditBookFormGroup = FormGroup<{
             <p>Score: {{ scoreLabel() }}</p>
             <p>Language: {{ languageLabel() }}</p>
             <p>Chapter count: {{ chapterCountLabel() }}</p>
+            @if (detail()!.book.latestChapter) {
+              <p data-testid="latest-chapter">Latest chapter: {{ detail()!.book.latestChapter }}</p>
+            }
+            @if (detail()!.book.lastUploadedAt) {
+              <p data-testid="last-uploaded-at">Last uploaded: {{ detail()!.book.lastUploadedAt | date:'mediumDate' }}</p>
+            }
+            @if (detail()!.book.originalLanguage) {
+              <p data-testid="original-language">Original language: {{ detail()!.book.originalLanguage }}</p>
+            }
+            @if (detail()!.book.timesRead > 1) {
+              <p data-testid="times-read">Read {{ detail()!.book.timesRead }} times</p>
+            }
+            @if (detail()!.book.lastRead && detail()!.book.status !== 'completed') {
+              <p data-testid="last-read">Last read: {{ detail()!.book.lastRead }}</p>
+            }
+            @if (detail()!.book.notes) {
+              <p data-testid="notes">📝 {{ detail()!.book.notes }}</p>
+            }
           </div>
 
           <section>
@@ -175,6 +200,12 @@ export class BookDetailsPageComponent {
     language: new FormControl('', { nonNullable: true }),
     chapterCount: new FormControl<number | null>(null),
     coverUrl: new FormControl('', { nonNullable: true }),
+    notes: new FormControl('', { nonNullable: true }),
+    timesRead: new FormControl<number>(1, { nonNullable: true }),
+    lastRead: new FormControl('', { nonNullable: true }),
+    latestChapter: new FormControl('', { nonNullable: true }),
+    lastUploadedAt: new FormControl('', { nonNullable: true }),
+    originalLanguage: new FormControl('', { nonNullable: true }),
     shelves: new FormControl<string[]>([], { nonNullable: true }),
     relatedBookIds: new FormControl<string[]>([], { nonNullable: true }),
     sources: new FormArray<SourceFormGroup>([]),
@@ -241,6 +272,12 @@ export class BookDetailsPageComponent {
       language: detail.book.language ?? '',
       chapterCount: detail.book.chapterCount,
       coverUrl: detail.book.coverUrl ?? '',
+      notes: detail.book.notes ?? '',
+      timesRead: detail.book.timesRead,
+      lastRead: detail.book.lastRead ?? '',
+      latestChapter: detail.book.latestChapter ?? '',
+      lastUploadedAt: detail.book.lastUploadedAt ? detail.book.lastUploadedAt.toISOString().slice(0, 19) : '',
+      originalLanguage: detail.book.originalLanguage ?? '',
       shelves: detail.shelves.map((shelf) => shelf.id),
       relatedBookIds: detail.relatedBooks.map((related) => related.bookId),
     });
@@ -359,6 +396,12 @@ export class BookDetailsPageComponent {
       language: this.editForm.controls.language.value,
       chapterCount: this.editForm.controls.chapterCount.value,
       coverUrl: this.editForm.controls.coverUrl.value,
+      notes: this.editForm.controls.notes.value,
+      timesRead: this.editForm.controls.timesRead.value,
+      lastRead: this.editForm.controls.lastRead.value,
+      latestChapter: this.editForm.controls.latestChapter.value,
+      lastUploadedAt: this.editForm.controls.lastUploadedAt.value,
+      originalLanguage: this.editForm.controls.originalLanguage.value,
       sources,
       shelves: this.editForm.controls.shelves.value,
       relatedBookIds: this.editForm.controls.relatedBookIds.value,

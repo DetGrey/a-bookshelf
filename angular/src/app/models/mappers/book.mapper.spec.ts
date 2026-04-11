@@ -64,6 +64,13 @@ describe('book mapper tracer bullet', () => {
       genres: ['action', 'drama'],
       language: null,
       chapterCount: 50,
+      latestChapter: null,
+      lastUploadedAt: null,
+      lastFetchedAt: null,
+      notes: null,
+      timesRead: 1,
+      lastRead: null,
+      originalLanguage: null,
       coverUrl: null,
       createdAt: new Date('2026-01-01T00:00:00.000Z'),
       updatedAt: new Date('2026-01-02T00:00:00.000Z'),
@@ -80,6 +87,12 @@ describe('book mapper tracer bullet', () => {
       language: '',
       chapterCount: 50,
       coverUrl: '',
+      notes: '',
+      timesRead: 1,
+      lastRead: '',
+      latestChapter: '',
+      lastUploadedAt: '',
+      originalLanguage: '',
       sources: [],
       shelves: [],
       relatedBookIds: [],
@@ -96,6 +109,12 @@ describe('book mapper tracer bullet', () => {
       language: '  ',
       chapterCount: null,
       coverUrl: '',
+      notes: '',
+      timesRead: 1,
+      lastRead: '',
+      latestChapter: '',
+      lastUploadedAt: '',
+      originalLanguage: '',
       sources: [],
       shelves: [],
       relatedBookIds: [],
@@ -112,7 +131,127 @@ describe('book mapper tracer bullet', () => {
       language: null,
       chapter_count: null,
       cover_url: null,
+      notes: null,
+      times_read: 1,
+      last_read: null,
+      latest_chapter: null,
+      last_uploaded_at: null,
+      original_language: null,
     });
+  });
+
+  // ── ISSUE-016: new fields ──────────────────────────────────────────────
+
+  it('maps notes from record to book domain model', () => {
+    const record: BookRecord = {
+      id: 'x', user_id: 'u', title: 'T', description: null, score: null,
+      status: 'reading', genres: null, language: null, chapter_count: null,
+      cover_url: null, created_at: '2026-01-01T00:00:00.000Z', updated_at: '2026-01-02T00:00:00.000Z',
+      notes: 'personal note',
+    };
+    expect(toBook(record).notes).toBe('personal note');
+  });
+
+  it('maps null notes to null', () => {
+    const record: BookRecord = {
+      id: 'x', user_id: 'u', title: 'T', description: null, score: null,
+      status: 'reading', genres: null, language: null, chapter_count: null,
+      cover_url: null, created_at: '2026-01-01T00:00:00.000Z', updated_at: '2026-01-02T00:00:00.000Z',
+    };
+    expect(toBook(record).notes).toBeNull();
+  });
+
+  it('normalizes times_read to minimum 1: null → 1, 0 → 1, 3 → 3', () => {
+    const base: BookRecord = {
+      id: 'x', user_id: 'u', title: 'T', description: null, score: null,
+      status: 'reading', genres: null, language: null, chapter_count: null,
+      cover_url: null, created_at: '2026-01-01T00:00:00.000Z', updated_at: '2026-01-02T00:00:00.000Z',
+    };
+    expect(toBook({ ...base, times_read: null }).timesRead).toBe(1);
+    expect(toBook({ ...base, times_read: 0 }).timesRead).toBe(1);
+    expect(toBook({ ...base, times_read: 3 }).timesRead).toBe(3);
+  });
+
+  it('maps lastRead and originalLanguage from record', () => {
+    const record: BookRecord = {
+      id: 'x', user_id: 'u', title: 'T', description: null, score: null,
+      status: 'reading', genres: null, language: null, chapter_count: null,
+      cover_url: null, created_at: '2026-01-01T00:00:00.000Z', updated_at: '2026-01-02T00:00:00.000Z',
+      last_read: 'Ch 50',
+      original_language: 'Japanese',
+    };
+    const result = toBook(record);
+    expect(result.lastRead).toBe('Ch 50');
+    expect(result.originalLanguage).toBe('Japanese');
+  });
+
+  it('maps new fields through toFormModel', () => {
+    const book: Book = {
+      id: 'b', userId: 'u', title: 'T', description: 'desc', score: 8,
+      status: 'reading', genres: [], language: null,
+      chapterCount: 50, latestChapter: 'Ch 50', lastUploadedAt: new Date('2026-03-01T10:00:00.000Z'),
+      lastFetchedAt: null, notes: 'my note', timesRead: 2, lastRead: 'Ch 40',
+      originalLanguage: 'Japanese', coverUrl: null,
+      createdAt: new Date('2026-01-01T00:00:00.000Z'), updatedAt: new Date('2026-01-02T00:00:00.000Z'),
+    };
+    const result = toFormModel(book);
+    expect(result.notes).toBe('my note');
+    expect(result.timesRead).toBe(2);
+    expect(result.lastRead).toBe('Ch 40');
+    expect(result.latestChapter).toBe('Ch 50');
+    expect(result.lastUploadedAt).toBe('2026-03-01T10:00:00');
+    expect(result.originalLanguage).toBe('Japanese');
+  });
+
+  it('maps null lastUploadedAt to empty string in form model', () => {
+    const book: Book = {
+      id: 'b', userId: 'u', title: 'T', description: '', score: null,
+      status: 'plan_to_read', genres: [], language: null,
+      chapterCount: null, latestChapter: null, lastUploadedAt: null,
+      lastFetchedAt: null, notes: null, timesRead: 1, lastRead: null,
+      originalLanguage: null, coverUrl: null,
+      createdAt: new Date('2026-01-01T00:00:00.000Z'), updatedAt: new Date('2026-01-02T00:00:00.000Z'),
+    };
+    const result = toFormModel(book);
+    expect(result.lastUploadedAt).toBe('');
+    expect(result.notes).toBe('');
+    expect(result.lastRead).toBe('');
+    expect(result.originalLanguage).toBe('');
+  });
+
+  it('maps new fields back through toSupabasePayload', () => {
+    const form: BookFormModel = {
+      title: 'T', description: '', score: null, status: 'reading',
+      genres: '', language: '', chapterCount: null, coverUrl: '',
+      notes: 'my note', timesRead: 2, lastRead: 'Ch 40',
+      latestChapter: 'Ch 50', lastUploadedAt: '2026-03-01T10:00:00',
+      originalLanguage: 'Japanese',
+      sources: [], shelves: [], relatedBookIds: [],
+    };
+    const result = toSupabasePayload(form);
+    expect(result.notes).toBe('my note');
+    expect(result.times_read).toBe(2);
+    expect(result.last_read).toBe('Ch 40');
+    expect(result.latest_chapter).toBe('Ch 50');
+    expect(result.last_uploaded_at).toBe('2026-03-01T10:00:00');
+    expect(result.original_language).toBe('Japanese');
+  });
+
+  it('treats empty strings as null in toSupabasePayload for new fields', () => {
+    const form: BookFormModel = {
+      title: 'T', description: '', score: null, status: null,
+      genres: '', language: '', chapterCount: null, coverUrl: '',
+      notes: '', timesRead: 0, lastRead: '',
+      latestChapter: '', lastUploadedAt: '', originalLanguage: '',
+      sources: [], shelves: [], relatedBookIds: [],
+    };
+    const result = toSupabasePayload(form);
+    expect(result.notes).toBeNull();
+    expect(result.times_read).toBe(1);
+    expect(result.last_read).toBeNull();
+    expect(result.latest_chapter).toBeNull();
+    expect(result.last_uploaded_at).toBeNull();
+    expect(result.original_language).toBeNull();
   });
 
   it('stores raw cover URL in payload without proxy transformation', () => {
@@ -125,6 +264,12 @@ describe('book mapper tracer bullet', () => {
       language: '',
       chapterCount: null,
       coverUrl: 'https://images.example.com/cover.jpg?size=large',
+      notes: '',
+      timesRead: 1,
+      lastRead: '',
+      latestChapter: '',
+      lastUploadedAt: '',
+      originalLanguage: '',
       sources: [],
       shelves: [],
       relatedBookIds: [],

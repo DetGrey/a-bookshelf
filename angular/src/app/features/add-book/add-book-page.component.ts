@@ -25,6 +25,12 @@ type AddBookFormGroup = FormGroup<{
   language: FormControl<string>;
   chapterCount: FormControl<number | null>;
   coverUrl: FormControl<string>;
+  notes: FormControl<string>;
+  timesRead: FormControl<number>;
+  lastRead: FormControl<string>;
+  latestChapter: FormControl<string>;
+  lastUploadedAt: FormControl<string>;
+  originalLanguage: FormControl<string>;
   shelves: FormControl<string[]>;
   relatedBookIds: FormControl<string[]>;
   sources: FormArray<SourceFormGroup>;
@@ -88,6 +94,12 @@ export class AddBookPageComponent {
     language: new FormControl('', { nonNullable: true }),
     chapterCount: new FormControl<number | null>(null),
     coverUrl: new FormControl('', { nonNullable: true }),
+    notes: new FormControl('', { nonNullable: true }),
+    timesRead: new FormControl<number>(1, { nonNullable: true }),
+    lastRead: new FormControl('', { nonNullable: true }),
+    latestChapter: new FormControl('', { nonNullable: true }),
+    lastUploadedAt: new FormControl('', { nonNullable: true }),
+    originalLanguage: new FormControl('', { nonNullable: true }),
     shelves: new FormControl<string[]>([], { nonNullable: true }),
     relatedBookIds: new FormControl<string[]>([], { nonNullable: true }),
     sources: new FormArray<SourceFormGroup>([]),
@@ -130,6 +142,12 @@ export class AddBookPageComponent {
       language: this.bookForm.controls.language.value,
       chapterCount: this.bookForm.controls.chapterCount.value,
       coverUrl: this.bookForm.controls.coverUrl.value,
+      notes: this.bookForm.controls.notes.value,
+      timesRead: this.bookForm.controls.timesRead.value,
+      lastRead: this.bookForm.controls.lastRead.value,
+      latestChapter: this.bookForm.controls.latestChapter.value,
+      lastUploadedAt: this.bookForm.controls.lastUploadedAt.value,
+      originalLanguage: this.bookForm.controls.originalLanguage.value,
       sources,
       shelves: this.bookForm.controls.shelves.value,
       relatedBookIds: this.bookForm.controls.relatedBookIds.value,

@@ -22,10 +22,20 @@ export function toBook(record: BookRecord): Book {
     latestChapter: record.latest_chapter ?? null,
     lastUploadedAt: record.last_uploaded_at ? new Date(record.last_uploaded_at) : null,
     lastFetchedAt: record.last_fetched_at ? new Date(record.last_fetched_at) : null,
+    notes: record.notes ?? null,
+    timesRead: Math.max(1, record.times_read ?? 1),
+    lastRead: record.last_read ?? null,
+    originalLanguage: record.original_language ?? null,
     coverUrl: record.cover_url,
     createdAt: new Date(record.created_at),
     updatedAt: new Date(record.updated_at),
   };
+}
+
+function toDatetimeLocal(date: Date | null): string {
+  if (!date) return '';
+  // Format as "YYYY-MM-DDTHH:MM:SS" (no timezone) for datetime-local input
+  return date.toISOString().slice(0, 19);
 }
 
 export function toFormModel(book: Book): BookFormModel {
@@ -38,6 +48,12 @@ export function toFormModel(book: Book): BookFormModel {
     language: book.language ?? '',
     chapterCount: book.chapterCount,
     coverUrl: book.coverUrl ?? '',
+    notes: book.notes ?? '',
+    timesRead: book.timesRead,
+    lastRead: book.lastRead ?? '',
+    latestChapter: book.latestChapter ?? '',
+    lastUploadedAt: toDatetimeLocal(book.lastUploadedAt),
+    originalLanguage: book.originalLanguage ?? '',
     sources: [],
     shelves: [],
     relatedBookIds: [],
@@ -57,5 +73,11 @@ export function toSupabasePayload(form: BookFormModel): Partial<BookRecord> {
     language: form.language.trim() || null,
     chapter_count: form.chapterCount,
     cover_url: form.coverUrl.trim() || null,
+    notes: form.notes.trim() || null,
+    times_read: Math.max(1, form.timesRead || 1),
+    last_read: form.lastRead.trim() || null,
+    latest_chapter: form.latestChapter.trim() || null,
+    last_uploaded_at: form.lastUploadedAt.trim() || null,
+    original_language: form.originalLanguage.trim() || null,
   };
 }
