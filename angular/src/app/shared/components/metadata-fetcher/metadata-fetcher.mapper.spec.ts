@@ -9,6 +9,7 @@ describe('metadata fetcher mapper', () => {
         image: 'https://images.example.com/solo.jpg',
         genres: ['Action', 'Fantasy'],
         language: 'English',
+        latest_chapter: 'Chapter 210',
         chapter_count: 210,
       },
       {
@@ -17,6 +18,7 @@ describe('metadata fetcher mapper', () => {
         coverUrl: '',
         genres: '',
         language: '',
+        latestChapter: '',
         chapterCount: null,
       },
     );
@@ -27,6 +29,7 @@ describe('metadata fetcher mapper', () => {
       coverUrl: 'https://images.example.com/solo.jpg',
       genres: 'Action, Fantasy',
       language: 'English',
+      latestChapter: 'Chapter 210',
       chapterCount: 210,
     });
   });
@@ -39,6 +42,7 @@ describe('metadata fetcher mapper', () => {
         image: 'https://images.example.com/fetched.jpg',
         genres: ['Action'],
         language: 'English',
+        latest_chapter: 'Chapter 50',
         chapter_count: 50,
       },
       {
@@ -47,6 +51,7 @@ describe('metadata fetcher mapper', () => {
         coverUrl: 'https://images.example.com/custom.jpg',
         genres: 'Drama',
         language: 'Japanese',
+        latestChapter: 'Chapter 99',
         chapterCount: 99,
       },
     );
@@ -62,6 +67,7 @@ describe('metadata fetcher mapper', () => {
         image: '',
         genres: [],
         language: '',
+        latest_chapter: '',
         chapter_count: null,
       },
       {
@@ -70,6 +76,7 @@ describe('metadata fetcher mapper', () => {
         coverUrl: '',
         genres: '',
         language: '',
+        latestChapter: '',
         chapterCount: null,
       },
     );

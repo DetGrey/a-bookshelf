@@ -101,14 +101,28 @@ In `BookDetailsPageComponent`:
 - Pass the `editForm` FormGroup to it
 
 ## Acceptance criteria
-- [ ] After a successful fetch, the preview card shows: cover image (with gradient fallback), title, description, genre pills, latest-chapter pill (if present), chapter count pill (if present).
-- [ ] "Apply to fields" patches the parent FormGroup with all available fields and closes the preview.
-- [ ] The preview is hidden until a fetch completes.
-- [ ] Fetching again with a new URL replaces the previous preview.
-- [ ] Error and loading states continue to work as before.
-- [ ] `MetadataFetcherComponent` is included in `BookDetailsPageComponent` edit mode.
-- [ ] Tests cover: preview appears after successful fetch, apply patches all fields, preview clears after apply, error state shown on failed fetch.
-- [ ] Existing test baseline preserved.
+- [x] After a successful fetch, the preview card shows: cover image (with gradient fallback), title, description, genre pills, latest-chapter pill (if present), chapter count pill (if present).
+- [x] "Apply to fields" patches the parent FormGroup with all available fields and closes the preview.
+- [x] The preview is hidden until a fetch completes.
+- [x] Fetching again with a new URL replaces the previous preview.
+- [x] Error and loading states continue to work as before.
+- [x] `MetadataFetcherComponent` is included in `BookDetailsPageComponent` edit mode.
+- [x] Tests cover: preview appears after successful fetch, apply patches all fields, preview clears after apply, error state shown on failed fetch.
+- [x] Existing test baseline preserved.
+
+## Completion notes
+- Implemented in Angular shared and feature layers:
+  - `src/app/shared/components/metadata-fetcher/metadata-fetcher.component.ts`
+  - `src/app/shared/components/metadata-fetcher/metadata-fetcher.mapper.ts`
+  - `src/app/features/book-details/book-details-page.component.ts`
+- Verified edge payload handling from `fetch-metadata` (`{ metadata: ... }`) and direct payload parsing compatibility in the component.
+- Test coverage updated in:
+  - `src/app/shared/components/metadata-fetcher/metadata-fetcher.component.spec.ts`
+  - `src/app/shared/components/metadata-fetcher/metadata-fetcher.mapper.spec.ts`
+  - `src/app/features/book-details/book-details-page.component.spec.ts`
+- Regression verification:
+  - `npm test`
+  - Result: 30/30 suites passed, 204/204 tests passed.
 
 ## Blocked by
 - Blocked by ISSUE-016 (needs `latestChapter` and `chapterCount` form controls).

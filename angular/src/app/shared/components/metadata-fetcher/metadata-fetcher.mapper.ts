@@ -4,6 +4,7 @@ export interface MetadataPayload {
   image?: string | null;
   genres?: string[] | null;
   language?: string | null;
+  latest_chapter?: string | null;
   chapter_count?: number | null;
 }
 
@@ -13,6 +14,7 @@ export interface MetadataPatchTarget {
   coverUrl: string;
   genres: string;
   language: string;
+  latestChapter: string;
   chapterCount: number | null;
 }
 
@@ -48,6 +50,11 @@ export function buildMetadataPatch(metadata: MetadataPayload, current: MetadataP
   const language = normalizeText(metadata.language);
   if (!current.language.trim() && language) {
     patch.language = language;
+  }
+
+  const latestChapter = normalizeText(metadata.latest_chapter);
+  if (!current.latestChapter.trim() && latestChapter) {
+    patch.latestChapter = latestChapter;
   }
 
   if (current.chapterCount === null && typeof metadata.chapter_count === 'number' && Number.isFinite(metadata.chapter_count)) {

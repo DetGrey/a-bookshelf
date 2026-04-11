@@ -8,6 +8,7 @@ import { BookSearchLinkerComponent } from '../../shared/components/book-search-l
 import { BookFormFieldsComponent } from '../../shared/components/book-form-fields/book-form-fields.component';
 import { ShelfSelectorComponent } from '../../shared/components/shelf-selector/shelf-selector.component';
 import { SourceManagerComponent } from '../../shared/components/source-manager/source-manager.component';
+import { MetadataFetcherComponent } from '../../shared/components/metadata-fetcher/metadata-fetcher.component';
 import { Result } from '../../models/result.model';
 import { BookFormModel, BookSourceDraft } from '../../models/book.model';
 import { BookDetailResolved } from './book-details.resolver';
@@ -48,6 +49,7 @@ type EditBookFormGroup = FormGroup<{
     SourceManagerComponent,
     ShelfSelectorComponent,
     BookSearchLinkerComponent,
+    MetadataFetcherComponent,
   ],
   template: `
     <section>
@@ -59,6 +61,7 @@ type EditBookFormGroup = FormGroup<{
           <h1>Edit Book</h1>
 
           <form [formGroup]="editForm" (ngSubmit)="saveEdit()">
+            <app-metadata-fetcher [form]="editForm" [compact]="true" />
             <app-book-form-fields [form]="editForm" />
             <app-source-manager [sources]="editForm.controls.sources" />
             <app-shelf-selector [control]="editForm.controls.shelves" [availableShelves]="shelfService.shelves()" />
