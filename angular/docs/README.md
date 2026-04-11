@@ -8,6 +8,7 @@ Use this folder as the single source of truth for recreating the frontend.
 - [Style Guide](./FRONTEND_STYLE_GUIDE.md)
 - [Recreation Checklist](./FRONTEND_REPLICATION_CHECKLIST.md)
 - [Angular Architecture](./ANGULAR_ARCHITECTURE.md) — authoritative architecture reference for the Angular rewrite
+- [Implementation Backlog](./implementation/README.md) — issue-by-issue execution docs (now includes ISSUE-015 parity follow-up)
 
 ## What to read first
 1. Start with the blueprint for screens, flows, and data contracts.

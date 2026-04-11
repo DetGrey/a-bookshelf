@@ -9,3 +9,7 @@ This folder is the local replacement for GitHub issues.
 ## Files
 - `SLICE_BREAKDOWN.md` — numbered slice overview for review/iteration
 - `issues/ISSUE-001-...md` etc. — implementation tickets in dependency order
+
+## Current tail of backlog
+- `issues/ISSUE-014-backup-restore-and-final-qa-gates.md` — completed portability + QA gates
+- `issues/ISSUE-015-react-parity-gap-closure.md` — post-014 React→Angular parity closure (additive follow-up)

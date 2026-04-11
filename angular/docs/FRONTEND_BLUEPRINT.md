@@ -308,6 +308,28 @@ Delete behavior:
 - removes the book
 - returns to the dashboard
 
+## 6.7 Angular parity follow-up scope (post-ISSUE-014)
+This section captures confirmed parity gaps found after the first Angular completion pass. It is a tracking baseline for ISSUE-015 and should be treated as additive follow-up work.
+
+Dashboard parity gaps:
+- actionable genre consolidation flow (scan/select/merge/replace)
+- actionable cover repair/upload workflow from quality checks
+
+Bookshelf parity gaps:
+- UI controls for genre filters and chapter-count range filters wired to existing filter state
+
+Add/Edit parity gaps:
+- shelf selector should use named shelf selection UX (not raw shelf-id entry)
+- source manager should support richer source-item editing/removal behavior
+- related-book linker should support searchable linking workflow and relation metadata
+
+Book Details parity gaps:
+- per-book latest-chapter fetch action with updated/skipped/error feedback
+
+Issue linkage:
+- tracked in `implementation/issues/ISSUE-015-react-parity-gap-closure.md`
+- does not reopen ISSUE-000 through ISSUE-014
+
 ## 7. Reusable component inventory
 
 ### Navigation and auth

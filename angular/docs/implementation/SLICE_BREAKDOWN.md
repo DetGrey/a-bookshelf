@@ -77,3 +77,8 @@ This is adapted from the PRD-to-issues workflow, using docs as the parent source
     **Blocked by**: ISSUE-011, ISSUE-013  
     **User stories covered**: JSON export/import recovery and end-to-end release checks
 
+15. **Title**: React Parity Gap Closure (Post-014)  
+   **Type**: HITL  
+   **Blocked by**: ISSUE-014  
+   **User stories covered**: close confirmed React→Angular feature/UX parity gaps without reopening completed issues
+

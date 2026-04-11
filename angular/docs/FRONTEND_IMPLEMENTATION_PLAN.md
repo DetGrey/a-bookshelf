@@ -117,6 +117,21 @@ Goal: the app is usable as a long-term personal tool.
 - Backup/restore supports full recovery.
 - Mobile and desktop UX feel deliberate.
 
+## Phase 7 — React parity closure (Angular follow-up)
+Goal: close confirmed React→Angular UX/feature parity gaps without changing completed issue history.
+
+### Tasks
+- Add actionable dashboard genre-consolidation flow.
+- Add actionable cover-repair flow from dashboard quality tools.
+- Expose genre/chapter filter controls in Bookshelf UI.
+- Upgrade Add/Edit helpers (`ShelfSelector`, `SourceManager`, `BookSearchLinker`) from raw-ID/raw-URL flows to richer workflows.
+- Add per-book "fetch latest chapter" action in Book Details.
+- Validate parity additions with focused tests and full regression checks.
+
+### Output
+- Angular delivers the same high-value maintenance and editing workflows as React.
+- Parity gaps are tracked and closed via ISSUE-015 without modifying ISSUE-000–014 docs.
+
 ## Suggested build order within each phase
 1. UI skeleton.
 2. State and data hooks.

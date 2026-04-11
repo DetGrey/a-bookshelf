@@ -78,3 +78,11 @@ Use this as a final pass when recreating the frontend.
 - [x] Lint passes.
 - [x] Build passes.
 - [x] JSON backup/restore round-trips cleanly.
+
+## React parity follow-up (ISSUE-015)
+- [ ] Dashboard genre consolidation is actionable (not help-only).
+- [ ] Dashboard cover checker includes repair/upload workflow.
+- [ ] Bookshelf exposes genre and chapter range filter controls.
+- [ ] Add/Edit flows use named shelf selection and richer source management UX.
+- [ ] Related-book linking supports searchable workflow with relation metadata.
+- [ ] Book Details supports per-book latest-chapter fetch action.
