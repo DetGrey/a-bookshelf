@@ -1,4 +1,4 @@
-import { computed, inject, Injectable, signal } from '@angular/core';
+import { computed, effect, inject, Injectable, signal } from '@angular/core';
 import { AuthService } from '../auth/auth.service';
 import { Book, BookFormModel, BookRecord } from '../../models/book.model';
 import { ErrorCode, Result } from '../../models/result.model';
@@ -33,6 +33,9 @@ export class BookService {
   private readonly repository = inject(BookRepository);
   private readonly auth = inject(AuthService);
   private readonly supabase = inject(SUPABASE_CLIENT, { optional: true });
+  private realtimeChannel: unknown | null = null;
+  private realtimeUserId: string | null = null;
+  private readonly pendingOptimisticBookIds = new Set<string>();
 
   readonly books = signal<Book[]>([]);
   readonly isLoading = signal(false);
@@ -49,6 +52,21 @@ export class BookService {
     const sum = scoredBooks.reduce((accumulator, book) => accumulator + (book.score ?? 0), 0);
     return Number((sum / scoredBooks.length).toFixed(2));
   });
+
+  constructor() {
+    effect(() => {
+      const user = this.auth.currentUser();
+
+      if (!user) {
+        this.stopRealtimeSubscription();
+        this.books.set([]);
+        return;
+      }
+
+      void this.loadBooks();
+      this.startRealtimeSubscription(user.id);
+    });
+  }
 
   async loadBooks(): Promise<Result<Book[]>> {
     const user = this.auth.currentUser();
@@ -162,6 +180,8 @@ export class BookService {
       return failure;
     }
 
+    this.pendingOptimisticBookIds.add(bookId);
+
     const previousBooks = this.books();
     const optimisticUpdatedAt = new Date();
     this.books.update((books) => books.map((book) => {
@@ -188,6 +208,7 @@ export class BookService {
 
     const rowResult = await this.repository.update(user.id, bookId, toSupabasePayload(form));
     if (!rowResult.success) {
+      this.pendingOptimisticBookIds.delete(bookId);
       this.rollbackBooks(previousBooks, `Could not save book. ${rowResult.error.message}`);
       return rowResult;
     }
@@ -215,6 +236,7 @@ export class BookService {
     for (const runStep of steps) {
       const stepResult = await runStep();
       if (!stepResult.success) {
+        this.pendingOptimisticBookIds.delete(bookId);
         this.rollbackBooks(previousBooks, `Could not save book. ${stepResult.error.message}`);
         return { success: false, error: stepResult.error };
       }
@@ -222,6 +244,7 @@ export class BookService {
 
     const mappedBook = toBook(rowResult.data);
     this.books.update((books) => books.map((book) => (book.id === bookId ? mappedBook : book)));
+    this.pendingOptimisticBookIds.delete(bookId);
 
     this.isLoading.set(false);
 
@@ -246,16 +269,19 @@ export class BookService {
     }
 
     const previousBooks = this.books();
+    this.pendingOptimisticBookIds.add(bookId);
     this.books.update((books) => books.filter((book) => book.id !== bookId));
     this.errorMessage.set(null);
     this.isLoading.set(true);
 
     const result = await this.repository.delete(user.id, bookId);
     if (!result.success) {
+      this.pendingOptimisticBookIds.delete(bookId);
       this.rollbackBooks(previousBooks, `Could not delete book. ${result.error.message}`);
       return result;
     }
 
+    this.pendingOptimisticBookIds.delete(bookId);
     this.isLoading.set(false);
     return { success: true, data: undefined };
   }
@@ -467,6 +493,86 @@ export class BookService {
   private async delay(milliseconds: number): Promise<void> {
     await new Promise<void>((resolve) => {
       setTimeout(() => resolve(), milliseconds);
+    });
+  }
+
+  private startRealtimeSubscription(userId: string): void {
+    if (!this.supabase?.channel || !this.supabase.removeChannel) {
+      return;
+    }
+
+    if (this.realtimeUserId === userId && this.realtimeChannel) {
+      return;
+    }
+
+    this.stopRealtimeSubscription();
+
+    const channel = this.supabase.channel(`books:realtime:${userId}`);
+    channel
+      .on('postgres_changes', {
+        event: '*',
+        schema: 'public',
+        table: 'books',
+        filter: `user_id=eq.${userId}`,
+      }, (payload: unknown) => {
+        this.applyRealtimeEvent(payload);
+      })
+      .subscribe();
+
+    this.realtimeChannel = channel;
+    this.realtimeUserId = userId;
+  }
+
+  private stopRealtimeSubscription(): void {
+    if (!this.realtimeChannel || !this.supabase?.removeChannel) {
+      this.realtimeChannel = null;
+      this.realtimeUserId = null;
+      return;
+    }
+
+    void this.supabase.removeChannel(this.realtimeChannel as never);
+    this.realtimeChannel = null;
+    this.realtimeUserId = null;
+  }
+
+  private applyRealtimeEvent(payload: unknown): void {
+    const event = payload as {
+      eventType?: string;
+      new?: Record<string, unknown> | null;
+      old?: Record<string, unknown> | null;
+    };
+
+    const eventType = String(event.eventType ?? '').toUpperCase();
+
+    if (eventType === 'DELETE') {
+      const deletedId = typeof event.old?.['id'] === 'string' ? String(event.old['id']) : null;
+      if (!deletedId || this.pendingOptimisticBookIds.has(deletedId)) {
+        return;
+      }
+
+      this.books.update((books) => books.filter((book) => book.id !== deletedId));
+      return;
+    }
+
+    const record = event.new;
+    if (!record || typeof record['id'] !== 'string') {
+      return;
+    }
+
+    const recordId = String(record['id']);
+
+    if (this.pendingOptimisticBookIds.has(recordId)) {
+      return;
+    }
+
+    const nextBook = toBook(record as never);
+    this.books.update((books) => {
+      const existingIndex = books.findIndex((book) => book.id === nextBook.id);
+      if (existingIndex === -1) {
+        return [nextBook, ...books.filter((book) => book.id !== nextBook.id)];
+      }
+
+      return books.map((book) => (book.id === nextBook.id ? nextBook : book));
     });
   }
 }

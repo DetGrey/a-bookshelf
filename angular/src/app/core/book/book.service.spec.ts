@@ -1,6 +1,7 @@
 import { TestBed } from '@angular/core/testing';
 import { signal } from '@angular/core';
 import { AuthService } from '../auth/auth.service';
+import { SUPABASE_CLIENT } from '../supabase.token';
 import { BookRepository } from './book.repository';
 import { BookService } from './book.service';
 import { SUPABASE_CLIENT } from '../supabase.token';
@@ -300,6 +301,7 @@ describe('BookService read state', () => {
     });
 
     const service = TestBed.inject(BookService);
+    await Promise.resolve();
     service.books.set([
       {
         id: 'book-1',
@@ -391,6 +393,7 @@ describe('BookService read state', () => {
     });
 
     const service = TestBed.inject(BookService);
+    await Promise.resolve();
     service.books.set([
       {
         id: 'book-1',
@@ -475,6 +478,310 @@ describe('BookService read state', () => {
     expect(result.success).toBe(false);
     expect(service.books().length).toBe(1);
     expect(service.errorMessage()).toContain('Could not delete book');
+  });
+
+  it('starts and stops realtime subscription with auth state changes', async () => {
+    const handlers: Record<string, (payload: unknown) => void> = {};
+    let channel: any;
+    channel = {
+      on: jest.fn().mockImplementation((_type: string, _filter: unknown, handler: (payload: unknown) => void) => {
+        handlers[_type] = handler;
+        return channel;
+      }),
+      subscribe: jest.fn().mockReturnValue(channel),
+    };
+    const removeChannel = jest.fn().mockResolvedValue(channel);
+    const repository = {
+      getByUserId: jest.fn().mockResolvedValue({ success: true, data: [] }),
+    } as unknown as BookRepository;
+
+    TestBed.configureTestingModule({
+      providers: [
+        BookService,
+        { provide: BookRepository, useValue: repository },
+        {
+          provide: AuthService,
+          useValue: {
+            currentUser: signal(null),
+          },
+        },
+        {
+          provide: SUPABASE_CLIENT,
+          useValue: {
+            channel: jest.fn().mockReturnValue(channel),
+            removeChannel,
+          },
+        },
+      ],
+    });
+
+    const service = TestBed.inject(BookService);
+    const auth = TestBed.inject(AuthService) as unknown as { currentUser: ReturnType<typeof signal> };
+
+    auth.currentUser.set({ id: 'user-1' } as never);
+    await new Promise((resolve) => setTimeout(resolve, 0));
+
+    expect(repository.getByUserId).toHaveBeenCalledWith('user-1');
+    expect(channel.on).toHaveBeenCalled();
+    expect(channel.subscribe).toHaveBeenCalled();
+
+    auth.currentUser.set(null);
+    await new Promise((resolve) => setTimeout(resolve, 0));
+
+    expect(removeChannel).toHaveBeenCalled();
+  });
+
+  it('merges realtime insert update and delete events without duplicates', async () => {
+    const handlers: Record<string, (payload: unknown) => void> = {};
+    let channel: any;
+    channel = {
+      on: jest.fn().mockImplementation((_type: string, _filter: unknown, handler: (payload: unknown) => void) => {
+        handlers[_type] = handler;
+        return channel;
+      }),
+      subscribe: jest.fn().mockReturnValue(channel),
+    };
+    const repository = {
+      getByUserId: jest.fn().mockResolvedValue({ success: true, data: [] }),
+    } as unknown as BookRepository;
+
+    TestBed.configureTestingModule({
+      providers: [
+        BookService,
+        { provide: BookRepository, useValue: repository },
+        {
+          provide: AuthService,
+          useValue: {
+            currentUser: signal({ id: 'user-1' }),
+          },
+        },
+        {
+          provide: SUPABASE_CLIENT,
+          useValue: {
+            channel: jest.fn().mockReturnValue(channel),
+            removeChannel: jest.fn(),
+          },
+        },
+      ],
+    });
+
+    const service = TestBed.inject(BookService);
+    await new Promise((resolve) => setTimeout(resolve, 0));
+    service.books.set([
+      {
+        id: 'book-1',
+        userId: 'user-1',
+        title: 'Original',
+        description: '',
+        score: null,
+        status: 'reading',
+        genres: [],
+        language: null,
+        chapterCount: 10,
+        latestChapter: 'Ch 10',
+        lastUploadedAt: null,
+        lastFetchedAt: null,
+        coverUrl: null,
+        createdAt: new Date('2026-01-01T00:00:00.000Z'),
+        updatedAt: new Date('2026-01-02T00:00:00.000Z'),
+      },
+    ]);
+
+    await new Promise((resolve) => setTimeout(resolve, 0));
+
+    handlers['postgres_changes']({
+      eventType: 'UPDATE',
+      new: {
+        id: 'book-1',
+        user_id: 'user-1',
+        title: 'Updated',
+        description: null,
+        score: null,
+        status: 'reading',
+        genres: [],
+        language: null,
+        chapter_count: 11,
+        latest_chapter: 'Ch 11',
+        last_uploaded_at: null,
+        last_fetched_at: null,
+        cover_url: null,
+        created_at: '2026-01-01T00:00:00.000Z',
+        updated_at: '2026-01-03T00:00:00.000Z',
+      },
+      old: null,
+    });
+
+    handlers['postgres_changes']({
+      eventType: 'INSERT',
+      new: {
+        id: 'book-2',
+        user_id: 'user-1',
+        title: 'Inserted',
+        description: null,
+        score: null,
+        status: 'waiting',
+        genres: [],
+        language: null,
+        chapter_count: null,
+        latest_chapter: null,
+        last_uploaded_at: null,
+        last_fetched_at: null,
+        cover_url: null,
+        created_at: '2026-01-01T00:00:00.000Z',
+        updated_at: '2026-01-03T00:00:00.000Z',
+      },
+      old: null,
+    });
+
+    handlers['postgres_changes']({
+      eventType: 'DELETE',
+      old: {
+        id: 'book-1',
+      },
+      new: null,
+    });
+
+    expect(service.books().some((book) => book.id === 'book-1')).toBe(false);
+    expect(service.books().some((book) => book.id === 'book-2')).toBe(true);
+    expect(service.books().filter((book) => book.id === 'book-2')).toHaveLength(1);
+  });
+
+  it('keeps optimistic updates visible when matching realtime events arrive early', async () => {
+    let resolveUpdate!: (value: unknown) => void;
+    const updatePromise = new Promise((resolve) => {
+      resolveUpdate = resolve;
+    });
+
+    const handlers: Record<string, (payload: unknown) => void> = {};
+    let channel: any;
+    channel = {
+      on: jest.fn().mockImplementation((_type: string, _filter: unknown, handler: (payload: unknown) => void) => {
+        handlers[_type] = handler;
+        return channel;
+      }),
+      subscribe: jest.fn().mockReturnValue(channel),
+    };
+    const repository = {
+      getByUserId: jest.fn().mockResolvedValue({ success: true, data: [] }),
+      update: jest.fn().mockReturnValue(updatePromise),
+      removeSources: jest.fn().mockResolvedValue({ success: true, data: undefined }),
+      addSources: jest.fn().mockResolvedValue({ success: true, data: undefined }),
+      removeRelations: jest.fn().mockResolvedValue({ success: true, data: undefined }),
+      addRelations: jest.fn().mockResolvedValue({ success: true, data: undefined }),
+      removeShelfLinks: jest.fn().mockResolvedValue({ success: true, data: undefined }),
+      setShelfLinks: jest.fn().mockResolvedValue({ success: true, data: undefined }),
+    } as unknown as BookRepository;
+
+    TestBed.configureTestingModule({
+      providers: [
+        BookService,
+        { provide: BookRepository, useValue: repository },
+        {
+          provide: AuthService,
+          useValue: {
+            currentUser: signal({ id: 'user-1' }),
+          },
+        },
+        {
+          provide: SUPABASE_CLIENT,
+          useValue: {
+            channel: jest.fn().mockReturnValue(channel),
+            removeChannel: jest.fn(),
+          },
+        },
+      ],
+    });
+
+    const service = TestBed.inject(BookService);
+    await new Promise((resolve) => setTimeout(resolve, 0));
+    service.books.set([
+      {
+        id: 'book-1',
+        userId: 'user-1',
+        title: 'Original',
+        description: '',
+        score: null,
+        status: 'reading',
+        genres: [],
+        language: null,
+        chapterCount: 10,
+        latestChapter: 'Ch 10',
+        lastUploadedAt: null,
+        lastFetchedAt: null,
+        coverUrl: null,
+        createdAt: new Date('2026-01-01T00:00:00.000Z'),
+        updatedAt: new Date('2026-01-02T00:00:00.000Z'),
+      },
+    ]);
+
+    const updateTask = service.updateBook('book-1', {
+      title: 'Optimistic',
+      description: '',
+      score: null,
+      status: 'reading',
+      genres: '',
+      language: '',
+      chapterCount: 10,
+      coverUrl: '',
+      sources: [],
+      shelves: [],
+      relatedBookIds: [],
+    }, {
+      sources: [],
+      relatedBookIds: [],
+      shelfIds: [],
+    });
+
+    await new Promise((resolve) => setTimeout(resolve, 0));
+
+    handlers['postgres_changes']({
+      eventType: 'UPDATE',
+      new: {
+        id: 'book-1',
+        user_id: 'user-1',
+        title: 'Stale realtime',
+        description: null,
+        score: null,
+        status: 'reading',
+        genres: [],
+        language: null,
+        chapter_count: 10,
+        latest_chapter: 'Ch 10',
+        last_uploaded_at: null,
+        last_fetched_at: null,
+        cover_url: null,
+        created_at: '2026-01-01T00:00:00.000Z',
+        updated_at: '2026-01-02T00:00:00.000Z',
+      },
+      old: null,
+    });
+
+    expect(service.books()[0]?.title).toBe('Optimistic');
+
+    resolveUpdate({
+      success: true,
+      data: {
+        id: 'book-1',
+        user_id: 'user-1',
+        title: 'Optimistic',
+        description: null,
+        score: null,
+        status: 'reading',
+        genres: [],
+        language: null,
+        chapter_count: 10,
+        latest_chapter: 'Ch 10',
+        last_uploaded_at: null,
+        last_fetched_at: null,
+        cover_url: null,
+        created_at: '2026-01-01T00:00:00.000Z',
+        updated_at: '2026-01-03T00:00:00.000Z',
+      },
+    });
+
+    await updateTask;
+
+    expect(service.books()[0]?.title).toBe('Optimistic');
   });
 
   it('updates only changed latest fields and skips unchanged waiting books', async () => {
