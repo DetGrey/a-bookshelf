@@ -18,6 +18,7 @@ describe('BookshelfFilterService', () => {
       sort: 'score',
       dir: 'desc',
       lang: 'en',
+      shelf: 'status:reading',
       genres: 'action,fantasy',
       chapterMin: '10',
       chapterMax: '50',
@@ -49,6 +50,7 @@ describe('BookshelfFilterService', () => {
     expect(service.sort()).toBe('score');
     expect(service.sortDir()).toBe('desc');
     expect(service.language()).toBe('en');
+    expect(service.shelf()).toBe('status:reading');
     expect(service.genres()).toEqual(['action', 'fantasy']);
     expect(service.chapterMin()).toBe(10);
     expect(service.chapterMax()).toBe(50);
@@ -88,6 +90,13 @@ describe('BookshelfFilterService', () => {
 
     expect(navigate).toHaveBeenCalledWith([], {
       queryParams: expect.objectContaining({ page: 2 }),
+      queryParamsHandling: 'merge',
+    });
+
+    await service.updateFilter('shelf', 'custom:shelf-2');
+
+    expect(navigate).toHaveBeenCalledWith([], {
+      queryParams: expect.objectContaining({ shelf: 'custom:shelf-2', page: 1 }),
       queryParamsHandling: 'merge',
     });
   });

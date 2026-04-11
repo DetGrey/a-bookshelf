@@ -16,11 +16,11 @@
 Implement shelf management end-to-end for sidebar operations: create/delete custom shelves, render shelf counts, and ensure shelf selection affects bookshelf result sets.
 
 ## Acceptance criteria
-- [ ] Built-in status shelves and custom shelves render in sidebar with counts.
-- [ ] Create shelf and delete shelf actions persist through repository/service layers.
-- [ ] Current shelf selection updates list results and URL state.
-- [ ] Failure states show actionable messages without corrupting local UI state.
-- [ ] Tests cover custom shelf CRUD and count recalculation.
+- [x] Built-in status shelves and custom shelves render in sidebar with counts.
+- [x] Create shelf and delete shelf actions persist through repository/service layers.
+- [x] Current shelf selection updates list results and URL state.
+- [x] Failure states show actionable messages without corrupting local UI state.
+- [x] Tests cover custom shelf CRUD and count recalculation.
 
 ## Blocked by
 - Blocked by ISSUE-003.

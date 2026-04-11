@@ -4,61 +4,110 @@ import { ShelfService } from '../../core/shelf/shelf.service';
 import { BookGridComponent } from '../../shared/components/book-grid/book-grid.component';
 import { BookshelfFilterService } from './bookshelf-filter.service';
 import { FormsModule } from '@angular/forms';
-import { Book } from '../../models/book.model';
+import { Book, BookStatus } from '../../models/book.model';
 
 @Component({
   selector: 'app-bookshelf-page',
   standalone: true,
   imports: [BookGridComponent, FormsModule],
   template: `
-    <section>
-      <h1>Bookshelf</h1>
+    <section class="bookshelf-layout">
+      <aside>
+        <h2>Shelves</h2>
+        <button data-testid="shelf-all" type="button" [class.active]="isShelfSelected('all')" (click)="selectShelf('all')">
+          All ({{ books().length }})
+        </button>
 
-      @if (isLoading()) {
-        <p>Loading library...</p>
-      } @else if (errorMessage()) {
-        <p>{{ errorMessage() }}</p>
-      } @else if (books().length === 0) {
-        <p>No books yet.</p>
-      } @else {
-        <div class="bookshelf-controls">
+        @for (statusShelf of statusShelves(); track statusShelf.key) {
+          <button
+            [attr.data-testid]="'shelf-status-' + statusShelf.value"
+            type="button"
+            [class.active]="isShelfSelected(statusShelf.key)"
+            (click)="selectShelf(statusShelf.key)"
+          >
+            {{ statusShelf.label }} ({{ statusShelf.count }})
+          </button>
+        }
+
+        <h3>Custom shelves</h3>
+        @for (shelf of customShelves(); track shelf.id) {
+          <div>
+            <button
+              [attr.data-testid]="'shelf-custom-' + shelf.id"
+              type="button"
+              [class.active]="isShelfSelected('custom:' + shelf.id)"
+              (click)="selectShelf('custom:' + shelf.id)"
+            >
+              {{ shelf.name }} ({{ shelf.bookCount }})
+            </button>
+            <button [attr.data-testid]="'delete-shelf-' + shelf.id" type="button" (click)="deleteCustomShelf(shelf.id)">Delete</button>
+          </div>
+        }
+
+        <form (submit)="onCreateShelfSubmit($event)">
           <input
-            data-testid="search-input"
-            [value]="filters.search()"
-            (input)="onSearchInput($event)"
-            placeholder="Search books"
+            data-testid="create-shelf-input"
+            name="newShelfName"
+            [(ngModel)]="newShelfName"
+            placeholder="New shelf"
           />
+          <button data-testid="create-shelf-button" type="submit">Create shelf</button>
+        </form>
 
-          <select [value]="filters.sort()" (change)="onSortChange($event)">
-            <option value="updatedAt">Updated</option>
-            <option value="createdAt">Created</option>
-            <option value="title">Title</option>
-            <option value="score">Score</option>
-            <option value="chapterCount">Chapter count</option>
-            <option value="status">Status</option>
-          </select>
+        @if (sidebarMessage()) {
+          <p>{{ sidebarMessage() }}</p>
+        }
+      </aside>
 
-          <select [value]="filters.sortDir()" (change)="onSortDirChange($event)">
-            <option value="desc">Desc</option>
-            <option value="asc">Asc</option>
-          </select>
+      <div>
+        <h1>Bookshelf</h1>
 
-          <input
-            [value]="filters.language()"
-            (input)="onLanguageInput($event)"
-            placeholder="Language"
-          />
-        </div>
+        @if (isLoading()) {
+          <p>Loading library...</p>
+        } @else if (errorMessage()) {
+          <p>{{ errorMessage() }}</p>
+        } @else if (books().length === 0) {
+          <p>No books yet.</p>
+        } @else {
+          <div class="bookshelf-controls">
+            <input
+              data-testid="search-input"
+              [value]="filters.search()"
+              (input)="onSearchInput($event)"
+              placeholder="Search books"
+            />
 
-        <p>Shelves: {{ shelfCount() }}</p>
-        <app-book-grid [books]="pagedBooks()" (opened)="onOpenDetails($event)" />
+            <select [value]="filters.sort()" (change)="onSortChange($event)">
+              <option value="updatedAt">Updated</option>
+              <option value="createdAt">Created</option>
+              <option value="title">Title</option>
+              <option value="score">Score</option>
+              <option value="chapterCount">Chapter count</option>
+              <option value="status">Status</option>
+            </select>
 
-        <div class="pagination">
-          <button type="button" [disabled]="filters.page() <= 1" (click)="setPage(filters.page() - 1)">Previous</button>
-          <span>Page {{ filters.page() }} of {{ totalPages() }}</span>
-          <button type="button" [disabled]="filters.page() >= totalPages()" (click)="setPage(filters.page() + 1)">Next</button>
-        </div>
-      }
+            <select [value]="filters.sortDir()" (change)="onSortDirChange($event)">
+              <option value="desc">Desc</option>
+              <option value="asc">Asc</option>
+            </select>
+
+            <input
+              [value]="filters.language()"
+              (input)="onLanguageInput($event)"
+              placeholder="Language"
+            />
+          </div>
+
+          <p>Shelves: {{ shelfCount() }}</p>
+          <app-book-grid [books]="pagedBooks()" (opened)="onOpenDetails($event)" />
+
+          <div class="pagination">
+            <button type="button" [disabled]="filters.page() <= 1" (click)="setPage(filters.page() - 1)">Previous</button>
+            <span>Page {{ filters.page() }} of {{ totalPages() }}</span>
+            <button type="button" [disabled]="filters.page() >= totalPages()" (click)="setPage(filters.page() + 1)">Next</button>
+          </div>
+        }
+      </div>
     </section>
   `,
   changeDetection: ChangeDetectionStrategy.OnPush,
@@ -69,11 +118,37 @@ export class BookshelfPageComponent {
   readonly filters = inject(BookshelfFilterService);
 
   readonly books = this.bookService.books;
+  readonly customShelves = this.shelfService.shelves;
   readonly shelfCount = this.shelfService.shelfCount;
   readonly isLoading = computed(() => this.bookService.isLoading() || this.shelfService.isLoading());
-  readonly errorMessage = computed(() => this.bookService.errorMessage() ?? this.shelfService.errorMessage());
+  readonly errorMessage = this.bookService.errorMessage;
+  readonly sidebarMessage = this.shelfService.errorMessage;
+  readonly selectedShelf = computed(() => {
+    const shelfReader = (this.filters as Partial<BookshelfFilterService>).shelf;
+    return typeof shelfReader === 'function' ? shelfReader() : 'all';
+  });
+  readonly statusShelves = computed(() => {
+    const source = this.books();
+    return this.statusOptions.map((status) => ({
+      key: `status:${status}`,
+      value: status,
+      label: this.statusLabels[status],
+      count: source.filter((book) => book.status === status).length,
+    }));
+  });
   readonly filteredSortedBooks = computed(() => {
     let collection = [...this.books()];
+
+    const selectedShelf = this.selectedShelf();
+    if (selectedShelf.startsWith('status:')) {
+      const status = selectedShelf.slice('status:'.length) as BookStatus;
+      collection = collection.filter((book) => book.status === status);
+    } else if (selectedShelf.startsWith('custom:')) {
+      const customShelfId = selectedShelf.slice('custom:'.length);
+      const shelf = this.customShelves().find((candidate) => candidate.id === customShelfId);
+      const allowedIds = new Set(shelf?.bookIds ?? []);
+      collection = collection.filter((book) => allowedIds.has(book.id));
+    }
 
     const search = this.filters.search().trim().toLowerCase();
     const language = this.filters.language().trim().toLowerCase();
@@ -137,6 +212,50 @@ export class BookshelfPageComponent {
     afterNextRender(() => {
       this.restoreViewMemory();
     });
+  }
+
+  newShelfName = '';
+
+  readonly statusOptions: readonly BookStatus[] = ['reading', 'plan_to_read', 'waiting', 'completed', 'dropped', 'on_hold'];
+
+  readonly statusLabels: Record<BookStatus, string> = {
+    reading: 'Reading',
+    plan_to_read: 'Plan to read',
+    waiting: 'Waiting',
+    completed: 'Completed',
+    dropped: 'Dropped',
+    on_hold: 'On hold',
+  };
+
+  selectShelf(key: string): void {
+    void this.filters.updateFilter('shelf', key);
+  }
+
+  isShelfSelected(key: string): boolean {
+    return this.selectedShelf() === key;
+  }
+
+  onCreateShelfSubmit(event: Event): void {
+    event.preventDefault();
+    void this.createCustomShelf();
+  }
+
+  async createCustomShelf(): Promise<void> {
+    const result = await this.shelfService.createShelf(this.newShelfName);
+    if (result.success) {
+      this.newShelfName = '';
+    }
+  }
+
+  async deleteCustomShelf(shelfId: string): Promise<void> {
+    const result = await this.shelfService.deleteShelf(shelfId);
+    if (!result.success) {
+      return;
+    }
+
+    if (this.selectedShelf() === `custom:${shelfId}`) {
+      await this.filters.updateFilter('shelf', 'all');
+    }
   }
 
   onSearchInput(event: Event): void {

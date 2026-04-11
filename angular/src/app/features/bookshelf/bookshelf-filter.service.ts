@@ -3,7 +3,7 @@ import { ActivatedRoute, Params, Router } from '@angular/router';
 
 type SortKey = 'title' | 'updatedAt' | 'createdAt' | 'score' | 'chapterCount' | 'status';
 type SortDir = 'asc' | 'desc';
-type FilterKey = 'search' | 'sort' | 'sortDir' | 'language' | 'genres' | 'chapterMin' | 'chapterMax' | 'page';
+type FilterKey = 'search' | 'sort' | 'sortDir' | 'language' | 'genres' | 'chapterMin' | 'chapterMax' | 'page' | 'shelf';
 
 @Injectable({ providedIn: 'root' })
 export class BookshelfFilterService {
@@ -20,6 +20,7 @@ export class BookshelfFilterService {
   readonly genres = signal<string[]>([]);
   readonly chapterMin = signal<number | null>(null);
   readonly chapterMax = signal<number | null>(null);
+  readonly shelf = signal('all');
   readonly page = signal(1);
   readonly pageSize = signal(20);
   readonly scrollY = signal(0);
@@ -69,6 +70,10 @@ export class BookshelfFilterService {
       case 'page':
         queryParams['page'] = value ?? 1;
         break;
+      case 'shelf':
+        queryParams['shelf'] = value || null;
+        queryParams['page'] = 1;
+        break;
     }
 
     await this.router.navigate([], {
@@ -102,6 +107,7 @@ export class BookshelfFilterService {
     this.genres.set(this.parseList((params['genres'] as string | undefined) ?? ''));
     this.chapterMin.set(this.parseNumber(params['chapterMin']));
     this.chapterMax.set(this.parseNumber(params['chapterMax']));
+    this.shelf.set((params['shelf'] as string | undefined) ?? 'all');
     this.page.set(this.parsePage(params['page']));
   }
 

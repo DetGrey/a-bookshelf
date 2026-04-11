@@ -416,4 +416,411 @@ describe('BookshelfPageComponent', () => {
     expect(rememberAnchor).toHaveBeenCalledWith('book-1');
     expect(rememberScroll).toHaveBeenCalledWith(250);
   });
+
+  it('renders built-in and custom shelves with counts in sidebar', () => {
+    TestBed.configureTestingModule({
+      imports: [BookshelfPageComponent],
+      providers: [
+        {
+          provide: BookService,
+          useValue: {
+            books: signal([
+              {
+                id: 'book-1',
+                userId: 'user-1',
+                title: 'Book A',
+                description: '',
+                score: 8,
+                status: 'reading',
+                genres: ['action'],
+                language: 'en',
+                chapterCount: 20,
+                coverUrl: null,
+                createdAt: new Date('2026-01-01T00:00:00.000Z'),
+                updatedAt: new Date('2026-01-02T00:00:00.000Z'),
+              },
+              {
+                id: 'book-2',
+                userId: 'user-1',
+                title: 'Book B',
+                description: '',
+                score: 7,
+                status: 'completed',
+                genres: ['drama'],
+                language: 'en',
+                chapterCount: 30,
+                coverUrl: null,
+                createdAt: new Date('2026-01-01T00:00:00.000Z'),
+                updatedAt: new Date('2026-01-02T00:00:00.000Z'),
+              },
+            ]),
+            isLoading: signal(false),
+            errorMessage: signal(null),
+            loadBooks: jest.fn(),
+          },
+        },
+        {
+          provide: ShelfService,
+          useValue: {
+            shelves: signal([
+              {
+                id: 's1',
+                userId: 'user-1',
+                name: 'Favorites',
+                bookCount: 1,
+                bookIds: ['book-1'],
+                createdAt: new Date('2026-01-01T00:00:00.000Z'),
+              },
+            ]),
+            isLoading: signal(false),
+            errorMessage: signal(null),
+            shelfCount: signal(1),
+            loadShelves: jest.fn(),
+            createShelf: jest.fn(),
+            deleteShelf: jest.fn(),
+          },
+        },
+        {
+          provide: BookshelfFilterService,
+          useValue: {
+            search: signal(''),
+            sort: signal('updatedAt'),
+            sortDir: signal('desc'),
+            language: signal(''),
+            genres: signal([]),
+            chapterMin: signal(null),
+            chapterMax: signal(null),
+            shelf: signal('all'),
+            page: signal(1),
+            pageSize: signal(20),
+            updateFilter: jest.fn().mockResolvedValue(undefined),
+          },
+        },
+      ],
+    });
+
+    const fixture = TestBed.createComponent(BookshelfPageComponent);
+    fixture.detectChanges();
+
+    expect(fixture.nativeElement.textContent).toContain('Reading (1)');
+    expect(fixture.nativeElement.textContent).toContain('Completed (1)');
+    expect(fixture.nativeElement.textContent).toContain('Favorites (1)');
+  });
+
+  it('updates shelf filter through BookshelfFilterService when selecting sidebar shelf', () => {
+    const updateFilter = jest.fn().mockResolvedValue(undefined);
+
+    TestBed.configureTestingModule({
+      imports: [BookshelfPageComponent],
+      providers: [
+        {
+          provide: BookService,
+          useValue: {
+            books: signal([
+              {
+                id: 'book-1',
+                userId: 'user-1',
+                title: 'Book A',
+                description: '',
+                score: 8,
+                status: 'reading',
+                genres: ['action'],
+                language: 'en',
+                chapterCount: 20,
+                coverUrl: null,
+                createdAt: new Date('2026-01-01T00:00:00.000Z'),
+                updatedAt: new Date('2026-01-02T00:00:00.000Z'),
+              },
+            ]),
+            isLoading: signal(false),
+            errorMessage: signal(null),
+            loadBooks: jest.fn(),
+          },
+        },
+        {
+          provide: ShelfService,
+          useValue: {
+            shelves: signal([]),
+            isLoading: signal(false),
+            errorMessage: signal(null),
+            shelfCount: signal(0),
+            loadShelves: jest.fn(),
+            createShelf: jest.fn(),
+            deleteShelf: jest.fn(),
+          },
+        },
+        {
+          provide: BookshelfFilterService,
+          useValue: {
+            search: signal(''),
+            sort: signal('updatedAt'),
+            sortDir: signal('desc'),
+            language: signal(''),
+            genres: signal([]),
+            chapterMin: signal(null),
+            chapterMax: signal(null),
+            shelf: signal('all'),
+            page: signal(1),
+            pageSize: signal(20),
+            updateFilter,
+          },
+        },
+      ],
+    });
+
+    const fixture = TestBed.createComponent(BookshelfPageComponent);
+    fixture.detectChanges();
+
+    const readingButton = fixture.debugElement.query(By.css('[data-testid="shelf-status-reading"]')).nativeElement as HTMLButtonElement;
+    readingButton.click();
+
+    expect(updateFilter).toHaveBeenCalledWith('shelf', 'status:reading');
+  });
+
+  it('creates and deletes custom shelves through ShelfService actions', async () => {
+    const createShelf = jest.fn().mockResolvedValue({
+      success: true,
+      data: {
+        id: 's2',
+        userId: 'user-1',
+        name: 'Weekend Reads',
+        bookCount: 0,
+        createdAt: new Date('2026-01-05T00:00:00.000Z'),
+      },
+    });
+    const deleteShelf = jest.fn().mockResolvedValue({ success: true, data: undefined });
+
+    TestBed.configureTestingModule({
+      imports: [BookshelfPageComponent],
+      providers: [
+        {
+          provide: BookService,
+          useValue: {
+            books: signal([
+              {
+                id: 'book-1',
+                userId: 'user-1',
+                title: 'Book A',
+                description: '',
+                score: 8,
+                status: 'reading',
+                genres: ['action'],
+                language: 'en',
+                chapterCount: 20,
+                coverUrl: null,
+                createdAt: new Date('2026-01-01T00:00:00.000Z'),
+                updatedAt: new Date('2026-01-02T00:00:00.000Z'),
+              },
+            ]),
+            isLoading: signal(false),
+            errorMessage: signal(null),
+            loadBooks: jest.fn(),
+          },
+        },
+        {
+          provide: ShelfService,
+          useValue: {
+            shelves: signal([
+              {
+                id: 's1',
+                userId: 'user-1',
+                name: 'Favorites',
+                bookCount: 1,
+                bookIds: ['book-1'],
+                createdAt: new Date('2026-01-01T00:00:00.000Z'),
+              },
+            ]),
+            isLoading: signal(false),
+            errorMessage: signal(null),
+            shelfCount: signal(1),
+            loadShelves: jest.fn(),
+            createShelf,
+            deleteShelf,
+          },
+        },
+        {
+          provide: BookshelfFilterService,
+          useValue: {
+            search: signal(''),
+            sort: signal('updatedAt'),
+            sortDir: signal('desc'),
+            language: signal(''),
+            genres: signal([]),
+            chapterMin: signal(null),
+            chapterMax: signal(null),
+            shelf: signal('all'),
+            page: signal(1),
+            pageSize: signal(20),
+            updateFilter: jest.fn().mockResolvedValue(undefined),
+          },
+        },
+      ],
+    });
+
+    const fixture = TestBed.createComponent(BookshelfPageComponent);
+    fixture.detectChanges();
+
+    fixture.componentInstance.newShelfName = 'Weekend Reads';
+    fixture.detectChanges();
+
+    const createButton = fixture.debugElement.query(By.css('[data-testid="create-shelf-button"]')).nativeElement as HTMLButtonElement;
+    createButton.click();
+    fixture.detectChanges();
+
+    await Promise.resolve();
+    expect(createShelf).toHaveBeenCalledWith('Weekend Reads');
+
+    const deleteButton = fixture.debugElement.query(By.css('[data-testid="delete-shelf-s1"]')).nativeElement as HTMLButtonElement;
+    deleteButton.click();
+    fixture.detectChanges();
+
+    await Promise.resolve();
+    expect(deleteShelf).toHaveBeenCalledWith('s1');
+  });
+
+  it('applies selected status shelf before other filters', () => {
+    TestBed.configureTestingModule({
+      imports: [BookshelfPageComponent],
+      providers: [
+        {
+          provide: BookService,
+          useValue: {
+            books: signal([
+              {
+                id: 'book-1',
+                userId: 'user-1',
+                title: 'Reading Title',
+                description: '',
+                score: 8,
+                status: 'reading',
+                genres: ['action'],
+                language: 'en',
+                chapterCount: 20,
+                coverUrl: null,
+                createdAt: new Date('2026-01-01T00:00:00.000Z'),
+                updatedAt: new Date('2026-01-02T00:00:00.000Z'),
+              },
+              {
+                id: 'book-2',
+                userId: 'user-1',
+                title: 'Completed Title',
+                description: '',
+                score: 7,
+                status: 'completed',
+                genres: ['drama'],
+                language: 'en',
+                chapterCount: 30,
+                coverUrl: null,
+                createdAt: new Date('2026-01-01T00:00:00.000Z'),
+                updatedAt: new Date('2026-01-02T00:00:00.000Z'),
+              },
+            ]),
+            isLoading: signal(false),
+            errorMessage: signal(null),
+            loadBooks: jest.fn(),
+          },
+        },
+        {
+          provide: ShelfService,
+          useValue: {
+            shelves: signal([]),
+            isLoading: signal(false),
+            errorMessage: signal(null),
+            shelfCount: signal(0),
+            loadShelves: jest.fn(),
+            createShelf: jest.fn(),
+            deleteShelf: jest.fn(),
+          },
+        },
+        {
+          provide: BookshelfFilterService,
+          useValue: {
+            search: signal(''),
+            sort: signal('updatedAt'),
+            sortDir: signal('desc'),
+            language: signal(''),
+            genres: signal([]),
+            chapterMin: signal(null),
+            chapterMax: signal(null),
+            shelf: signal('status:completed'),
+            page: signal(1),
+            pageSize: signal(20),
+            updateFilter: jest.fn().mockResolvedValue(undefined),
+          },
+        },
+      ],
+    });
+
+    const fixture = TestBed.createComponent(BookshelfPageComponent);
+    fixture.detectChanges();
+
+    expect(fixture.nativeElement.textContent).toContain('Completed Title');
+    expect(fixture.nativeElement.textContent).not.toContain('Reading Title');
+  });
+
+  it('shows actionable shelf error message without hiding current bookshelf content', () => {
+    TestBed.configureTestingModule({
+      imports: [BookshelfPageComponent],
+      providers: [
+        {
+          provide: BookService,
+          useValue: {
+            books: signal([
+              {
+                id: 'book-1',
+                userId: 'user-1',
+                title: 'Book A',
+                description: '',
+                score: 8,
+                status: 'reading',
+                genres: ['action'],
+                language: 'en',
+                chapterCount: 20,
+                coverUrl: null,
+                createdAt: new Date('2026-01-01T00:00:00.000Z'),
+                updatedAt: new Date('2026-01-02T00:00:00.000Z'),
+              },
+            ]),
+            isLoading: signal(false),
+            errorMessage: signal(null),
+            loadBooks: jest.fn(),
+          },
+        },
+        {
+          provide: ShelfService,
+          useValue: {
+            shelves: signal([]),
+            isLoading: signal(false),
+            errorMessage: signal('Could not create shelf. db unavailable'),
+            shelfCount: signal(0),
+            loadShelves: jest.fn(),
+            createShelf: jest.fn(),
+            deleteShelf: jest.fn(),
+          },
+        },
+        {
+          provide: BookshelfFilterService,
+          useValue: {
+            search: signal(''),
+            sort: signal('updatedAt'),
+            sortDir: signal('desc'),
+            language: signal(''),
+            genres: signal([]),
+            chapterMin: signal(null),
+            chapterMax: signal(null),
+            shelf: signal('all'),
+            page: signal(1),
+            pageSize: signal(20),
+            updateFilter: jest.fn().mockResolvedValue(undefined),
+          },
+        },
+      ],
+    });
+
+    const fixture = TestBed.createComponent(BookshelfPageComponent);
+    fixture.detectChanges();
+
+    expect(fixture.nativeElement.textContent).toContain('Could not create shelf. db unavailable');
+    expect(fixture.nativeElement.textContent).toContain('Book A');
+  });
 });
