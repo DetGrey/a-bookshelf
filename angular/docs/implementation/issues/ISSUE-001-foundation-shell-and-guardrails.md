@@ -13,17 +13,17 @@
   - As a user, I can load a stable app shell with route placeholders.
 
 ## What to build
-Create the Angular app skeleton and architectural enforcement baseline: standalone components, `OnPush` defaults, strict TypeScript flags, ESLint boundaries rules, root route map, shell layout, SCSS token entrypoint, `SUPABASE_CLIENT` injection token, `APP_INITIALIZER` bootstrap hook, and foundational `Result<T>` error contract types.
+Create the Angular app skeleton and architectural enforcement baseline: standalone components, `OnPush` defaults, strict TypeScript flags, ESLint boundaries rules, root route map, shell layout, SCSS token entrypoint, `SUPABASE_CLIENT` injection token, `provideAppInitializer` bootstrap hook, and foundational `Result<T>` error contract types.
 
 ## Acceptance criteria
-- [ ] `app.config.ts` wires providers, router, `APP_INITIALIZER` (calling `AuthService.init()`), and `SUPABASE_CLIENT` token.
-- [ ] `SUPABASE_CLIENT` injection token is defined in `core/supabase.token.ts` and provided via `useFactory` in `app.config.ts`.
-- [ ] `Result<T>`, `AppError`, and `ErrorCode` enum are defined in `models/result.model.ts` — used by all repository methods from ISSUE-003 onward.
-- [ ] `angular.json` schematics default all generated components to `OnPush`, standalone, and SCSS — no manual flags needed per component.
-- [ ] Route skeleton exists for `/login`, `/signup`, `/bookshelf`, `/dashboard`, `/add`, `/book/:bookId`.
-- [ ] Compiler and lint settings enforce `strict`, `strictTemplates`, `noUncheckedIndexedAccess`, `exactOptionalPropertyTypes`, and `eslint-plugin-boundaries` import rules.
-- [ ] `styles.scss` contains import-only setup and token files are in place.
-- [ ] Minimal shell renders navigation + content outlet without feature logic.
+- [x] `app.config.ts` wires providers, router, `provideAppInitializer` (calling `AuthService.init()`), and `SUPABASE_CLIENT` token.
+- [x] `SUPABASE_CLIENT` injection token is defined in `core/supabase.token.ts` and provided via `useFactory` in `app.config.ts`.
+- [x] `Result<T>`, `AppError`, and `ErrorCode` enum are defined in `models/result.model.ts` — used by all repository methods from ISSUE-003 onward.
+- [x] `angular.json` schematics default all generated components to `OnPush`, standalone, and SCSS — no manual flags needed per component.
+- [x] Route skeleton exists for `/login`, `/signup`, `/bookshelf`, `/dashboard`, `/add`, `/book/:bookId`.
+- [x] Compiler and lint settings enforce `strict`, `strictTemplates`, `noUncheckedIndexedAccess`, `exactOptionalPropertyTypes`, and `eslint-plugin-boundaries` import rules.
+- [x] `styles.scss` contains import-only setup and token files are in place.
+- [x] Minimal shell renders navigation + content outlet without feature logic.
 
 ## Blocked by
 - Blocked by ISSUE-000.

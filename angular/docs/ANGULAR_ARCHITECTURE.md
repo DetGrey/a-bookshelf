@@ -42,7 +42,7 @@ This document is the authoritative architectural reference for the Angular rewri
 | Realtime | `BookService` + `effect()` | Subscription lifecycle tied to auth state, not component lifecycle |
 | Filter state | URL as single source of truth | Filters persist on refresh and are shareable by design |
 | Optimistic updates | In `BookService` with rollback | Signal updated immediately; rolled back on `Result.success === false` |
-| Auth bootstrap | `APP_INITIALIZER` | App renders nothing until auth state is known; guards stay synchronous |
+| Auth bootstrap | `provideAppInitializer` | App renders nothing until auth state is known; guards stay synchronous |
 | Enforcement | ESLint + `@angular-eslint` + `eslint-plugin-boundaries` + this document | Architectural rules are machine-verifiable, not just convention |
 
 ---
@@ -52,7 +52,7 @@ This document is the authoritative architectural reference for the Angular rewri
 ```
 src/
 ├── app/
-│   ├── app.config.ts              # Bootstrap: providers, APP_INITIALIZER, router
+│   ├── app.config.ts              # Bootstrap: providers, provideAppInitializer, router
 │   ├── app.routes.ts              # Root route definitions
 │   │
 │   ├── core/                      # Singleton services, guards, interceptors
@@ -331,14 +331,9 @@ export class AuthService {
 }
 ```
 
-Called in `app.config.ts` via `APP_INITIALIZER`:
+Called in `app.config.ts` via `provideAppInitializer`:
 ```typescript
-{
-  provide: APP_INITIALIZER,
-  useFactory: (auth: AuthService) => () => auth.init(),
-  deps: [AuthService],
-  multi: true
-}
+provideAppInitializer(() => authService.init())
 ```
 
 ---
@@ -444,7 +439,7 @@ export const routes: Routes = [
 
 ### `authGuard`
 
-Reads `AuthService.currentUser` signal synchronously (safe because `APP_INITIALIZER` guarantees auth is resolved before any route activates).
+Reads `AuthService.currentUser` signal synchronously (safe because `provideAppInitializer` guarantees auth is resolved before any route activates).
 
 ### `bookDetailResolver`
 
@@ -644,7 +639,7 @@ Key rules enforced:
     "@angular-eslint/template/strict-attribute-types": "error",
 
     // Import boundaries
-    "boundaries/element-types": ["error", {
+    "boundaries/dependencies": ["error", {
       "default": "disallow",
       "rules": [
         { "from": "features", "allow": ["core", "shared", "models"] },

@@ -47,7 +47,9 @@ export default {
 
 **`setup-jest.ts`**
 ```typescript
-import 'jest-preset-angular/setup-jest';
+import { setupZoneTestEnv } from 'jest-preset-angular/setup-env/zone';
+
+setupZoneTestEnv();
 ```
 
 **`tsconfig.spec.json`**

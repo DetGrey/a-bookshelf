@@ -1,0 +1,25 @@
+.app-shell {
+	min-height: 100dvh;
+	background: var(--page-bg);
+	color: var(--text-primary);
+}
+
+.app-nav {
+	display: flex;
+	gap: 0.75rem;
+	padding: 1rem;
+	border-bottom: 1px solid var(--border);
+}
+
+.app-nav a {
+	color: var(--text-muted);
+	text-decoration: none;
+}
+
+.app-nav a.active-link {
+	color: var(--accent);
+}
+
+.app-content {
+	padding: 1rem;
+}
