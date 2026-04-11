@@ -98,17 +98,17 @@ The read mode already shows a structured section list. Enrich it to match the ca
 - Show related books as titles (resolved from `relatedBooks` array which already has `bookId`; look up in `BookService.books()` for title — same pattern as `BookSearchLinkerComponent`).
 
 ## Acceptance criteria
-- [ ] `BookCardComponent` renders score pill with correct colour-coding for all score ranges.
-- [ ] Language pills show correct emoji flags for EN/JP/KR/CN/ES; plain text for others.
-- [ ] Genre pills emit `genreToggled` on click; active genres are visually distinguished.
-- [ ] Notes line renders with 📝 prefix when non-empty; hidden when null/empty.
-- [ ] "Latest chapter" and "Last read" display correctly in card footer.
-- [ ] "+ Shelf" dropdown lists all custom shelves, marks active ones, emits `shelfToggled` on selection.
-- [ ] Compact mode hides the correct fields.
-- [ ] `BookshelfPageComponent` wires genre-toggle and shelf-toggle events through to filter/shelf services.
-- [ ] Book Details read mode shows all enriched fields (notes, times-read, latest-chapter, last-uploaded, original-language, source names, related-book titles).
-- [ ] Tests cover: score colour thresholds, genre toggle wiring, shelf dropdown open/close/toggle, compact mode hiding.
-- [ ] Existing test baseline preserved.
+- [x] `BookCardComponent` renders score pill with correct colour-coding for all score ranges.
+- [x] Language pills show correct emoji flags for EN/JP/KR/CN/ES; plain text for others.
+- [x] Genre pills emit `genreToggled` on click; active genres are visually distinguished.
+- [x] Notes line renders with 📝 prefix when non-empty; hidden when null/empty.
+- [x] "Latest chapter" and "Last read" display correctly in card footer.
+- [x] "+ Shelf" dropdown lists all custom shelves, marks active ones, emits `shelfToggled` on selection.
+- [x] Compact mode hides the correct fields.
+- [x] `BookshelfPageComponent` wires genre-toggle and shelf-toggle events through to filter/shelf services.
+- [x] Book Details read mode shows all enriched fields (notes, times-read, latest-chapter, last-uploaded, original-language, source names, related-book titles).
+- [x] Tests cover: score colour thresholds, genre toggle wiring, shelf dropdown open/close/toggle, compact mode hiding.
+- [x] Existing test baseline preserved.
 
 ## Blocked by
 - Blocked by ISSUE-016 (needs `notes`, `timesRead`, `lastRead`, `latestChapter`, `lastUploadedAt`, `originalLanguage` on the `Book` model).
