@@ -187,7 +187,7 @@ import { escapeRegex } from '../../shared/utils/string.util';
             </div>
 
             <div class="block mt-12">
-              <div class="filter-header" (click)="genreFilterOpen.set(!genreFilterOpen())">
+              <div class="filter-header" data-testid="genre-filter-toggle" (click)="genreFilterOpen.set(!genreFilterOpen())">
                 <p class="eyebrow">Filter by Genre {{ genreFilterOpen() ? '▼' : '▶' }}</p>
 
                 @if (filters.genres().length > 0) {
@@ -252,7 +252,7 @@ import { escapeRegex } from '../../shared/utils/string.util';
             </div>
 
             <div class="block mt-12">
-              <div class="filter-header" (click)="chapterFilterOpen.set(!chapterFilterOpen())">
+              <div class="filter-header" data-testid="chapter-filter-toggle" (click)="chapterFilterOpen.set(!chapterFilterOpen())">
                 <p class="eyebrow">Filter by Chapter Count {{ chapterFilterOpen() ? '▼' : '▶' }}</p>
 
                 @if (filters.chapterValue() !== null) {
@@ -412,8 +412,8 @@ export class BookshelfPageComponent {
   readonly statusOpen = signal(true);
   readonly customOpen = signal(true);
   readonly showNewShelfForm = signal(true);
-  readonly genreFilterOpen = signal(true);
-  readonly chapterFilterOpen = signal(true);
+  readonly genreFilterOpen = signal(false);
+  readonly chapterFilterOpen = signal(false);
   readonly statusShelves = computed(() => {
     const source = this.books();
     return this.statusOptions.map((status) => ({

@@ -13,6 +13,7 @@ import { BookService } from '../../../core/book/book.service';
     <section class="card book-search-linker">
       <button
         type="button"
+        data-testid="book-search-linker-toggle"
         class="ghost collapsible-header"
         [class.expanded]="!isCollapsed()"
         (click)="isCollapsed.set(!isCollapsed())"
@@ -82,7 +83,7 @@ export class BookSearchLinkerComponent {
 
   readonly control = input.required<FormControl<string[]>>();
   readonly searchQuery = signal('');
-  readonly isCollapsed = signal(false);
+  readonly isCollapsed = signal(true);
 
   readonly suggestions = computed(() => {
     const query = this.searchQuery().trim().toLowerCase();

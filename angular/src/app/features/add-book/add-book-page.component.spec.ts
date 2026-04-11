@@ -74,6 +74,9 @@ describe('AddBookPageComponent', () => {
     titleInput.value = 'Solo Leveling';
     titleInput.dispatchEvent(new Event('input'));
 
+    fixture.debugElement.query(By.css('[data-testid="source-manager-toggle"]')).nativeElement.click();
+    fixture.detectChanges();
+
     const sourceInput = fixture.debugElement.query(By.css('[data-testid="source-url-input"]')).nativeElement as HTMLInputElement;
     sourceInput.value = 'https://example.com/solo-leveling';
     sourceInput.dispatchEvent(new Event('input'));
@@ -87,6 +90,9 @@ describe('AddBookPageComponent', () => {
 
     const addShelfButton = fixture.debugElement.query(By.css('[data-testid="add-shelf-button"]')).nativeElement as HTMLButtonElement;
     addShelfButton.click();
+
+    fixture.debugElement.query(By.css('[data-testid="book-search-linker-toggle"]')).nativeElement.click();
+    fixture.detectChanges();
 
     // Search for the related book by title, then select it from suggestions
     const relatedInput = fixture.debugElement.query(By.css('[data-testid="related-book-input"]')).nativeElement as HTMLInputElement;

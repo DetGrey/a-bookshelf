@@ -51,25 +51,65 @@ type AddBookFormGroup = FormGroup<{
   ],
   template: `
     <section class="page narrow add-book-page">
-      <h1>Add Book</h1>
+      <div class="page-head">
+        <div>
+          <p class="eyebrow">Smart Add</p>
+          <h1>Paste a link, capture the details</h1>
+          <p class="muted">Connects to the Supabase Edge Function fetch-metadata to pull Open Graph data from supported sites.</p>
+        </div>
+      </div>
 
-      <form class="card stack" [formGroup]="bookForm" (ngSubmit)="onSubmit()">
+      <section class="card add-book-fetch">
         <app-metadata-fetcher [form]="bookForm" />
+      </section>
+
+      <form class="card stack add-book-form" [formGroup]="bookForm" (ngSubmit)="onSubmit()">
+        <p class="eyebrow">Book Details</p>
 
         <app-book-form-fields [form]="bookForm" />
 
         <app-source-manager [sources]="bookForm.controls.sources" />
-        <app-shelf-selector [control]="bookForm.controls.shelves" [availableShelves]="shelfService.shelves()" />
         <app-book-search-linker [control]="bookForm.controls.relatedBookIds" />
-
-        <app-cover-image [src]="bookForm.controls.coverUrl.value" [alt]="bookForm.controls.title.value || 'Book cover preview'" />
+        <app-shelf-selector [control]="bookForm.controls.shelves" [availableShelves]="shelfService.shelves()" />
 
         @if (localError()) {
           <p class="error">{{ localError() }}</p>
         }
 
-        <button class="primary" data-testid="save-book-button" type="submit" [disabled]="isSubmitting()">Save book</button>
+        <div class="save-row">
+          <button class="ghost" data-testid="save-book-button" type="submit" [disabled]="isSubmitting()">
+            {{ isSubmitting() ? 'Saving…' : 'Save to Library' }}
+          </button>
+        </div>
       </form>
+
+      @if (showPreview()) {
+        <section class="card metadata-preview-card">
+          <app-cover-image class="preview-thumb" [src]="bookForm.controls.coverUrl.value" [alt]="bookForm.controls.title.value || 'Book cover preview'" />
+          <div class="stack">
+            <p class="eyebrow">Preview</p>
+            <h2>{{ bookForm.controls.title.value || 'Untitled' }}</h2>
+            <p class="muted">{{ bookForm.controls.description.value || 'No description yet.' }}</p>
+
+            <div class="pill-row">
+              <span class="pill">{{ statusLabel() }}</span>
+              @if (bookForm.controls.lastRead.value) {
+                <span class="pill ghost">Last: {{ bookForm.controls.lastRead.value }}</span>
+              }
+            </div>
+
+            @if (previewGenres().length > 0) {
+              <div class="pill-row mt-8">
+                @for (genre of previewGenres(); track genre) {
+                  <span class="pill ghost">{{ genre }}</span>
+                }
+              </div>
+            }
+
+            <p class="muted">Ready to save to your library.</p>
+          </div>
+        </section>
+      }
     </section>
   `,
   changeDetection: ChangeDetectionStrategy.OnPush,
@@ -85,6 +125,15 @@ export class AddBookPageComponent {
 
   readonly isSubmitting = signal(false);
   readonly localError = signal<string | null>(null);
+
+  readonly statusLabels: Record<'reading' | 'plan_to_read' | 'waiting' | 'completed' | 'dropped' | 'on_hold', string> = {
+    reading: 'Reading',
+    plan_to_read: 'Plan to read',
+    waiting: 'Waiting',
+    completed: 'Completed',
+    dropped: 'Dropped',
+    on_hold: 'On hold',
+  };
 
   readonly bookForm: AddBookFormGroup = new FormGroup({
     title: new FormControl('', { nonNullable: true, validators: [Validators.required] }),
@@ -126,6 +175,27 @@ export class AddBookPageComponent {
     }
 
     await this.router.navigate(['/bookshelf']);
+  }
+
+  showPreview(): boolean {
+    return Boolean(
+      this.bookForm.controls.title.value.trim() ||
+      this.bookForm.controls.coverUrl.value.trim() ||
+      this.bookForm.controls.description.value.trim() ||
+      this.previewGenres().length > 0,
+    );
+  }
+
+  previewGenres(): string[] {
+    return this.bookForm.controls.genres.value
+      .split(',')
+      .map((genre) => genre.trim())
+      .filter((genre) => genre.length > 0);
+  }
+
+  statusLabel(): string {
+    const status = this.bookForm.controls.status.value ?? 'plan_to_read';
+    return this.statusLabels[status] ?? status;
   }
 
   private toFormModel(): BookFormModel {

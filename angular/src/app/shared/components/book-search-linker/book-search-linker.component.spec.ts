@@ -28,6 +28,12 @@ const makeBook = (id: string, title: string) => ({
 });
 
 describe('BookSearchLinkerComponent', () => {
+  const openSection = (fixture: ReturnType<typeof TestBed.createComponent<BookSearchLinkerComponent>>) => {
+    const toggle = fixture.debugElement.query(By.css('[data-testid="book-search-linker-toggle"]')).nativeElement as HTMLButtonElement;
+    toggle.click();
+    fixture.detectChanges();
+  };
+
   it('shows suggestions matching the typed query', () => {
     const control = new FormControl<string[]>([], { nonNullable: true });
 
@@ -50,6 +56,7 @@ describe('BookSearchLinkerComponent', () => {
     const fixture = TestBed.createComponent(BookSearchLinkerComponent);
     fixture.componentRef.setInput('control', control);
     fixture.detectChanges();
+    openSection(fixture);
 
     const input = fixture.debugElement.query(By.css('[data-testid="related-book-input"]')).nativeElement as HTMLInputElement;
     input.value = 'solo';
@@ -84,6 +91,7 @@ describe('BookSearchLinkerComponent', () => {
     const fixture = TestBed.createComponent(BookSearchLinkerComponent);
     fixture.componentRef.setInput('control', control);
     fixture.detectChanges();
+    openSection(fixture);
 
     const input = fixture.debugElement.query(By.css('[data-testid="related-book-input"]')).nativeElement as HTMLInputElement;
     input.value = 'solo';
@@ -114,6 +122,7 @@ describe('BookSearchLinkerComponent', () => {
     const fixture = TestBed.createComponent(BookSearchLinkerComponent);
     fixture.componentRef.setInput('control', control);
     fixture.detectChanges();
+    openSection(fixture);
 
     expect(fixture.debugElement.query(By.css('[data-testid="related-book-suggestions"]'))).toBeNull();
   });
@@ -136,6 +145,7 @@ describe('BookSearchLinkerComponent', () => {
     const fixture = TestBed.createComponent(BookSearchLinkerComponent);
     fixture.componentRef.setInput('control', control);
     fixture.detectChanges();
+    openSection(fixture);
 
     const input = fixture.debugElement.query(By.css('[data-testid="related-book-input"]')).nativeElement as HTMLInputElement;
     input.value = 'solo';
@@ -169,6 +179,7 @@ describe('BookSearchLinkerComponent', () => {
     const fixture = TestBed.createComponent(BookSearchLinkerComponent);
     fixture.componentRef.setInput('control', control);
     fixture.detectChanges();
+    openSection(fixture);
 
     expect(fixture.nativeElement.textContent).toContain('Solo Leveling');
   });
@@ -191,6 +202,7 @@ describe('BookSearchLinkerComponent', () => {
     const fixture = TestBed.createComponent(BookSearchLinkerComponent);
     fixture.componentRef.setInput('control', control);
     fixture.detectChanges();
+    openSection(fixture);
 
     expect(fixture.nativeElement.textContent).toContain('unknown-id');
   });
@@ -216,6 +228,7 @@ describe('BookSearchLinkerComponent', () => {
     const fixture = TestBed.createComponent(BookSearchLinkerComponent);
     fixture.componentRef.setInput('control', control);
     fixture.detectChanges();
+    openSection(fixture);
 
     const removeButton = fixture.debugElement.query(By.css('[data-testid="remove-related-book-1"]')).nativeElement as HTMLButtonElement;
     removeButton.click();

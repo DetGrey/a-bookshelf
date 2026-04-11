@@ -328,6 +328,9 @@ describe('BookshelfPageComponent', () => {
     const fixture = TestBed.createComponent(BookshelfPageComponent);
     fixture.detectChanges();
 
+    fixture.debugElement.query(By.css('[data-testid="genre-filter-toggle"]')).nativeElement.click();
+    fixture.detectChanges();
+
     fixture.debugElement.query(By.css('[data-testid="remove-genre-action"]')).nativeElement.click();
     expect(updateFilter).toHaveBeenCalledWith('genres', ['drama']);
   });
@@ -355,6 +358,9 @@ describe('BookshelfPageComponent', () => {
     const fixture = TestBed.createComponent(BookshelfPageComponent);
     fixture.detectChanges();
 
+    fixture.debugElement.query(By.css('[data-testid="genre-filter-toggle"]')).nativeElement.click();
+    fixture.detectChanges();
+
     fixture.debugElement.query(By.css('[data-testid="genre-chip-Action"]')).nativeElement.click();
     expect(updateFilter).toHaveBeenCalledWith('genres', []);
   });
@@ -378,6 +384,9 @@ describe('BookshelfPageComponent', () => {
     });
 
     const fixture = TestBed.createComponent(BookshelfPageComponent);
+    fixture.detectChanges();
+
+    fixture.debugElement.query(By.css('[data-testid="genre-filter-toggle"]')).nativeElement.click();
     fixture.detectChanges();
 
     const selected = fixture.debugElement.query(By.css('[data-testid="genre-chip-action"]')).nativeElement as HTMLButtonElement;
@@ -407,6 +416,9 @@ describe('BookshelfPageComponent', () => {
         ],
       });
       const fixture = TestBed.createComponent(BookshelfPageComponent);
+      fixture.detectChanges();
+
+      fixture.debugElement.query(By.css('[data-testid="chapter-filter-toggle"]')).nativeElement.click();
       fixture.detectChanges();
 
       const preset50 = fixture.debugElement.query(By.css('[data-testid="chapter-preset-50"]')).nativeElement;

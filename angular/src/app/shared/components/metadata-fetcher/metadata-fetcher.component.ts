@@ -8,27 +8,31 @@ import { buildMetadataPatch, MetadataPayload } from './metadata-fetcher.mapper';
   selector: 'app-metadata-fetcher',
   standalone: true,
   imports: [FormsModule, ReactiveFormsModule, CoverImageComponent],
+  styleUrl: './metadata-fetcher.component.scss',
   template: `
     <fieldset class="metadata-fetcher">
-      <legend>Metadata fetcher</legend>
+      <label class="field">
+        <span>Source URL</span>
+        <p class="muted">Right now it only works with bato pages.</p>
+        <div class="fetch-controls">
+          <input
+            data-testid="metadata-url-input"
+            [(ngModel)]="sourceUrl"
+            name="metadataSourceUrl"
+            placeholder="https://example.com/volume-12"
+          />
 
-      <div class="fetch-controls">
-        <input
-          data-testid="metadata-url-input"
-          [(ngModel)]="sourceUrl"
-          name="metadataSourceUrl"
-          placeholder="Paste source URL"
-        />
-
-        <button
-          data-testid="metadata-fetch-button"
-          type="button"
-          [disabled]="isLoading() || !sourceUrl.trim()"
-          (click)="fetchMetadata()"
-        >
-          @if (isLoading()) { Fetching... } @else { Fetch metadata }
-        </button>
-      </div>
+          <button
+            data-testid="metadata-fetch-button"
+            type="button"
+            class="primary"
+            [disabled]="isLoading() || !sourceUrl.trim()"
+            (click)="fetchMetadata()"
+          >
+            @if (isLoading()) { Fetching… } @else { Fetch metadata }
+          </button>
+        </div>
+      </label>
 
       @if (errorMessage(); as msg) {
         <p class="error-text" data-testid="fetch-error">{{ msg }}</p>

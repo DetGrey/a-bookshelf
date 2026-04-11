@@ -2,11 +2,47 @@
   display: block;
 }
 
-.add-book-page h1 {
-  margin-bottom: var(--space-2);
+.add-book-page {
+  gap: 16px;
 }
 
-.add-book-page form {
-  display: grid;
-  gap: var(--space-3);
+.add-book-fetch {
+  padding: 14px;
+}
+
+.add-book-form {
+  gap: 14px;
+}
+
+.save-row {
+  display: flex;
+  gap: 8px;
+}
+
+.metadata-preview-card {
+  display: flex;
+  flex-direction: column;
+  gap: 14px;
+}
+
+.preview-thumb {
+  width: 96px;
+  height: 136px;
+}
+
+.mt-8 {
+  margin-top: 8px;
+}
+
+@media (min-width: 768px) {
+  .metadata-preview-card {
+    display: grid;
+    grid-template-columns: 160px 1fr;
+    align-items: start;
+  }
+
+  .preview-thumb {
+    width: 140px;
+    height: 200px;
+  }
 }

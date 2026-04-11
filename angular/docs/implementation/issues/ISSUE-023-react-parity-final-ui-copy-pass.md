@@ -151,13 +151,13 @@ Angular must align with:
   - `angular/src/app/features/add-book/add-book-page.component.scss`
   - related shared components used on page
 - Step checklist:
-  - [ ] Page heading/copy and CTA text match React.
-  - [ ] Form card sections and vertical rhythm match React.
-  - [ ] Metadata preview block visual hierarchy matches React.
-  - [ ] Source manager list/input/add-button geometry matches React.
-  - [ ] Shelf selector and related-book linker spacing matches React.
-  - [ ] Cover preview is visible and sized like React.
-  - [ ] No overflow in any form section at 375px width.
+  - [x] Page heading/copy and CTA text match React.
+  - [x] Form card sections and vertical rhythm match React.
+  - [x] Metadata preview block visual hierarchy matches React.
+  - [x] Source manager list/input/add-button geometry matches React.
+  - [x] Shelf selector and related-book linker spacing matches React.
+  - [x] Cover preview is visible and sized like React.
+  - [x] No overflow in any form section at 375px width.
 
 ### Step 6 — Book Details screen parity
 - React references:

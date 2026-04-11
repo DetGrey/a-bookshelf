@@ -17,6 +17,12 @@ function makeSourcesArray(items: Array<{ siteName: string; url: string }> = []):
 }
 
 describe('SourceManagerComponent', () => {
+  const openSection = (fixture: ReturnType<typeof TestBed.createComponent<SourceManagerComponent>>) => {
+    const toggle = fixture.debugElement.query(By.css('[data-testid="source-manager-toggle"]')).nativeElement as HTMLButtonElement;
+    toggle.click();
+    fixture.detectChanges();
+  };
+
   it('adds a source to the FormArray when URL is provided', () => {
     const sources = makeSourcesArray();
 
@@ -27,6 +33,7 @@ describe('SourceManagerComponent', () => {
     const fixture = TestBed.createComponent(SourceManagerComponent);
     fixture.componentRef.setInput('sources', sources);
     fixture.detectChanges();
+    openSection(fixture);
 
     const urlInput = fixture.debugElement.query(By.css('[data-testid="source-url-input"]')).nativeElement as HTMLInputElement;
     urlInput.value = 'https://example.com/book';
@@ -51,6 +58,7 @@ describe('SourceManagerComponent', () => {
     const fixture = TestBed.createComponent(SourceManagerComponent);
     fixture.componentRef.setInput('sources', sources);
     fixture.detectChanges();
+    openSection(fixture);
 
     fixture.componentInstance.pendingUrl = 'https://example.com/book';
     fixture.componentInstance.pendingSiteName = 'Example';
@@ -72,6 +80,7 @@ describe('SourceManagerComponent', () => {
     const fixture = TestBed.createComponent(SourceManagerComponent);
     fixture.componentRef.setInput('sources', sources);
     fixture.detectChanges();
+    openSection(fixture);
 
     fixture.componentInstance.addSource();
 
@@ -91,6 +100,7 @@ describe('SourceManagerComponent', () => {
     const fixture = TestBed.createComponent(SourceManagerComponent);
     fixture.componentRef.setInput('sources', sources);
     fixture.detectChanges();
+    openSection(fixture);
 
     const removeButton = fixture.debugElement.query(By.css('[data-testid="remove-source-0"]')).nativeElement as HTMLButtonElement;
     removeButton.click();

@@ -15,6 +15,7 @@ type SourceFormGroup = FormGroup<{
     <section class="card source-manager">
       <button
         type="button"
+        data-testid="source-manager-toggle"
         class="ghost collapsible-header"
         [class.expanded]="!isCollapsed"
         (click)="isCollapsed = !isCollapsed"
@@ -84,7 +85,7 @@ export class SourceManagerComponent {
 
   pendingUrl = '';
   pendingSiteName = '';
-  isCollapsed = false;
+  isCollapsed = true;
 
   suggestSiteName(): void {
     if (this.pendingSiteName) {
