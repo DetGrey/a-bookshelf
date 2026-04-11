@@ -16,13 +16,13 @@
 Implement `BookshelfFilterService` as the sole query-param owner and wire search/sort/language/genre/chapter filters plus pagination. URL state must remain the single source of truth. The service reads `ActivatedRoute` query params into typed signals and exposes `updateFilter()` — the only public mutation method. Components never touch the router directly.
 
 ## Acceptance criteria
-- [ ] `BookshelfFilterService` is the only class that calls `Router.navigate()` for filter state — components call `filterService.updateFilter()` only.
-- [ ] No component inside `features/bookshelf/` imports `Router` directly for filter-state purposes.
-- [ ] Filter controls update URL query params and restore correctly on reload.
-- [ ] Sorting/filtering logic follows documented ordering and semantics.
-- [ ] Pagination works with page size and state persistence rules.
-- [ ] Scroll and selected-anchor memory restore after returning from details.
-- [ ] Tests cover query-param derivation, `updateFilter()` navigation calls, and round-trips.
+- [x] `BookshelfFilterService` is the only class that calls `Router.navigate()` for filter state — components call `filterService.updateFilter()` only.
+- [x] No component inside `features/bookshelf/` imports `Router` directly for filter-state purposes.
+- [x] Filter controls update URL query params and restore correctly on reload.
+- [x] Sorting/filtering logic follows documented ordering and semantics.
+- [x] Pagination works with page size and state persistence rules.
+- [x] Scroll and selected-anchor memory restore after returning from details.
+- [x] Tests cover query-param derivation, `updateFilter()` navigation calls, and round-trips.
 
 ## Blocked by
 - Blocked by ISSUE-003.

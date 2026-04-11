@@ -1,4 +1,4 @@
-import { ChangeDetectionStrategy, Component, input } from '@angular/core';
+import { ChangeDetectionStrategy, Component, input, output } from '@angular/core';
 import { Book } from '../../../models/book.model';
 import { BookCardComponent } from '../book-card/book-card.component';
 
@@ -9,7 +9,7 @@ import { BookCardComponent } from '../book-card/book-card.component';
   template: `
     <section class="book-grid">
       @for (book of books(); track book.id) {
-        <app-book-card [book]="book" />
+        <app-book-card [book]="book" (opened)="opened.emit($event)" />
       }
     </section>
   `,
@@ -17,4 +17,5 @@ import { BookCardComponent } from '../book-card/book-card.component';
 })
 export class BookGridComponent {
   readonly books = input<readonly Book[]>([]);
+  readonly opened = output<string>();
 }
