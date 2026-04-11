@@ -5,14 +5,21 @@ import { SignupPageComponent } from './features/auth/signup/signup-page.componen
 import { BookDetailsPageComponent } from './features/book-details/book-details-page.component';
 import { BookshelfPageComponent } from './features/bookshelf/bookshelf-page.component';
 import { DashboardPageComponent } from './features/dashboard/dashboard-page.component';
+import { authGuard } from './core/auth/auth.guard';
 
 export const routes: Routes = [
-	{ path: '', component: DashboardPageComponent },
+	{ path: '', redirectTo: 'bookshelf', pathMatch: 'full' },
 	{ path: 'login', component: LoginPageComponent },
 	{ path: 'signup', component: SignupPageComponent },
-	{ path: 'bookshelf', component: BookshelfPageComponent },
-	{ path: 'dashboard', component: DashboardPageComponent },
-	{ path: 'add', component: AddBookPageComponent },
-	{ path: 'book/:bookId', component: BookDetailsPageComponent },
+	{
+		path: '',
+		canActivate: [authGuard],
+		children: [
+			{ path: 'bookshelf', component: BookshelfPageComponent },
+			{ path: 'dashboard', component: DashboardPageComponent },
+			{ path: 'add', component: AddBookPageComponent },
+			{ path: 'book/:bookId', component: BookDetailsPageComponent },
+		],
+	},
 	{ path: '**', redirectTo: '' },
 ];

@@ -4,11 +4,12 @@ import { routes } from './app.routes';
 
 describe('foundation route map and shell', () => {
   it('defines required route skeleton entries', () => {
-    const paths = routes.map((route) => route.path);
+    const topLevelPaths = routes.map((route) => route.path);
+    const guardedChildren = routes.find((route) => route.canActivate)?.children ?? [];
+    const guardedPaths = guardedChildren.map((route) => route.path);
 
-    expect(paths).toEqual(expect.arrayContaining([
-      'login',
-      'signup',
+    expect(topLevelPaths).toEqual(expect.arrayContaining(['login', 'signup']));
+    expect(guardedPaths).toEqual(expect.arrayContaining([
       'bookshelf',
       'dashboard',
       'add',

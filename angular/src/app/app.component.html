@@ -1,11 +1,17 @@
 <div class="app-shell">
-  <nav class="app-nav">
-    <a routerLink="/dashboard" routerLinkActive="active-link">Dashboard</a>
-    <a routerLink="/bookshelf" routerLinkActive="active-link">Bookshelf</a>
-    <a routerLink="/add" routerLinkActive="active-link">Add</a>
-    <a routerLink="/login" routerLinkActive="active-link">Login</a>
-    <a routerLink="/signup" routerLinkActive="active-link">Signup</a>
-  </nav>
+  @if (showNavigation()) {
+    <nav class="app-nav">
+      @if (auth.currentUser()) {
+        <a routerLink="/dashboard" routerLinkActive="active-link">Dashboard</a>
+        <a routerLink="/bookshelf" routerLinkActive="active-link">Bookshelf</a>
+        <a routerLink="/add" routerLinkActive="active-link">Add</a>
+        <button type="button" (click)="logout()">Logout</button>
+      } @else {
+        <a routerLink="/login" routerLinkActive="active-link">Login</a>
+        <a routerLink="/signup" routerLinkActive="active-link">Signup</a>
+      }
+    </nav>
+  }
 
   <main class="app-content">
     <router-outlet />

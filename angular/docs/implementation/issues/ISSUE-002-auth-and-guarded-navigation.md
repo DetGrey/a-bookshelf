@@ -17,12 +17,12 @@
 Implement end-to-end auth for login/signup/logout with `AuthService` signal state, guard enforcement, loading states, and redirect-back behavior after successful authentication. `AuthService.init()` is the function called by `provideAppInitializer` (wired in ISSUE-001) — it resolves the session before any route activates.
 
 ## Acceptance criteria
-- [ ] `AuthService` exposes a `currentUser` signal and an `isInitialised` signal; `init()` populates both by calling `supabase.auth.getSession()`.
-- [ ] `authGuard` reads `currentUser` synchronously — this is safe because `provideAppInitializer` guarantees `init()` has resolved before any route guard runs.
-- [ ] Login and signup screens submit to auth backend and show loading + error/success states.
-- [ ] Successful login redirects to intended protected destination.
-- [ ] Navigation visibility rules are applied on auth pages versus protected pages.
-- [ ] Auth flow tests cover success, failure, redirect cases, and the `init()` bootstrap path.
+- [x] `AuthService` exposes a `currentUser` signal and an `isInitialised` signal; `init()` populates both by calling `supabase.auth.getSession()`.
+- [x] `authGuard` reads `currentUser` synchronously — this is safe because `provideAppInitializer` guarantees `init()` has resolved before any route guard runs.
+- [x] Login and signup screens submit to auth backend and show loading + error/success states.
+- [x] Successful login redirects to intended protected destination.
+- [x] Navigation visibility rules are applied on auth pages versus protected pages.
+- [x] Auth flow tests cover success, failure, redirect cases, and the `init()` bootstrap path.
 
 ## Blocked by
 - Blocked by ISSUE-001.
