@@ -133,13 +133,13 @@ Angular must align with:
   - `angular/src/app/features/bookshelf/bookshelf-page.component.ts`
   - `angular/src/styles/_layout.scss`
 - Step checklist:
-  - [ ] Sidebar width/sticky behavior/button rows match React.
-  - [ ] Shelf item active/hover states match React.
-  - [ ] Filter controls (search/sort/language/genre/chapter) spacing and wrapping match React.
-  - [ ] Genre any/all and chapter min/max toggles visually match React pills.
-  - [ ] Pagination card/layout/button sizing matches React.
-  - [ ] Book grid density and breakpoints match React.
-  - [ ] No input/button overflow in filter rows on mobile.
+  - [x] Sidebar width/sticky behavior/button rows match React.
+  - [x] Shelf item active/hover states match React.
+  - [x] Filter controls (search/sort/language/genre/chapter) spacing and wrapping match React.
+  - [x] Genre any/all and chapter min/max toggles visually match React pills.
+  - [x] Pagination card/layout/button sizing matches React.
+  - [x] Book grid density and breakpoints match React.
+  - [x] No input/button overflow in filter rows on mobile.
 
 ### Step 5 — Add Book screen parity
 - React references:

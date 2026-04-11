@@ -13,213 +13,379 @@ import { escapeRegex } from '../../shared/utils/string.util';
   standalone: true,
   imports: [BookGridComponent, FormsModule],
   template: `
-    <section class="bookshelf-layout">
-      <aside>
-        <h2>Shelves</h2>
-        <button data-testid="shelf-all" type="button" [class.active]="isShelfSelected('all')" (click)="selectShelf('all')">
-          All ({{ books().length }})
-        </button>
+    <div class="page">
+      <div class="page-head">
+        <div>
+          <p class="eyebrow">Library</p>
+          <h1>Bookshelf</h1>
+          <p class="muted">Browse, filter, and organize your collection</p>
+        </div>
+        <a href="/add" class="primary">Smart Add</a>
+      </div>
 
-        @for (statusShelf of statusShelves(); track statusShelf.key) {
-          <button
-            [attr.data-testid]="'shelf-status-' + statusShelf.value"
-            type="button"
-            [class.active]="isShelfSelected(statusShelf.key)"
-            (click)="selectShelf(statusShelf.key)"
-          >
-            {{ statusShelf.label }} ({{ statusShelf.count }})
-          </button>
-        }
-
-        <h3>Custom shelves</h3>
-        @for (shelf of customShelves(); track shelf.id) {
-          <div>
-            <button
-              [attr.data-testid]="'shelf-custom-' + shelf.id"
-              type="button"
-              [class.active]="isShelfSelected('custom:' + shelf.id)"
-              (click)="selectShelf('custom:' + shelf.id)"
-            >
-              {{ shelf.name }} ({{ shelf.bookCount }})
-            </button>
-            <button [attr.data-testid]="'delete-shelf-' + shelf.id" type="button" (click)="deleteCustomShelf(shelf.id)">Delete</button>
-          </div>
-        }
-
-        <form (submit)="onCreateShelfSubmit($event)">
-          <input
-            data-testid="create-shelf-input"
-            name="newShelfName"
-            [(ngModel)]="newShelfName"
-            placeholder="New shelf"
-          />
-          <button data-testid="create-shelf-button" type="submit">Create shelf</button>
-        </form>
-
-        @if (sidebarMessage()) {
-          <p>{{ sidebarMessage() }}</p>
-        }
-      </aside>
-
-      <div>
-        <h1>Bookshelf</h1>
-
-        @if (isLoading()) {
-          <p>Loading library...</p>
-        } @else if (errorMessage()) {
-          <p>{{ errorMessage() }}</p>
-        } @else if (books().length === 0) {
-          <p>No books yet.</p>
-        } @else {
-          @if (isWaitingShelfContext()) {
-            <button
-              data-testid="waiting-updates-button"
-              type="button"
-              [disabled]="waitingUpdatesRunning()"
-              (click)="runWaitingUpdates()"
-            >
-              Check waiting updates
-            </button>
-          }
-
-          @if (waitingUpdateProgress()) {
-            <p>
-              Progress: {{ waitingUpdateProgress()!.processed }} / {{ waitingUpdateProgress()!.total }}
-            </p>
-          }
-
-          @if (waitingUpdateError()) {
-            <p>{{ waitingUpdateError() }}</p>
-          }
-
-          @if (waitingUpdateSummary()) {
-            <div>
-              <p>Updated: {{ waitingUpdateSummary()!.updatedCount }}</p>
-              <p>Skipped: {{ waitingUpdateSummary()!.skippedCount }}</p>
-              <p>Errors: {{ waitingUpdateSummary()!.errorCount }}</p>
-
-              @if (waitingErrorDetails().length > 0) {
-                <ul>
-                  @for (item of waitingErrorDetails(); track item.bookId) {
-                    <li>{{ item.title }}: {{ item.detail }}</li>
-                  }
-                </ul>
-              }
-            </div>
-          }
-
-          <div class="bookshelf-controls">
-            <input
-              data-testid="search-input"
-              [value]="filters.search()"
-              (input)="onSearchInput($event)"
-              placeholder="Search books"
-            />
-
-            <select [value]="filters.sort()" (change)="onSortChange($event)">
-              @if (filters.search()) {
-                <option value="relevance">Relevance</option>
-              }
-              <option value="updatedAt">Updated</option>
-              <option value="createdAt">Created</option>
-              <option value="title">Title</option>
-              <option value="score">Score</option>
-              <option value="chapterCount">Chapter count</option>
-              <option value="status">Status</option>
-            </select>
-
-            <select [value]="filters.sortDir()" (change)="onSortDirChange($event)">
-              <option value="desc">Desc</option>
-              <option value="asc">Asc</option>
-            </select>
-
-            <input
-              [value]="filters.language()"
-              (input)="onLanguageInput($event)"
-              placeholder="Language"
-            />
-
-            <div>
-              <input
-                data-testid="genre-input"
-                [value]="genreInput()"
-                (input)="onGenreInput($event)"
-                (keydown.enter)="onGenreEnter($event)"
-                placeholder="Add genre filter"
-              />
-              <button type="button" data-testid="add-genre-button" (click)="addGenreFromInput()">Add</button>
-              
-              @if (filters.genres().length > 0) {
-                <div class="genre-mode-toggle">
-                  <button 
-                    type="button" 
-                    data-testid="genre-mode-any" 
-                    [class.active]="filters.genreMode() === 'any'" 
-                    (click)="setGenreMode('any')"
-                  >
-                    Any
-                  </button>
-                  <button 
-                    type="button" 
-                    data-testid="genre-mode-all" 
-                    [class.active]="filters.genreMode() === 'all'" 
-                    (click)="setGenreMode('all')"
-                  >
-                    All
-                  </button>
-                </div>
-              }
-
-              @for (genre of filters.genres(); track genre) {
-                <span>
-                  {{ genre }}
-                  <button type="button" [attr.data-testid]="'remove-genre-' + genre" (click)="removeGenreTag(genre)">×</button>
-                </span>
-              }
+      <section class="bookshelf-layout">
+        <aside class="shelf-sidebar">
+          <div class="block">
+            <div class="block-head cursor-pointer" (click)="statusOpen.set(!statusOpen())">
+              <p class="eyebrow">Status {{ statusOpen() ? '▼' : '▶' }}</p>
             </div>
 
-            <div class="chapter-filters">
-              <div class="chapter-presets">
-                <button type="button" data-testid="chapter-preset-clear" [class.active]="filters.chapterValue() === null" (click)="setChapterValue(null)">Any</button>
-                @for (preset of chapterPresets; track preset) {
-                  <button 
-                    type="button" 
-                    [attr.data-testid]="'chapter-preset-' + preset" 
-                    [class.active]="filters.chapterValue() === preset" 
-                    (click)="setChapterValue(preset)"
+            @if (statusOpen()) {
+              <nav class="shelf-list">
+                <button
+                  data-testid="shelf-all"
+                  type="button"
+                  class="shelf-item"
+                  [class.active]="isShelfSelected('all')"
+                  (click)="selectShelf('all')"
+                >
+                  <div>
+                    <span>All Books<span class="sr-only"> ({{ books().length }})</span></span>
+                    <span class="shelf-count">{{ books().length }}</span>
+                  </div>
+                </button>
+
+                @for (statusShelf of statusShelves(); track statusShelf.key) {
+                  <button
+                    [attr.data-testid]="'shelf-status-' + statusShelf.value"
+                    type="button"
+                    class="shelf-item"
+                    [class.active]="isShelfSelected(statusShelf.key)"
+                    (click)="selectShelf(statusShelf.key)"
                   >
-                    {{ preset }}
+                    <div>
+                      <span>{{ statusShelf.label }}<span class="sr-only"> ({{ statusShelf.count }})</span></span>
+                      <span class="shelf-count">{{ statusShelf.count }}</span>
+                    </div>
                   </button>
                 }
+              </nav>
+            }
+          </div>
+
+          <div class="block shelf-block-section">
+            <div class="block-head cursor-pointer" (click)="customOpen.set(!customOpen())">
+              <p class="eyebrow">Custom Shelves {{ customOpen() ? '▼' : '▶' }}</p>
+              <button
+                class="ghost shelf-header-button"
+                type="button"
+                (click)="$event.stopPropagation(); showNewShelfForm.set(!showNewShelfForm())"
+              >
+                + New
+              </button>
+            </div>
+
+            @if (customOpen()) {
+              <nav class="shelf-list">
+                @for (shelf of customShelves(); track shelf.id) {
+                  <div class="shelf-item-wrapper">
+                    <button
+                      [attr.data-testid]="'shelf-custom-' + shelf.id"
+                      type="button"
+                      class="shelf-item flex-1"
+                      [class.active]="isShelfSelected('custom:' + shelf.id)"
+                      (click)="selectShelf('custom:' + shelf.id)"
+                    >
+                      <div>
+                        <span>{{ shelf.name }}<span class="sr-only"> ({{ shelf.bookCount }})</span></span>
+                        <span class="shelf-count">{{ shelf.bookCount }}</span>
+                      </div>
+                    </button>
+
+                    <button
+                      [attr.data-testid]="'delete-shelf-' + shelf.id"
+                      type="button"
+                      class="shelf-delete"
+                      (click)="deleteCustomShelf(shelf.id)"
+                    >
+                      ×
+                    </button>
+                  </div>
+                }
+              </nav>
+
+              @if (showNewShelfForm()) {
+                <form class="stack" (submit)="onCreateShelfSubmit($event)">
+                  <label class="field">
+                    <span>Shelf name</span>
+                    <input
+                      data-testid="create-shelf-input"
+                      name="newShelfName"
+                      [(ngModel)]="newShelfName"
+                      placeholder="Favorites, To Buy..."
+                    />
+                  </label>
+
+                  <div class="shelf-form-section">
+                    <button data-testid="create-shelf-button" type="submit" class="primary shelf-form-button">Create</button>
+                    <button type="button" class="ghost shelf-form-button" (click)="showNewShelfForm.set(false)">Cancel</button>
+                  </div>
+                </form>
+              }
+            }
+          </div>
+
+          @if (sidebarMessage()) {
+            <p class="error">{{ sidebarMessage() }}</p>
+          }
+        </aside>
+
+        <div class="shelf-content">
+          @if (isLoading()) {
+            <p>Loading library...</p>
+          } @else if (errorMessage()) {
+            <p class="error">{{ errorMessage() }}</p>
+          } @else if (books().length === 0) {
+            <p>No books yet.</p>
+          } @else {
+            <div class="shelf-controls">
+              <label class="field shelf-search">
+                <span>Search</span>
+                <input
+                  data-testid="search-input"
+                  [value]="filters.search()"
+                  (input)="onSearchInput($event)"
+                  placeholder="Search by title or description..."
+                />
+              </label>
+
+              <div class="shelf-controls-row">
+                <label class="field min-w-180">
+                  <span>Sort by</span>
+                  <select [value]="filters.sort()" (change)="onSortChange($event)">
+                    @if (filters.search()) {
+                      <option value="relevance">Relevance (search)</option>
+                    }
+                    <option value="createdAt">Date Added</option>
+                    <option value="updatedAt">Last Updated</option>
+                    <option value="score">Score</option>
+                    <option value="chapterCount">Chapter Count</option>
+                    <option value="title">Title (A-Z)</option>
+                    <option value="status">Status</option>
+                  </select>
+                </label>
+
+                <button
+                  class="ghost sort-direction-button"
+                  type="button"
+                  (click)="toggleSortDirection()"
+                  [attr.title]="filters.sortDir() === 'desc' ? 'Descending' : 'Ascending'"
+                >
+                  {{ filters.sortDir() === 'desc' ? '↓' : '↑' }}
+                </button>
+
+                <label class="field min-w-160">
+                  <span>Language</span>
+                  <select [value]="filters.language() || 'all'" (change)="onLanguageChange($event)">
+                    <option value="all">All languages</option>
+                    @for (language of allLanguages(); track language) {
+                      <option [value]="language">{{ language }}</option>
+                    }
+                  </select>
+                </label>
               </div>
-              
-              @if (filters.chapterValue() !== null) {
-                <div class="chapter-mode-toggle">
-                  <button type="button" data-testid="chapter-mode-max" [class.active]="filters.chapterMode() === 'max'" (click)="setChapterMode('max')">Max</button>
-                  <button type="button" data-testid="chapter-mode-min" [class.active]="filters.chapterMode() === 'min'" (click)="setChapterMode('min')">Min</button>
+            </div>
+
+            <div class="block mt-12">
+              <div class="filter-header" (click)="genreFilterOpen.set(!genreFilterOpen())">
+                <p class="eyebrow">Filter by Genre {{ genreFilterOpen() ? '▼' : '▶' }}</p>
+
+                @if (filters.genres().length > 0) {
+                  <div class="mode-toggle genre-mode-toggle">
+                    <button
+                      type="button"
+                      data-testid="genre-mode-any"
+                      class="pill filter-toggle-button"
+                      [class.ghost]="filters.genreMode() !== 'any'"
+                      (click)="$event.stopPropagation(); setGenreMode('any')"
+                    >
+                      Any
+                    </button>
+                    <button
+                      type="button"
+                      data-testid="genre-mode-all"
+                      class="pill filter-toggle-button"
+                      [class.ghost]="filters.genreMode() !== 'all'"
+                      (click)="$event.stopPropagation(); setGenreMode('all')"
+                    >
+                      All
+                    </button>
+                  </div>
+                }
+              </div>
+
+              @if (genreFilterOpen()) {
+                <div class="filter-options">
+                  @if (filters.genres().length > 0) {
+                    <button class="pill radius-8" type="button" (click)="clearGenres()">✕ Clear</button>
+                  }
+
+                  @for (genre of allGenres(); track genre) {
+                    <button
+                      type="button"
+                      class="pill radius-8 filter-chip"
+                      [class.ghost]="!isGenreActive(genre)"
+                      [attr.data-testid]="'genre-chip-' + genre"
+                      (click)="onGenreToggled(genre)"
+                    >
+                      {{ genre }}
+                    </button>
+                  }
+                </div>
+
+                <div class="filter-options selected-tags">
+                  @for (genre of filters.genres(); track genre) {
+                    <span class="pill">
+                      {{ genre }}
+                      <button
+                        type="button"
+                        class="genre-remove"
+                        [attr.data-testid]="'remove-genre-' + genre"
+                        (click)="removeGenreTag(genre)"
+                      >
+                        ×
+                      </button>
+                    </span>
+                  }
                 </div>
               }
             </div>
-          </div>
 
-          <p>Shelves: {{ shelfCount() }}</p>
-          <app-book-grid
-            [books]="pagedBooks()"
-            [customShelves]="customShelves()"
-            [activeGenres]="filters.genres()"
-            (opened)="onOpenDetails($event)"
-            (genreToggled)="onGenreToggled($event)"
-            (shelfToggled)="onShelfToggled($event)"
-          />
+            <div class="block mt-12">
+              <div class="filter-header" (click)="chapterFilterOpen.set(!chapterFilterOpen())">
+                <p class="eyebrow">Filter by Chapter Count {{ chapterFilterOpen() ? '▼' : '▶' }}</p>
 
-          <div class="pagination">
-            <button type="button" [disabled]="filters.page() <= 1" (click)="setPage(filters.page() - 1)">Previous</button>
-            <span>Page {{ filters.page() }} of {{ totalPages() }}</span>
-            <button type="button" [disabled]="filters.page() >= totalPages()" (click)="setPage(filters.page() + 1)">Next</button>
-          </div>
-        }
-      </div>
-    </section>
+                @if (filters.chapterValue() !== null) {
+                  <div class="mode-toggle">
+                    <button
+                      type="button"
+                      data-testid="chapter-mode-max"
+                      class="filter-toggle-button"
+                      [class.pill]="filters.chapterMode() === 'max'"
+                      [class.ghost]="filters.chapterMode() !== 'max'"
+                      (click)="$event.stopPropagation(); setChapterMode('max')"
+                    >
+                      Max
+                    </button>
+                    <button
+                      type="button"
+                      data-testid="chapter-mode-min"
+                      class="filter-toggle-button"
+                      [class.pill]="filters.chapterMode() === 'min'"
+                      [class.ghost]="filters.chapterMode() !== 'min'"
+                      (click)="$event.stopPropagation(); setChapterMode('min')"
+                    >
+                      Min
+                    </button>
+                  </div>
+                }
+              </div>
+
+              @if (chapterFilterOpen()) {
+                <div class="preset-options">
+                  @if (filters.chapterValue() !== null) {
+                    <button class="pill radius-8 filter-chip" type="button" data-testid="chapter-preset-clear" (click)="clearChapterFilter()">✕ Clear</button>
+                  } @else {
+                    <button class="pill filter-chip" type="button" data-testid="chapter-preset-clear" (click)="setChapterValue(null)">Any</button>
+                  }
+
+                  @for (preset of chapterPresets; track preset) {
+                    <button
+                      type="button"
+                      class="pill radius-8 filter-chip"
+                      [attr.data-testid]="'chapter-preset-' + preset"
+                      [class.ghost]="filters.chapterValue() !== preset"
+                      (click)="setChapterValue(preset)"
+                    >
+                      {{ preset }} chapters
+                    </button>
+                  }
+                </div>
+              }
+            </div>
+
+            <div class="results-header" id="bookshelf-results">
+              <p class="muted">
+                {{ filteredSortedBooks().length }} {{ filteredSortedBooks().length === 1 ? 'book' : 'books' }} found
+                {{ isLoading() ? '(loading...)' : '' }}
+              </p>
+
+              @if (isWaitingShelfContext() && filteredSortedBooks().length > 0) {
+                <button
+                  data-testid="waiting-updates-button"
+                  type="button"
+                  class="primary text-small"
+                  [disabled]="waitingUpdatesRunning()"
+                  (click)="runWaitingUpdates()"
+                >
+                  {{ waitingUpdatesRunning() ? 'Checking…' : 'Check Updates' }}
+                </button>
+              }
+            </div>
+
+            @if (waitingUpdateProgress(); as progress) {
+              <div class="notice mb-12">
+                <p class="muted m-0">Progress: {{ progress.processed }} / {{ progress.total }}</p>
+                @if (progress.total > 0) {
+                  <div class="progress-container">
+                    <div class="progress-bar" [style.width.%]="(progress.processed / progress.total) * 100"></div>
+                  </div>
+                }
+              </div>
+            }
+
+            @if (waitingUpdateError()) {
+              <p class="error">{{ waitingUpdateError() }}</p>
+            }
+
+            @if (waitingUpdateSummary()) {
+              <div class="notice mb-12">
+                <p>Updated: {{ waitingUpdateSummary()!.updatedCount }}</p>
+                <p>Skipped: {{ waitingUpdateSummary()!.skippedCount }}</p>
+                <p>Errors: {{ waitingUpdateSummary()!.errorCount }}</p>
+
+                @if (waitingErrorDetails().length > 0) {
+                  <ul>
+                    @for (item of waitingErrorDetails(); track item.bookId) {
+                      <li>{{ item.title }}: {{ item.detail }}</li>
+                    }
+                  </ul>
+                }
+              </div>
+            }
+
+            <p class="muted">Shelves: {{ shelfCount() }}</p>
+            <app-book-grid
+              [books]="pagedBooks()"
+              [customShelves]="customShelves()"
+              [activeGenres]="filters.genres()"
+              (opened)="onOpenDetails($event)"
+              (genreToggled)="onGenreToggled($event)"
+              (shelfToggled)="onShelfToggled($event)"
+            />
+
+            @if (totalPages() > 1) {
+              <div class="pagination-controls">
+                <div class="pagination-info">
+                  Showing {{ (filters.page() - 1) * filters.pageSize() + 1 }}–{{ pageEndIndex() }} of {{ filteredSortedBooks().length }} books
+                </div>
+                <div class="pagination-buttons">
+                  <button class="ghost" type="button" [disabled]="filters.page() <= 1" (click)="setPage(filters.page() - 1)">← Previous</button>
+                  <select class="page-selector" [value]="filters.page()" (change)="onPageSelect($event)">
+                    @for (pageNumber of pageOptions(); track pageNumber) {
+                      <option [value]="pageNumber">Page {{ pageNumber }}</option>
+                    }
+                  </select>
+                  <button class="ghost" type="button" [disabled]="filters.page() >= totalPages()" (click)="setPage(filters.page() + 1)">Next →</button>
+                </div>
+              </div>
+            } @else {
+              <p class="muted">Page {{ filters.page() }} of {{ totalPages() }}</p>
+            }
+          }
+        </div>
+      </section>
+    </div>
   `,
   changeDetection: ChangeDetectionStrategy.OnPush,
 })
@@ -243,6 +409,11 @@ export class BookshelfPageComponent {
   readonly isWaitingShelfContext = computed(() => this.selectedShelf() === 'status:waiting');
   readonly waitingUpdatesRunning = signal(false);
   readonly waitingErrorDetails = computed(() => this.waitingUpdateSummary()?.outcomes.filter((item) => item.status === 'error') ?? []);
+  readonly statusOpen = signal(true);
+  readonly customOpen = signal(true);
+  readonly showNewShelfForm = signal(true);
+  readonly genreFilterOpen = signal(true);
+  readonly chapterFilterOpen = signal(true);
   readonly statusShelves = computed(() => {
     const source = this.books();
     return this.statusOptions.map((status) => ({
@@ -333,7 +504,23 @@ export class BookshelfPageComponent {
   }
 
   newShelfName = '';
-  readonly genreInput = signal('');
+  readonly allGenres = computed(() => {
+    const values = this.books().flatMap((book) => book.genres ?? []);
+    return [...new Set(values)].sort((left, right) => left.localeCompare(right));
+  });
+  readonly allLanguages = computed(() => {
+    const values = this.books()
+      .map((book) => (book.language ?? '').trim())
+      .filter((value) => value.length > 0);
+    return [...new Set(values)].sort((left, right) => left.localeCompare(right));
+  });
+
+  readonly pageOptions = computed(() => Array.from({ length: this.totalPages() }, (_, index) => index + 1));
+  readonly pageEndIndex = computed(() => {
+    const upper = this.filters.page() * this.filters.pageSize();
+    return Math.min(upper, this.filteredSortedBooks().length);
+  });
+
   readonly waitingUpdateProgress = signal<WaitingUpdateProgress | null>(null);
   readonly waitingUpdateSummary = signal<WaitingUpdateSummary | null>(null);
   readonly waitingUpdateError = signal<string | null>(null);
@@ -419,37 +606,30 @@ export class BookshelfPageComponent {
     void this.filters.updateFilter('sortDir', target.value);
   }
 
+  toggleSortDirection(): void {
+    const next = this.filters.sortDir() === 'desc' ? 'asc' : 'desc';
+    void this.filters.updateFilter('sortDir', next);
+  }
+
   onLanguageInput(event: Event): void {
     const target = event.target as HTMLInputElement;
     void this.filters.updateFilter('language', target.value);
   }
 
-  onGenreInput(event: Event): void {
-    const target = event.target as HTMLInputElement;
-    this.genreInput.set(target.value);
-  }
-
-  onGenreEnter(event: Event): void {
-    event.preventDefault();
-    this.addGenreFromInput();
-  }
-
-  addGenreFromInput(): void {
-    const genre = this.genreInput().trim();
-    if (!genre) {
-      return;
-    }
-
-    const current = this.filters.genres();
-    if (!current.includes(genre)) {
-      void this.filters.updateFilter('genres', [...current, genre]);
-    }
-
-    this.genreInput.set('');
+  onLanguageChange(event: Event): void {
+    const target = event.target as HTMLSelectElement;
+    const value = target.value === 'all' ? '' : target.value;
+    void this.filters.updateFilter('language', value);
   }
 
   removeGenreTag(genre: string): void {
-    void this.filters.updateFilter('genres', this.filters.genres().filter((g) => g !== genre));
+    const target = genre.trim().toLowerCase();
+    void this.filters.updateFilter('genres', this.filters.genres().filter((g) => g.trim().toLowerCase() !== target));
+  }
+
+  clearGenres(): void {
+    void this.filters.updateFilter('genres', []);
+    this.genreFilterOpen.set(false);
   }
   
   // ISSUE-018: New Method for Genre Mode
@@ -473,6 +653,19 @@ export class BookshelfPageComponent {
     void this.filters.updateFilter('chapterMode', mode);
   }
 
+  clearChapterFilter(): void {
+    void this.filters.updateFilter('chapterValue', null);
+    this.chapterFilterOpen.set(false);
+  }
+
+  onPageSelect(event: Event): void {
+    const target = event.target as HTMLSelectElement;
+    const value = Number(target.value);
+    if (Number.isFinite(value)) {
+      this.setPage(value);
+    }
+  }
+
   setPage(page: number): void {
     const clampedPage = Math.min(Math.max(page, 1), this.totalPages());
     void this.filters.updateFilter('page', clampedPage);
@@ -486,11 +679,17 @@ export class BookshelfPageComponent {
 
   onGenreToggled(genre: string): void {
     const current = this.filters.genres();
-    const isActive = current.includes(genre);
+    const selected = genre.trim().toLowerCase();
+    const isActive = current.some((item) => item.trim().toLowerCase() === selected);
     const next = isActive
-      ? current.filter((item) => item !== genre)
-      : [...current, genre];
+      ? current.filter((item) => item.trim().toLowerCase() !== selected)
+      : [...current, this.resolveGenreLabel(genre)];
     void this.filters.updateFilter('genres', next);
+  }
+
+  isGenreActive(genre: string): boolean {
+    const selected = genre.trim().toLowerCase();
+    return this.filters.genres().some((item) => item.trim().toLowerCase() === selected);
   }
 
   onShelfToggled(payload: { bookId: string; shelfId: string }): void {
@@ -577,5 +776,11 @@ export class BookshelfPageComponent {
     }
 
     return 0;
+  }
+
+  private resolveGenreLabel(value: string): string {
+    const trimmed = value.trim();
+    const match = this.allGenres().find((genre) => genre.toLowerCase() === trimmed.toLowerCase());
+    return match ?? trimmed;
   }
 }

@@ -297,50 +297,21 @@ describe('BookshelfPageComponent', () => {
     expect(fixture.nativeElement.textContent).toContain('Timeout while fetching latest chapter.');
   });
 
-  it('adds a genre tag via the Add button and calls updateFilter with the combined list', () => {
-    const updateFilter = jest.fn().mockResolvedValue(undefined);
+  it('does not render legacy-mismatched genre add input controls', () => {
     TestBed.configureTestingModule({
       imports: [BookshelfPageComponent],
       providers: [
         { provide: BookService, useValue: { books: signal([{ id: 'b1', userId: 'u1', title: 'Book A', description: '', score: 8, status: 'reading', genres: ['action'], language: 'en', chapterCount: 20, coverUrl: null, createdAt: new Date(), updatedAt: new Date() }]), isLoading: signal(false), errorMessage: signal(null), loadBooks: jest.fn() } },
         { provide: ShelfService, useValue: { shelves: signal([]), isLoading: signal(false), errorMessage: signal(null), shelfCount: signal(0), loadShelves: jest.fn() } },
-        { provide: BookshelfFilterService, useValue: createMockFilter({ updateFilter }) },
+        { provide: BookshelfFilterService, useValue: createMockFilter() },
       ],
     });
 
     const fixture = TestBed.createComponent(BookshelfPageComponent);
     fixture.detectChanges();
 
-    const genreInput = fixture.debugElement.query(By.css('[data-testid="genre-input"]')).nativeElement as HTMLInputElement;
-    genreInput.value = 'fantasy';
-    genreInput.dispatchEvent(new Event('input'));
-    fixture.detectChanges();
-
-    fixture.debugElement.query(By.css('[data-testid="add-genre-button"]')).nativeElement.click();
-    expect(updateFilter).toHaveBeenCalledWith('genres', ['fantasy']);
-  });
-
-  it('adds a genre tag via the Enter key and calls updateFilter', () => {
-    const updateFilter = jest.fn().mockResolvedValue(undefined);
-    TestBed.configureTestingModule({
-      imports: [BookshelfPageComponent],
-      providers: [
-        { provide: BookService, useValue: { books: signal([{ id: 'b1', userId: 'u1', title: 'Book A', description: '', score: 8, status: 'reading', genres: ['action'], language: 'en', chapterCount: 20, coverUrl: null, createdAt: new Date(), updatedAt: new Date() }]), isLoading: signal(false), errorMessage: signal(null), loadBooks: jest.fn() } },
-        { provide: ShelfService, useValue: { shelves: signal([]), isLoading: signal(false), errorMessage: signal(null), shelfCount: signal(0), loadShelves: jest.fn() } },
-        { provide: BookshelfFilterService, useValue: createMockFilter({ updateFilter }) },
-      ],
-    });
-
-    const fixture = TestBed.createComponent(BookshelfPageComponent);
-    fixture.detectChanges();
-
-    const genreInput = fixture.debugElement.query(By.css('[data-testid="genre-input"]')).nativeElement as HTMLInputElement;
-    genreInput.value = 'drama';
-    genreInput.dispatchEvent(new Event('input'));
-    fixture.detectChanges();
-
-    genreInput.dispatchEvent(new KeyboardEvent('keydown', { key: 'Enter', bubbles: true }));
-    expect(updateFilter).toHaveBeenCalledWith('genres', ['drama']);
+    expect(fixture.debugElement.query(By.css('[data-testid="genre-input"]'))).toBeNull();
+    expect(fixture.debugElement.query(By.css('[data-testid="add-genre-button"]'))).toBeNull();
   });
 
   it('removes a genre tag when × is clicked and calls updateFilter without that genre', () => {
@@ -359,6 +330,62 @@ describe('BookshelfPageComponent', () => {
 
     fixture.debugElement.query(By.css('[data-testid="remove-genre-action"]')).nativeElement.click();
     expect(updateFilter).toHaveBeenCalledWith('genres', ['drama']);
+  });
+
+  it('unselects the only selected genre when clicking its chip (case-insensitive match)', () => {
+    const updateFilter = jest.fn().mockResolvedValue(undefined);
+
+    TestBed.configureTestingModule({
+      imports: [BookshelfPageComponent],
+      providers: [
+        {
+          provide: BookService,
+          useValue: {
+            books: signal([{ id: 'b1', userId: 'u1', title: 'Book A', description: '', score: 8, status: 'reading', genres: ['Action'], language: 'en', chapterCount: 20, coverUrl: null, createdAt: new Date(), updatedAt: new Date() }]),
+            isLoading: signal(false),
+            errorMessage: signal(null),
+            loadBooks: jest.fn(),
+          },
+        },
+        { provide: ShelfService, useValue: { shelves: signal([]), isLoading: signal(false), errorMessage: signal(null), shelfCount: signal(0), loadShelves: jest.fn() } },
+        { provide: BookshelfFilterService, useValue: createMockFilter({ genres: signal(['action']), updateFilter }) },
+      ],
+    });
+
+    const fixture = TestBed.createComponent(BookshelfPageComponent);
+    fixture.detectChanges();
+
+    fixture.debugElement.query(By.css('[data-testid="genre-chip-Action"]')).nativeElement.click();
+    expect(updateFilter).toHaveBeenCalledWith('genres', []);
+  });
+
+  it('renders selected and unselected genre chips with the base pill class for consistent sizing', () => {
+    TestBed.configureTestingModule({
+      imports: [BookshelfPageComponent],
+      providers: [
+        {
+          provide: BookService,
+          useValue: {
+            books: signal([{ id: 'b1', userId: 'u1', title: 'Book A', description: '', score: 8, status: 'reading', genres: ['action', 'drama'], language: 'en', chapterCount: 20, coverUrl: null, createdAt: new Date(), updatedAt: new Date() }]),
+            isLoading: signal(false),
+            errorMessage: signal(null),
+            loadBooks: jest.fn(),
+          },
+        },
+        { provide: ShelfService, useValue: { shelves: signal([]), isLoading: signal(false), errorMessage: signal(null), shelfCount: signal(0), loadShelves: jest.fn() } },
+        { provide: BookshelfFilterService, useValue: createMockFilter({ genres: signal(['action']) }) },
+      ],
+    });
+
+    const fixture = TestBed.createComponent(BookshelfPageComponent);
+    fixture.detectChanges();
+
+    const selected = fixture.debugElement.query(By.css('[data-testid="genre-chip-action"]')).nativeElement as HTMLButtonElement;
+    const unselected = fixture.debugElement.query(By.css('[data-testid="genre-chip-drama"]')).nativeElement as HTMLButtonElement;
+
+    expect(selected.classList.contains('pill')).toBe(true);
+    expect(unselected.classList.contains('pill')).toBe(true);
+    expect(unselected.classList.contains('ghost')).toBe(true);
   });
 
   describe('Chapter Count Presets', () => {
