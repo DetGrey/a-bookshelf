@@ -1,6 +1,7 @@
 {
   "name": "a-bookshelf",
   "version": "0.0.0",
+  "packageManager": "npm@10.9.2",
   "scripts": {
     "ng": "ng",
     "start": "ng serve",
