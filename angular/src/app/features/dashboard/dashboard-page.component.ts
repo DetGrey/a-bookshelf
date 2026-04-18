@@ -11,6 +11,14 @@ import { fromEvent } from 'rxjs';
 
 type ConsolidationStep = 'idle' | 'selecting' | 'working';
 
+type SimilarGenrePair = {
+  keepGenre: string;
+  mergeGenre: string;
+  keepCount: number;
+  mergeCount: number;
+  similarity: number;
+};
+
 @Component({
   selector: 'app-dashboard-page',
   standalone: true,
@@ -293,7 +301,7 @@ type ConsolidationStep = 'idle' | 'selecting' | 'working';
                   <p class="muted m-0">Find and merge genres that are variations of each other</p>
                 </div>
                 @if (consolidationStep() === 'idle') {
-                  <button type="button" class="ghost quality-check-button" data-testid="genre-consolidation" (click)="startGenreConsolidation()">Find similar genres</button>
+                  <button type="button" class="ghost quality-check-button" data-testid="genre-consolidation" (click)="findSimilarGenres()">Find similar genres</button>
                 }
               </div>
 
@@ -303,42 +311,97 @@ type ConsolidationStep = 'idle' | 'selecting' | 'working';
 
               @if (consolidationStep() === 'selecting') {
                 <div class="genre-consolidation-panel" data-testid="genre-consolidation-panel">
-                  <h3>Select source genres</h3>
-                  <ul>
-                    @for (item of genreBreakdown(); track item.name) {
-                      <li>
-                        <label>
-                          <input
-                            type="checkbox"
-                            [checked]="isSourceGenreSelected(item.name)"
-                            (change)="toggleSourceGenre(item.name)"
-                          />
-                          {{ item.name }} ({{ item.count }})
+                  @if (similarGenrePairs().length > 0) {
+                    <div class="stack duplicate-results mt-4">
+                      @for (pair of similarGenrePairs(); track pair.mergeGenre + '→' + pair.keepGenre; let index = $index) {
+                        <label class="card duplicate-item-card genre-pair-checkbox">
+                          <div class="genre-pair-item">
+                            <input
+                              type="checkbox"
+                              [checked]="selectedGenrePairs().includes(index)"
+                              (change)="toggleGenrePair(index)"
+                            />
+                            <div class="duplicate-comparison genre-pair-content">
+                              <div class="duplicate-titles-wrapper">
+                                <div class="duplicate-titles-list">
+                                  <div class="genre-pair-names">
+                                    <span class="genre-name">{{ pair.mergeGenre }}</span>
+                                    <span class="genre-arrow">→</span>
+                                    <span class="genre-name">{{ pair.keepGenre }}</span>
+                                  </div>
+                                  <p class="muted text-small-muted">Merge {{ pair.mergeGenre }} ({{ pair.mergeCount }}) into {{ pair.keepGenre }} ({{ pair.keepCount }})</p>
+                                </div>
+                              </div>
+                              <span class="pill ghost">{{ (pair.similarity * 100).toFixed(0) }}% match</span>
+                            </div>
+                          </div>
                         </label>
-                      </li>
-                    }
-                  </ul>
-                  <input
-                    data-testid="consolidation-target-input"
-                    [(ngModel)]="consolidationTarget"
-                    name="consolidationTarget"
-                    placeholder="Target genre"
-                  />
-                  <select data-testid="consolidation-mode-select" [(ngModel)]="consolidationMode" name="consolidationMode">
-                    <option value="merge">Merge — add target, keep other genres</option>
-                    <option value="replace">Replace — replace all source genres with target</option>
-                  </select>
-                  <div class="genre-consolidation-actions">
-                    <button
-                      type="button"
-                      class="primary quality-check-button"
-                      data-testid="consolidation-confirm"
-                      [disabled]="selectedSourceGenres().length === 0 || !consolidationTarget"
-                      (click)="confirmGenreConsolidation()"
-                    >
-                      Consolidate {{ selectedSourceGenres().length }} genre(s) → {{ consolidationTarget || '…' }}
-                    </button>
-                    <button type="button" class="ghost quality-check-button" data-testid="consolidation-cancel" (click)="cancelGenreConsolidation()">Cancel</button>
+                      }
+                    </div>
+
+                    <div class="genre-merge-buttons">
+                      @if (selectedGenrePairs().length > 0) {
+                        <button
+                          type="button"
+                          class="primary quality-check-button"
+                          data-testid="consolidation-confirm"
+                          [disabled]="genreMerging()"
+                          (click)="mergeSelectedGenrePairs()"
+                        >
+                          {{ genreMerging() ? 'Merging…' : 'Merge ' + selectedGenrePairs().length + ' pair' + (selectedGenrePairs().length > 1 ? 's' : '') }}
+                        </button>
+                      }
+                      <button
+                        type="button"
+                        class="ghost quality-check-button"
+                        data-testid="consolidation-cancel"
+                        [disabled]="genreMerging()"
+                        (click)="cancelGenreConsolidation()"
+                      >
+                        {{ selectedGenrePairs().length > 0 ? 'Clear selection' : 'Cancel' }}
+                      </button>
+                    </div>
+                  } @else {
+                    <p class="muted">No similar genres found.</p>
+                  }
+
+                  <div class="genre-divider">
+                    <h3 class="genre-divider-title">Or replace manually</h3>
+                    <div class="genre-custom-form">
+                      <div class="field">
+                        <label>Replace this genre:</label>
+                        <input
+                          type="text"
+                          data-testid="consolidation-custom-from"
+                          [(ngModel)]="customFrom"
+                          name="customFrom"
+                          autoCapitalize="words"
+                          placeholder="e.g. SciFi"
+                          [disabled]="customMerging()"
+                        />
+                      </div>
+                      <div class="field">
+                        <label>With this genre:</label>
+                        <input
+                          type="text"
+                          data-testid="consolidation-custom-to"
+                          [(ngModel)]="customTo"
+                          name="customTo"
+                          autoCapitalize="words"
+                          placeholder="e.g. Science Fiction"
+                          [disabled]="customMerging()"
+                        />
+                      </div>
+                      <button
+                        class="primary genre-custom-button"
+                        type="button"
+                        data-testid="consolidation-custom-replace"
+                        (click)="replaceGenreManually()"
+                        [disabled]="customMerging() || !customFrom.trim() || !customTo.trim()"
+                      >
+                        {{ customMerging() ? 'Merging…' : 'Replace' }}
+                      </button>
+                    </div>
                   </div>
                 </div>
               } @else if (consolidationStep() === 'working') {
@@ -410,7 +473,10 @@ export class DashboardPageComponent {
   readonly coverScanResult = signal<CoverHealthScanResult | null>(null);
   readonly coverRepairRunning = signal(false);
   readonly consolidationStep = signal<ConsolidationStep>('idle');
-  readonly selectedSourceGenres = signal<string[]>([]);
+  readonly similarGenrePairs = signal<SimilarGenrePair[]>([]);
+  readonly selectedGenrePairs = signal<number[]>([]);
+  readonly genreMerging = signal(false);
+  readonly customMerging = signal(false);
   readonly breakdownPalette = ['#7c83ff', '#ff8ba7', '#22c55e', '#f6aa1c', '#4cc9f0', '#a855f7', '#ef4444', '#0ea5e9'];
 
   readonly sectionStatuses = [
@@ -420,8 +486,8 @@ export class DashboardPageComponent {
     { key: 'completed', label: 'Completed' },
   ] as const;
 
-  consolidationTarget = '';
-  consolidationMode: 'merge' | 'replace' = 'merge';
+  customFrom = '';
+  customTo = '';
 
   readonly genreBreakdown = computed(() => this.buildTopBreakdown(this.collectGenres(this.books())));
   readonly sourceBreakdown = computed(() => this.buildTopBreakdown(this.collectSources(this.books())));
@@ -538,53 +604,156 @@ export class DashboardPageComponent {
     );
   }
 
-  startGenreConsolidation(): void {
-    this.selectedSourceGenres.set([]);
-    this.consolidationTarget = '';
-    this.consolidationMode = 'merge';
+  async findSimilarGenres(): Promise<void> {
     this.genreMessage.set('');
+    this.selectedGenrePairs.set([]);
+    this.customFrom = '';
+    this.customTo = '';
+
+    const genreCounts = new Map<string, number>();
+    this.books().forEach((book) => {
+      const uniqueGenres = new Set((book.genres ?? []).map((genre) => genre.trim()).filter(Boolean));
+      uniqueGenres.forEach((genre) => {
+        genreCounts.set(genre, (genreCounts.get(genre) ?? 0) + 1);
+      });
+    });
+
+    const genresSet = new Map<string, string>();
+    this.books().forEach((book) => {
+      (book.genres ?? []).forEach((genre) => {
+        const key = genre.trim();
+        if (!key) return;
+        const normalized = this.normalizeGenre(key);
+        if (!genresSet.has(normalized)) {
+          genresSet.set(normalized, key);
+        }
+      });
+    });
+
+    const genres = [...genresSet.values()];
+    const pairs: SimilarGenrePair[] = [];
+
+    for (let i = 0; i < genres.length; i += 1) {
+      for (let j = i + 1; j < genres.length; j += 1) {
+        const similarity = this.stringSimilarity(genres[i]!, genres[j]!);
+        if (similarity < 0.75) {
+          continue;
+        }
+
+        const genre1 = genres[i]!;
+        const genre2 = genres[j]!;
+        const count1 = genreCounts.get(genre1) ?? 0;
+        const count2 = genreCounts.get(genre2) ?? 0;
+        const keepGenre = count1 >= count2 ? genre1 : genre2;
+        const mergeGenre = keepGenre === genre1 ? genre2 : genre1;
+
+        pairs.push({
+          keepGenre,
+          mergeGenre,
+          keepCount: keepGenre === genre1 ? count1 : count2,
+          mergeCount: mergeGenre === genre1 ? count1 : count2,
+          similarity,
+        });
+      }
+    }
+
+    pairs.sort((left, right) => right.similarity - left.similarity);
+    this.similarGenrePairs.set(pairs);
+    this.genreMessage.set(
+      pairs.length ? `Found ${pairs.length} potentially similar genre pair${pairs.length === 1 ? '' : 's'}` : 'No similar genres found.',
+    );
     this.consolidationStep.set('selecting');
   }
 
-  isSourceGenreSelected(genre: string): boolean {
-    return this.selectedSourceGenres().includes(genre);
-  }
-
-  toggleSourceGenre(genre: string): void {
-    const current = this.selectedSourceGenres();
-    if (current.includes(genre)) {
-      this.selectedSourceGenres.set(current.filter((g) => g !== genre));
+  toggleGenrePair(index: number): void {
+    const current = this.selectedGenrePairs();
+    if (current.includes(index)) {
+      this.selectedGenrePairs.set(current.filter((value) => value !== index));
     } else {
-      this.selectedSourceGenres.set([...current, genre]);
+      this.selectedGenrePairs.set([...current, index]);
     }
   }
 
-  async confirmGenreConsolidation(): Promise<void> {
-    const sources = this.selectedSourceGenres();
-    const target = this.consolidationTarget.trim();
-
-    if (sources.length === 0 || !target) {
-      return;
-    }
-
-    this.consolidationStep.set('working');
-    const result = await this.qualityTools.consolidateGenres(sources, target, true, this.consolidationMode);
-    this.consolidationStep.set('idle');
-
-    if (!result.success) {
-      this.genreMessage.set(`Genre consolidation failed: ${result.error.message}`);
-      return;
-    }
-
-    this.genreMessage.set(
-      `Genre consolidation complete. Updated ${result.data.updatedCount} book(s). "${sources.join(', ')}" → "${result.data.targetGenre}"`,
-    );
+  clearSelectedGenrePairs(): void {
+    this.selectedGenrePairs.set([]);
   }
 
   cancelGenreConsolidation(): void {
-    this.consolidationStep.set('idle');
-    this.selectedSourceGenres.set([]);
+    this.selectedGenrePairs.set([]);
+    this.similarGenrePairs.set([]);
+    this.customFrom = '';
+    this.customTo = '';
     this.genreMessage.set('');
+    this.consolidationStep.set('idle');
+  }
+
+  async mergeSelectedGenrePairs(): Promise<void> {
+    const selectedIndices = this.selectedGenrePairs();
+    const selectedPairs = selectedIndices.map((index) => this.similarGenrePairs()[index]).filter((pair): pair is SimilarGenrePair => pair !== undefined);
+
+    if (selectedPairs.length === 0) {
+      return;
+    }
+
+    this.genreMerging.set(true);
+    this.consolidationStep.set('working');
+    let updatedCount = 0;
+
+    try {
+      for (const pair of selectedPairs) {
+        const result = await this.qualityTools.consolidateGenres([pair.mergeGenre], pair.keepGenre, true, 'replace');
+        if (!result.success) {
+          throw new Error(result.error.message);
+        }
+
+        updatedCount += result.data.updatedCount;
+      }
+
+      this.genreMessage.set(
+        `Genre consolidation complete. Updated ${updatedCount} book(s). ${selectedPairs.map((pair) => `"${pair.mergeGenre}" → "${pair.keepGenre}"`).join(', ')}`,
+      );
+      this.similarGenrePairs.set([]);
+      this.selectedGenrePairs.set([]);
+      this.consolidationStep.set('idle');
+    } catch (error) {
+      this.genreMessage.set(`Genre consolidation failed: ${error instanceof Error ? error.message : 'Unknown error'}`);
+      this.consolidationStep.set('selecting');
+    } finally {
+      this.genreMerging.set(false);
+    }
+  }
+
+  async replaceGenreManually(): Promise<void> {
+    const fromTrimmed = this.customFrom.trim();
+    const toTrimmed = this.customTo.trim();
+
+    if (!fromTrimmed || !toTrimmed || fromTrimmed === toTrimmed) {
+      return;
+    }
+
+    this.customMerging.set(true);
+    this.consolidationStep.set('working');
+
+    try {
+      const result = await this.qualityTools.consolidateGenres([fromTrimmed], toTrimmed, true, 'replace');
+      if (!result.success) {
+        throw new Error(result.error.message);
+      }
+
+      this.genreMessage.set(
+        `Successfully merged "${fromTrimmed}" → "${toTrimmed}" (${result.data.updatedCount} book${result.data.updatedCount === 1 ? '' : 's'} updated).`,
+      );
+      this.customFrom = '';
+      this.customTo = '';
+      this.similarGenrePairs.set([]);
+      this.selectedGenrePairs.set([]);
+      this.consolidationStep.set('idle');
+    } catch (error) {
+      this.genreMessage.set(`Genre consolidation failed: ${error instanceof Error ? error.message : 'Unknown error'}`);
+      this.consolidationStep.set('selecting');
+    } finally {
+      this.customMerging.set(false);
+    }
   }
 
   async downloadBackup(): Promise<void> {
@@ -684,6 +853,41 @@ export class DashboardPageComponent {
 
   private sliceBreakdown(items: Array<{ name: string; count: number }>, expanded: boolean): Array<{ name: string; count: number }> {
     return expanded ? items : items.slice(0, 5);
+  }
+
+  private normalizeGenre(genre: string): string {
+    return genre.trim().toLowerCase().replace(/[^a-z0-9\s]/g, '').replace(/\s+/g, ' ');
+  }
+
+  private stringSimilarity(a: string, b: string): number {
+    const normalizedA = this.normalizeGenre(a);
+    const normalizedB = this.normalizeGenre(b);
+
+    if (normalizedA === normalizedB) {
+      return 1;
+    }
+
+    const len = Math.max(normalizedA.length, normalizedB.length);
+    if (len === 0) {
+      return 1;
+    }
+
+    const matrix: number[][] = Array.from({ length: normalizedB.length + 1 }, () => Array(normalizedA.length + 1).fill(0));
+
+    for (let i = 0; i <= normalizedA.length; i += 1) matrix[0]![i] = i;
+    for (let j = 0; j <= normalizedB.length; j += 1) matrix[j]![0] = j;
+
+    for (let j = 1; j <= normalizedB.length; j += 1) {
+      for (let i = 1; i <= normalizedA.length; i += 1) {
+        const indicator = normalizedA[i - 1] === normalizedB[j - 1] ? 0 : 1;
+        const left = matrix[j]?.[i - 1] ?? 0;
+        const up = matrix[j - 1]?.[i] ?? 0;
+        const diagonal = matrix[j - 1]?.[i - 1] ?? 0;
+        matrix[j]![i] = Math.min(left + 1, up + 1, diagonal + indicator);
+      }
+    }
+
+    return 1 - ((matrix[normalizedB.length]?.[normalizedA.length] ?? 0) / len);
   }
 
   private updateBooksPerStatus(): void {

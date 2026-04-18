@@ -405,24 +405,25 @@ export class QualityToolsService {
     mode: 'merge' | 'replace',
   ): string[] {
     const sourceSet = new Set(sourceGenres.map((genre) => this.normalizeGenre(genre)));
+    const nextTargetGenre = targetGenre.trim();
     const nextGenres: string[] = [];
 
     currentGenres.forEach((genre) => {
       const normalized = this.normalizeGenre(genre);
       if (sourceSet.has(normalized)) {
-        if (!nextGenres.includes(targetGenre)) {
-          nextGenres.push(targetGenre);
+        if (!nextGenres.some((item) => this.normalizeGenre(item) === this.normalizeGenre(nextTargetGenre))) {
+          nextGenres.push(nextTargetGenre);
         }
         return;
       }
 
-      if (!nextGenres.includes(normalized)) {
-        nextGenres.push(normalized);
+      if (!nextGenres.some((item) => this.normalizeGenre(item) === normalized)) {
+        nextGenres.push(genre.trim());
       }
     });
 
-    if (mode === 'merge' && !nextGenres.includes(targetGenre)) {
-      nextGenres.push(targetGenre);
+    if (mode === 'merge' && !nextGenres.some((item) => this.normalizeGenre(item) === this.normalizeGenre(nextTargetGenre))) {
+      nextGenres.push(nextTargetGenre);
     }
 
     return nextGenres;

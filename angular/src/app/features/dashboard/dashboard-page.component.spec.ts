@@ -422,14 +422,14 @@ describe('DashboardPageComponent', () => {
     expect(fixture.debugElement.query(By.css('[data-testid="cover-repair"]'))).toBeNull();
   });
 
-  it('walks through the full genre consolidation flow: start → select → confirm → result', async () => {
+  it('walks through the full genre consolidation flow: scan → select pair → merge → result', async () => {
     const consolidateGenres = jest.fn().mockResolvedValue({
       success: true,
       data: {
         updatedCount: 3,
-        targetGenre: 'Fantasy',
-        sourceGenres: ['fantasy', 'high fantasy'],
-        mode: 'merge',
+        targetGenre: 'Shounen',
+        sourceGenres: ['shonen'],
+        mode: 'replace',
       },
     });
 
@@ -442,10 +442,17 @@ describe('DashboardPageComponent', () => {
             books: signal([
               {
                 id: 'book-1', userId: 'user-1', title: 'Book A', description: '',
-                score: null, status: 'reading', genres: ['fantasy', 'action'], language: 'en',
+                score: null, status: 'reading', genres: ['shounen', 'action'], language: 'en',
                 chapterCount: 10, latestChapter: null, lastUploadedAt: null, lastFetchedAt: null,
                 notes: null, timesRead: 1, lastRead: null, originalLanguage: null,
                 coverUrl: null, createdAt: new Date('2026-01-01T00:00:00.000Z'), updatedAt: new Date('2026-01-02T00:00:00.000Z'),
+              },
+              {
+                id: 'book-2', userId: 'user-1', title: 'Book B', description: '',
+                score: null, status: 'reading', genres: ['shonen'], language: 'en',
+                chapterCount: 12, latestChapter: null, lastUploadedAt: null, lastFetchedAt: null,
+                notes: null, timesRead: 1, lastRead: null, originalLanguage: null,
+                coverUrl: null, createdAt: new Date('2026-01-01T00:00:00.000Z'), updatedAt: new Date('2026-01-03T00:00:00.000Z'),
               },
             ]),
             bookCount: signal(1),
@@ -472,11 +479,14 @@ describe('DashboardPageComponent', () => {
     fixture.debugElement.query(By.css('[data-testid="genre-consolidation"]')).nativeElement.click();
     fixture.detectChanges();
 
-    expect(fixture.debugElement.query(By.css('[data-testid="genre-consolidation-panel"]'))).not.toBeNull();
+    await Promise.resolve();
+    fixture.detectChanges();
 
-    // Step 2: select the 'fantasy' genre using the component's method (toggleSourceGenre is the public API)
-    fixture.componentInstance.toggleSourceGenre('fantasy');
-    fixture.componentInstance.consolidationTarget = 'Fantasy';
+    expect(fixture.debugElement.query(By.css('[data-testid="genre-consolidation-panel"]'))).not.toBeNull();
+    expect(fixture.nativeElement.textContent).toContain('Found 1 potentially similar genre pair');
+
+    // Step 2: select the similar genre pair in the results
+    fixture.debugElement.query(By.css('input[type="checkbox"]')).nativeElement.click();
     fixture.detectChanges();
 
     const confirmButton = fixture.debugElement.query(By.css('[data-testid="consolidation-confirm"]')).nativeElement as HTMLButtonElement;
@@ -486,11 +496,73 @@ describe('DashboardPageComponent', () => {
     await Promise.resolve();
     fixture.detectChanges();
 
-    expect(consolidateGenres).toHaveBeenCalled();
+    expect(consolidateGenres).toHaveBeenCalledWith(['shonen'], 'shounen', true, 'replace');
     expect(fixture.nativeElement.textContent).toContain('Genre consolidation complete');
     expect(fixture.nativeElement.textContent).toContain('3 book(s)');
     // Panel is gone, idle button is back
     expect(fixture.debugElement.query(By.css('[data-testid="genre-consolidation"]'))).not.toBeNull();
+  });
+
+  it('supports manual genre replacement like the React consolidator', async () => {
+    const consolidateGenres = jest.fn().mockResolvedValue({
+      success: true,
+      data: {
+        updatedCount: 2,
+        targetGenre: 'Science Fiction',
+        sourceGenres: ['SciFi'],
+        mode: 'replace',
+      },
+    });
+
+    TestBed.configureTestingModule({
+      imports: [DashboardPageComponent],
+      providers: [
+        {
+          provide: BookService,
+          useValue: {
+            books: signal([]),
+            bookCount: signal(0),
+            averageScore: signal(0),
+          },
+        },
+        {
+          provide: QualityToolsService,
+          useValue: {
+            scanDuplicateTitles: jest.fn(),
+            scanStaleWaiting: jest.fn(),
+            scanCoverHealth: jest.fn(),
+            consolidateGenres,
+          },
+        },
+        { provide: BackupRestoreService, useValue: backupRestoreStub },
+      ],
+    });
+
+    const fixture = TestBed.createComponent(DashboardPageComponent);
+    fixture.detectChanges();
+
+    fixture.debugElement.query(By.css('[data-testid="genre-consolidation"]')).nativeElement.click();
+    fixture.detectChanges();
+    await Promise.resolve();
+    fixture.detectChanges();
+
+    const fromInput = fixture.debugElement.query(By.css('[data-testid="consolidation-custom-from"]')).nativeElement as HTMLInputElement;
+    fromInput.value = 'SciFi';
+    fromInput.dispatchEvent(new Event('input'));
+
+    const toInput = fixture.debugElement.query(By.css('[data-testid="consolidation-custom-to"]')).nativeElement as HTMLInputElement;
+    toInput.value = 'Science Fiction';
+    toInput.dispatchEvent(new Event('input'));
+    fixture.detectChanges();
+
+    fixture.debugElement.query(By.css('[data-testid="consolidation-custom-replace"]')).nativeElement.click();
+    fixture.detectChanges();
+
+    await Promise.resolve();
+    fixture.detectChanges();
+
+    expect(consolidateGenres).toHaveBeenCalledWith(['SciFi'], 'Science Fiction', true, 'replace');
+    expect(fixture.nativeElement.textContent).toContain('Successfully merged "SciFi" → "Science Fiction"');
   });
 
   it('cancelling genre consolidation resets back to idle state', () => {
@@ -500,7 +572,22 @@ describe('DashboardPageComponent', () => {
         {
           provide: BookService,
           useValue: {
-            books: signal([]),
+            books: signal([
+              {
+                id: 'book-1', userId: 'user-1', title: 'Book A', description: '',
+                score: null, status: 'reading', genres: ['shounen'], language: 'en',
+                chapterCount: 10, latestChapter: null, lastUploadedAt: null, lastFetchedAt: null,
+                notes: null, timesRead: 1, lastRead: null, originalLanguage: null,
+                coverUrl: null, createdAt: new Date('2026-01-01T00:00:00.000Z'), updatedAt: new Date('2026-01-02T00:00:00.000Z'),
+              },
+              {
+                id: 'book-2', userId: 'user-1', title: 'Book B', description: '',
+                score: null, status: 'reading', genres: ['shonen'], language: 'en',
+                chapterCount: 12, latestChapter: null, lastUploadedAt: null, lastFetchedAt: null,
+                notes: null, timesRead: 1, lastRead: null, originalLanguage: null,
+                coverUrl: null, createdAt: new Date('2026-01-01T00:00:00.000Z'), updatedAt: new Date('2026-01-03T00:00:00.000Z'),
+              },
+            ]),
             bookCount: signal(0),
             averageScore: signal(0),
           },
@@ -523,12 +610,19 @@ describe('DashboardPageComponent', () => {
     fixture.debugElement.query(By.css('[data-testid="genre-consolidation"]')).nativeElement.click();
     fixture.detectChanges();
 
+    fixture.detectChanges();
+
+    // With no similar genres on this test data, the manual section is still rendered.
     expect(fixture.debugElement.query(By.css('[data-testid="genre-consolidation-panel"]'))).not.toBeNull();
+
+    // Pretend one pair is selected by toggling the internal signal through the public UI.
+    fixture.componentInstance.selectedGenrePairs.set([0]);
+    fixture.detectChanges();
 
     fixture.debugElement.query(By.css('[data-testid="consolidation-cancel"]')).nativeElement.click();
     fixture.detectChanges();
 
-    expect(fixture.debugElement.query(By.css('[data-testid="genre-consolidation-panel"]'))).toBeNull();
+    expect(fixture.debugElement.query(By.css('[data-testid="consolidation-confirm"]'))).toBeNull();
     expect(fixture.debugElement.query(By.css('[data-testid="genre-consolidation"]'))).not.toBeNull();
   });
 
