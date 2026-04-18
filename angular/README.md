@@ -38,23 +38,20 @@ It uses Supabase for auth/data and invokes Edge Functions for metadata/latest-ch
 npm install
 ```
 
-2. Create local environment files from examples:
+2. Create a local env file from the example:
 
 ```bash
-cp src/environments/environment.example.ts src/environments/environment.ts
-cp src/environments/environment.prod.example.ts src/environments/environment.prod.ts
+cp .env.local.example .env.local
 ```
 
-3. Configure environment values in:
+3. Configure local values in `.env.local`:
 
-- `src/environments/environment.ts` (local, ignored by git)
-- `src/environments/environment.prod.ts` (local, ignored by git)
+- `SUPABASE_URL`
+- `SUPABASE_ANON_KEY`
+- `IMAGE_PROXY_URL` (optional but recommended if using cover proxy)
 
-Set:
-
-- `supabaseUrl`
-- `supabaseAnonKey`
-- `imageProxyUrl` (optional but recommended if using cover proxy)
+`npm start` runs a prestart script that generates `src/environments/environment.local.ts` from `.env.local`.
+Angular development config replaces `environment.ts` with this generated file.
 
 ## Run locally
 
@@ -96,6 +93,8 @@ npm run build
 
 ## Notes
 
-- If Supabase values are empty, authenticated/data-driven pages will fail to load correctly.
-- Real environment files are intentionally ignored by git to prevent accidental secret commits.
+- If local Supabase values are empty, authenticated/data-driven pages will fail to load correctly.
+- `.env.local` and `src/environments/environment.local.ts` are intentionally ignored by git to prevent accidental secret commits.
+- `src/environments/environment.ts` stays committed with safe placeholders so imports always resolve.
+- Production values are generated from CI secrets into `environment.prod.ts` during build.
 - This Angular app is built to match the existing React product behavior and UI parity.

@@ -2,8 +2,17 @@
   "name": "a-bookshelf",
   "version": "0.0.0",
   "packageManager": "npm@10.9.2",
+  "engines": {
+    "node": "22.x",
+    "npm": "10.x"
+  },
+  "volta": {
+    "node": "22.12.0",
+    "npm": "10.9.2"
+  },
   "scripts": {
     "ng": "ng",
+    "prestart": "node scripts/generate-dev-env.js",
     "start": "ng serve",
     "prebuild": "node scripts/generate-prod-env.js",
     "build": "ng build && cp dist/a-bookshelf/browser/index.html dist/a-bookshelf/browser/404.html",

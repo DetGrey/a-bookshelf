@@ -29,6 +29,7 @@ yarn-error.log*
 .env
 .env.local
 .env.*.local
+angular/src/environments/environment.local.ts
 
 # OS generated files
 Thumbs.db
