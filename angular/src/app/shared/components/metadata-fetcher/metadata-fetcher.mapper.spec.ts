@@ -2,26 +2,17 @@ import { buildMetadataPatch } from './metadata-fetcher.mapper';
 
 describe('metadata fetcher mapper', () => {
   it('maps metadata payload to BookFormModel patch fields', () => {
-    const patch = buildMetadataPatch(
-      {
-        title: 'Solo Leveling',
-        description: 'Hunters and gates',
-        image: 'https://images.example.com/solo.jpg',
-        genres: ['Action', 'Fantasy'],
-        language: 'English',
-        latest_chapter: 'Chapter 210',
-        chapter_count: 210,
-      },
-      {
-        title: '',
-        description: '',
-        coverUrl: '',
-        genres: '',
-        language: '',
-        latestChapter: '',
-        chapterCount: null,
-      },
-    );
+    const patch = buildMetadataPatch({
+      title: 'Solo Leveling',
+      description: 'Hunters and gates',
+      image: 'https://images.example.com/solo.jpg',
+      genres: ['Action', 'Fantasy'],
+      language: 'English',
+      original_language: 'Korean',
+      latest_chapter: 'Chapter 210',
+      last_uploaded_at: '2026-03-01T12:30:00.000Z',
+      chapter_count: 210,
+    });
 
     expect(patch).toEqual({
       title: 'Solo Leveling',
@@ -29,57 +20,45 @@ describe('metadata fetcher mapper', () => {
       coverUrl: 'https://images.example.com/solo.jpg',
       genres: 'Action, Fantasy',
       language: 'English',
+      originalLanguage: 'Korean',
       latestChapter: 'Chapter 210',
+      lastUploadedAt: '2026-03-01T12:30:00',
       chapterCount: 210,
     });
   });
 
-  it('does not overwrite existing non-empty form values', () => {
-    const patch = buildMetadataPatch(
-      {
-        title: 'Fetched title',
-        description: 'Fetched description',
-        image: 'https://images.example.com/fetched.jpg',
-        genres: ['Action'],
-        language: 'English',
-        latest_chapter: 'Chapter 50',
-        chapter_count: 50,
-      },
-      {
-        title: 'My custom title',
-        description: 'My custom description',
-        coverUrl: 'https://images.example.com/custom.jpg',
-        genres: 'Drama',
-        language: 'Japanese',
-        latestChapter: 'Chapter 99',
-        chapterCount: 99,
-      },
-    );
+  it('overwrites values with fetched metadata', () => {
+    const patch = buildMetadataPatch({
+      title: 'Fetched title',
+      description: 'Fetched description',
+      image: 'https://images.example.com/fetched.jpg',
+      genres: ['Action'],
+      language: 'English',
+      latest_chapter: 'Chapter 50',
+      chapter_count: 50,
+    });
 
-    expect(patch).toEqual({});
+    expect(patch).toEqual({
+      title: 'Fetched title',
+      description: 'Fetched description',
+      coverUrl: 'https://images.example.com/fetched.jpg',
+      genres: 'Action',
+      language: 'English',
+      latestChapter: 'Chapter 50',
+      chapterCount: 50,
+    });
   });
 
-  it('ignores empty metadata fields to avoid corrupting form', () => {
-    const patch = buildMetadataPatch(
-      {
-        title: '  ',
-        description: '',
-        image: '',
-        genres: [],
-        language: '',
-        latest_chapter: '',
-        chapter_count: null,
-      },
-      {
-        title: '',
-        description: '',
-        coverUrl: '',
-        genres: '',
-        language: '',
-        latestChapter: '',
-        chapterCount: null,
-      },
-    );
+  it('skips undefined and null metadata fields', () => {
+    const patch = buildMetadataPatch({
+      title: undefined,
+      description: null,
+      image: undefined,
+      genres: undefined,
+      language: null,
+      latest_chapter: undefined,
+      chapter_count: null,
+    });
 
     expect(patch).toEqual({});
   });

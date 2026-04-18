@@ -192,7 +192,10 @@ export class MetadataFetcherComponent {
     const coverUrlControl = form.get('coverUrl') as FormControl<string> | null;
     const genresControl = form.get('genres') as FormControl<string> | null;
     const languageControl = form.get('language') as FormControl<string> | null;
+    const originalLanguageControl = form.get('originalLanguage') as FormControl<string> | null;
     const latestChapterControl = form.get('latestChapter') as FormControl<string> | null;
+    const lastUploadedAtControl = form.get('lastUploadedAt') as FormControl<string> | null;
+    const lastFetchedAtControl = form.get('lastFetchedAt') as FormControl<string> | null;
     const chapterCountControl = form.get('chapterCount') as FormControl<number | null> | null;
 
     if (!titleControl || !descriptionControl || !coverUrlControl || !genresControl || !languageControl || !latestChapterControl || !chapterCountControl) {
@@ -201,17 +204,14 @@ export class MetadataFetcherComponent {
       return false;
     }
 
-    const patch = buildMetadataPatch(metadata, {
-      title: titleControl.value,
-      description: descriptionControl.value,
-      coverUrl: coverUrlControl.value,
-      genres: genresControl.value,
-      language: languageControl.value,
-      latestChapter: latestChapterControl.value,
-      chapterCount: chapterCountControl.value,
-    });
+    const patch = buildMetadataPatch(metadata);
 
-    form.patchValue(patch);
+    const now = new Date().toISOString().slice(0, 19);
+    const patchWithFetchedAt = lastFetchedAtControl
+      ? { ...patch, lastFetchedAt: now }
+      : patch;
+
+    form.patchValue(patchWithFetchedAt);
     if (this.autoAddSource()) {
       this.syncPrimarySource(form, this.resolvedSourceUrl());
     }

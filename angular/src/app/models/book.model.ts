@@ -65,6 +65,7 @@ export interface BookFormModel {
   lastRead: string;
   latestChapter: string;
   lastUploadedAt: string;
+  lastFetchedAt?: string;
   originalLanguage: string;
   sources: BookSourceDraft[];
   shelves: string[];

@@ -33,6 +33,7 @@ type EditBookFormGroup = FormGroup<{
   lastRead: FormControl<string>;
   latestChapter: FormControl<string>;
   lastUploadedAt: FormControl<string>;
+  lastFetchedAt: FormControl<string>;
   originalLanguage: FormControl<string>;
   shelves: FormControl<string[]>;
   relatedBookIds: FormControl<string[]>;
@@ -258,6 +259,7 @@ export class BookDetailsPageComponent {
     lastRead: new FormControl('', { nonNullable: true }),
     latestChapter: new FormControl('', { nonNullable: true }),
     lastUploadedAt: new FormControl('', { nonNullable: true }),
+    lastFetchedAt: new FormControl('', { nonNullable: true }),
     originalLanguage: new FormControl('', { nonNullable: true }),
     shelves: new FormControl<string[]>([], { nonNullable: true }),
     relatedBookIds: new FormControl<string[]>([], { nonNullable: true }),
@@ -339,6 +341,40 @@ export class BookDetailsPageComponent {
     this.mutationError.set(null);
     this.isEditMode.set(true);
 
+    this.resetEditForm(detail);
+  }
+
+  cancelEdit(): void {
+    const detail = this.detail();
+    if (detail) {
+      this.resetEditForm(detail);
+    }
+
+    this.isEditMode.set(false);
+    this.mutationError.set(null);
+  }
+
+  private resetEditForm(detail: BookDetailResolved): void {
+    this.editForm.reset({
+      title: '',
+      description: '',
+      score: null,
+      status: 'plan_to_read',
+      genres: '',
+      language: '',
+      chapterCount: null,
+      coverUrl: '',
+      notes: '',
+      timesRead: 1,
+      lastRead: '',
+      latestChapter: '',
+      lastUploadedAt: '',
+      lastFetchedAt: '',
+      originalLanguage: '',
+      shelves: [],
+      relatedBookIds: [],
+    });
+
     this.editForm.patchValue({
       title: detail.book.title,
       description: detail.book.description,
@@ -353,6 +389,7 @@ export class BookDetailsPageComponent {
       lastRead: detail.book.lastRead ?? '',
       latestChapter: detail.book.latestChapter ?? '',
       lastUploadedAt: detail.book.lastUploadedAt ? detail.book.lastUploadedAt.toISOString().slice(0, 19) : '',
+      lastFetchedAt: detail.book.lastFetchedAt ? detail.book.lastFetchedAt.toISOString().slice(0, 19) : '',
       originalLanguage: detail.book.originalLanguage ?? '',
       shelves: detail.shelves.map((shelf) => shelf.id),
       relatedBookIds: detail.relatedBooks.map((related) => related.bookId),
@@ -365,11 +402,6 @@ export class BookDetailsPageComponent {
         url: new FormControl(source.url, { nonNullable: true }),
       }));
     }
-  }
-
-  cancelEdit(): void {
-    this.isEditMode.set(false);
-    this.mutationError.set(null);
   }
 
   async saveEdit(): Promise<void> {
@@ -502,6 +534,7 @@ export class BookDetailsPageComponent {
       lastRead: this.editForm.controls.lastRead.value,
       latestChapter: this.editForm.controls.latestChapter.value,
       lastUploadedAt: this.editForm.controls.lastUploadedAt.value,
+      lastFetchedAt: this.editForm.controls.lastFetchedAt.value,
       originalLanguage: this.editForm.controls.originalLanguage.value,
       sources,
       shelves: this.editForm.controls.shelves.value,

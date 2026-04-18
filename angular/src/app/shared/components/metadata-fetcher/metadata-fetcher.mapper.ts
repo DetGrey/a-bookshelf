@@ -4,7 +4,9 @@ export interface MetadataPayload {
   image?: string | null;
   genres?: string[] | null;
   language?: string | null;
+  original_language?: string | null;
   latest_chapter?: string | null;
+  last_uploaded_at?: string | null;
   chapter_count?: number | null;
 }
 
@@ -14,7 +16,9 @@ export interface MetadataPatchTarget {
   coverUrl: string;
   genres: string;
   language: string;
+  originalLanguage: string;
   latestChapter: string;
+  lastUploadedAt: string;
   chapterCount: number | null;
 }
 
@@ -24,40 +28,63 @@ function normalizeText(value: string | null | undefined): string {
   return (value ?? '').trim();
 }
 
-export function buildMetadataPatch(metadata: MetadataPayload, current: MetadataPatchTarget): MetadataFormPatch {
+function toDatetimeLocalString(value: string | null | undefined): string {
+  const normalized = normalizeText(value);
+  if (!normalized) {
+    return '';
+  }
+
+  const parsed = new Date(normalized);
+  if (Number.isNaN(parsed.getTime())) {
+    return '';
+  }
+
+  return parsed.toISOString().slice(0, 19);
+}
+
+export function buildMetadataPatch(metadata: MetadataPayload): MetadataFormPatch {
   const patch: MetadataFormPatch = {};
 
   const title = normalizeText(metadata.title);
-  if (!current.title.trim() && title) {
+  if (metadata.title !== undefined && metadata.title !== null) {
     patch.title = title;
   }
 
   const description = normalizeText(metadata.description);
-  if (!current.description.trim() && description) {
+  if (metadata.description !== undefined && metadata.description !== null) {
     patch.description = description;
   }
 
   const image = normalizeText(metadata.image);
-  if (!current.coverUrl.trim() && image) {
+  if (metadata.image !== undefined && metadata.image !== null) {
     patch.coverUrl = image;
   }
 
   const genres = (metadata.genres ?? []).map((genre) => genre.trim()).filter(Boolean);
-  if (!current.genres.trim() && genres.length > 0) {
+  if (metadata.genres !== undefined && metadata.genres !== null) {
     patch.genres = genres.join(', ');
   }
 
   const language = normalizeText(metadata.language);
-  if (!current.language.trim() && language) {
+  if (metadata.language !== undefined && metadata.language !== null) {
     patch.language = language;
   }
 
+  const originalLanguage = normalizeText(metadata.original_language);
+  if (metadata.original_language !== undefined && metadata.original_language !== null) {
+    patch.originalLanguage = originalLanguage;
+  }
+
   const latestChapter = normalizeText(metadata.latest_chapter);
-  if (!current.latestChapter.trim() && latestChapter) {
+  if (metadata.latest_chapter !== undefined && metadata.latest_chapter !== null) {
     patch.latestChapter = latestChapter;
   }
 
-  if (current.chapterCount === null && typeof metadata.chapter_count === 'number' && Number.isFinite(metadata.chapter_count)) {
+  if (metadata.last_uploaded_at !== undefined && metadata.last_uploaded_at !== null) {
+    patch.lastUploadedAt = toDatetimeLocalString(metadata.last_uploaded_at);
+  }
+
+  if (typeof metadata.chapter_count === 'number' && Number.isFinite(metadata.chapter_count)) {
     patch.chapterCount = metadata.chapter_count;
   }
 

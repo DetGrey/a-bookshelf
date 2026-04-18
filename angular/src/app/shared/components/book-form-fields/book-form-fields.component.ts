@@ -106,6 +106,19 @@ import { FormGroup, ReactiveFormsModule } from '@angular/forms';
         <input id="lastUploadedAt" data-testid="last-uploaded-at-input" type="datetime-local" formControlName="lastUploadedAt" />
       </label>
 
+      @if (hasControl('lastFetchedAt')) {
+        <label class="field" for="lastFetchedAt">
+          <span>Last Fetched At</span>
+          <input
+            id="lastFetchedAt"
+            data-testid="last-fetched-at-input"
+            type="datetime-local"
+            formControlName="lastFetchedAt"
+            readonly
+          />
+        </label>
+      }
+
       <label class="field" for="notes">
         <span>Notes</span>
         <textarea
@@ -123,6 +136,10 @@ import { FormGroup, ReactiveFormsModule } from '@angular/forms';
 export class BookFormFieldsComponent {
   readonly form = input.required<FormGroup>();
   readonly scoreOptions = [1, 2, 3, 4, 5, 6, 7, 8, 9, 10];
+
+  hasControl(name: string): boolean {
+    return this.form().contains(name);
+  }
 
   normalizeTimesRead(): void {
     const control = this.form().get('timesRead');

@@ -57,6 +57,7 @@ export function toFormModel(book: Book): BookFormModel {
     lastRead: book.lastRead ?? '',
     latestChapter: book.latestChapter ?? '',
     lastUploadedAt: toDatetimeLocal(book.lastUploadedAt),
+    lastFetchedAt: toDatetimeLocal(book.lastFetchedAt),
     originalLanguage: book.originalLanguage ?? '',
     sources: [...(book.sources ?? [])],
     shelves: [],
@@ -82,6 +83,7 @@ export function toSupabasePayload(form: BookFormModel): Partial<BookRecord> {
     last_read: form.lastRead.trim() || null,
     latest_chapter: form.latestChapter.trim() || null,
     last_uploaded_at: form.lastUploadedAt.trim() || null,
+    last_fetched_at: form.lastFetchedAt?.trim() || null,
     original_language: form.originalLanguage.trim() || null,
   };
 }
