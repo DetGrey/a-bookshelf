@@ -66,13 +66,15 @@ import { escapeRegex } from '../../shared/utils/string.util';
           <div class="block shelf-block-section">
             <div class="block-head cursor-pointer" (click)="customOpen.set(!customOpen())">
               <p class="eyebrow">Custom Shelves {{ customOpen() ? '▼' : '▶' }}</p>
-              <button
-                class="ghost shelf-header-button"
-                type="button"
-                (click)="$event.stopPropagation(); showNewShelfForm.set(!showNewShelfForm())"
-              >
-                + New
-              </button>
+              @if (customOpen()) {
+                <button
+                  class="ghost shelf-header-button"
+                  type="button"
+                  (click)="$event.stopPropagation(); showNewShelfForm.set(!showNewShelfForm())"
+                >
+                  + New
+                </button>
+              }
             </div>
 
             @if (customOpen()) {
@@ -497,6 +499,12 @@ export class BookshelfPageComponent {
   constructor() {
     void this.bookService.loadBooks();
     void this.shelfService.loadShelves();
+
+    const viewport = this.document.defaultView;
+    if (viewport?.matchMedia && viewport.matchMedia('(max-width: 767px)').matches) {
+      this.statusOpen.set(false);
+      this.customOpen.set(false);
+    }
 
     afterNextRender(() => {
       this.restoreViewMemory();

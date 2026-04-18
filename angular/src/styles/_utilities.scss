@@ -9,6 +9,10 @@
   color: var(--text-muted);
 }
 
+.emoji-text {
+  font-family: 'NotoColorEmojiLimited', 'Apple Color Emoji', 'Segoe UI Emoji', 'Noto Color Emoji', 'Segoe UI', sans-serif;
+}
+
 .pill {
   display: inline-flex;
   align-items: center;

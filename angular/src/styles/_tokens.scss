@@ -1,3 +1,9 @@
+@font-face {
+  font-family: 'NotoColorEmojiLimited';
+  unicode-range: U+1F1E6-1F1FF;
+  src: url('https://raw.githack.com/googlefonts/noto-emoji/main/fonts/NotoColorEmoji.ttf');
+}
+
 :root {
   --bg: #0f1117;
   --panel: #1a1d27;

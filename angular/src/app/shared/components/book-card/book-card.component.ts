@@ -48,13 +48,13 @@ const SCORE_OPTIONS: Record<number, string> = {
             }
 
             @if (!compact() && book().language; as lang) {
-              <span data-testid="language-pill" class="pill ghost language-pill" title="Reading Language">
+              <span data-testid="language-pill" class="pill ghost language-pill emoji-text" title="Reading Language">
                 {{ formatLanguage(lang) }}
               </span>
             }
 
             @if (book().originalLanguage; as originalLanguage) {
-              <span data-testid="original-language-pill" class="pill ghost original-language-pill" title="Original Language">
+              <span data-testid="original-language-pill" class="pill ghost original-language-pill emoji-text" title="Original Language">
                 {{ formatLanguage(originalLanguage) }}
               </span>
             }

@@ -91,6 +91,7 @@ describe('BookshelfFilterService', () => {
     expect(service.genreMode()).toBe('all');
     expect(service.chapterValue()).toBeNull();
     expect(service.chapterMode()).toBe('max');
+    expect(service.shelf()).toBe('all');
   });
 
   it('updateFilter navigates with merged query params and resets page except when page is updated', async () => {

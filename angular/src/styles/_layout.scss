@@ -421,6 +421,75 @@ button:disabled {
   min-height: 44px;
 }
 
+@media (max-width: 767px) {
+  .page {
+    padding: 16px 12px 40px;
+    gap: 16px;
+  }
+
+  .page-head {
+    gap: 10px;
+  }
+
+  .page-head h1 {
+    font-size: 1.6rem;
+    line-height: 1.2;
+  }
+
+  .page-head .muted {
+    font-size: 0.88rem;
+  }
+
+  .bookshelf-layout {
+    gap: 14px;
+  }
+
+  .shelf-sidebar {
+    padding: var(--space-3);
+  }
+
+  .shelf-content {
+    gap: 12px;
+  }
+
+  .shelf-controls {
+    gap: 8px;
+  }
+
+  .shelf-controls-row {
+    flex-direction: column;
+    align-items: stretch;
+    gap: 8px;
+  }
+
+  .min-w-180,
+  .min-w-160 {
+    min-width: 0;
+    width: 100%;
+  }
+
+  .sort-direction-button {
+    align-self: flex-start;
+  }
+
+  .results-header {
+    flex-direction: column;
+    align-items: flex-start;
+  }
+
+  .pagination-controls {
+    margin-top: 16px;
+    padding: 12px;
+    gap: 12px;
+  }
+
+  .pagination-buttons {
+    width: 100%;
+    justify-content: space-between;
+    gap: 8px;
+  }
+}
+
 @media (min-width: 768px) {
   .shelf-controls {
     gap: 12px;

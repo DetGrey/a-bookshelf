@@ -13,7 +13,7 @@ export class BookshelfFilterService {
   readonly sort = signal<SortOption>('lastRead');
   readonly sortDir = signal<SortDirection>('desc');
   readonly language = signal<string | null>(null);
-  readonly shelf = signal<string | null>('status:reading');
+  readonly shelf = signal<string | null>('all');
   readonly genres = signal<string[]>([]);
   
   // Issue 018: New advanced filter properties
@@ -36,7 +36,7 @@ export class BookshelfFilterService {
 
       this.sortDir.set(params['dir'] === 'asc' ? 'asc' : 'desc');
       this.language.set(params['lang'] || null);
-      this.shelf.set(params['shelf'] || 'status:reading');
+      this.shelf.set(params['shelf'] || 'all');
       this.genres.set(params['genres'] ? params['genres'].split(',') : []);
       
       // Issue 018: Read new query params
