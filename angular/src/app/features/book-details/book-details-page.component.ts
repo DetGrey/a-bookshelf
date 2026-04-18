@@ -69,6 +69,11 @@ type EditBookFormGroup = FormGroup<{
               <button class="ghost" data-testid="enter-edit-mode" type="button" (click)="enterEditMode()">Edit</button>
               <button class="ghost delete-action-button" data-testid="delete-book" type="button" (click)="deleteCurrentBook()">Delete</button>
             </div>
+          } @else {
+            <div class="read-actions">
+              <button class="primary" data-testid="save-edit-top" type="button" (click)="saveEdit()">Save Changes</button>
+              <button class="ghost" data-testid="cancel-edit-top" type="button" (click)="cancelEdit()">Cancel</button>
+            </div>
           }
         </div>
 
@@ -77,7 +82,7 @@ type EditBookFormGroup = FormGroup<{
             <h1>Edit Book</h1>
 
             <form class="stack" [formGroup]="editForm" (ngSubmit)="saveEdit()">
-              <app-metadata-fetcher [form]="editForm" [compact]="true" />
+              <app-metadata-fetcher [form]="editForm" [compact]="true" [prefillSourceUrl]="primarySourceUrl()" />
               <app-book-form-fields [form]="editForm" />
               <app-shelf-selector [control]="editForm.controls.shelves" [availableShelves]="shelfService.shelves()" />
               <app-source-manager [sources]="editForm.controls.sources" />
@@ -114,25 +119,19 @@ type EditBookFormGroup = FormGroup<{
                   }
                 </div>
 
-                <div class="pill-row detail-meta-pills">
-                  <span class="pill ghost">Status: {{ detail()!.book.status }}</span>
-                  <span class="pill ghost">Score: {{ detail()!.book.score === null ? 'Unscored' : detail()!.book.score }}</span>
-                  <span class="pill ghost">Language: {{ languageLabel() }}</span>
-                  <span class="pill ghost">Chapter count: {{ chapterCountLabel() }}</span>
-                  @if (detail()!.book.latestChapter) {
-                    <span class="pill ghost" data-testid="latest-chapter">Latest chapter: {{ detail()!.book.latestChapter }}</span>
+                <div class="stat-grid">
+                  <div class="stat"><p class="muted">Status</p><strong>{{ statusLabel(detail()!.book.status) }}</strong></div>
+                  <div class="stat"><p class="muted">Score</p><strong>{{ scoreLabel() }}</strong></div>
+                  <div class="stat"><p class="muted">Language</p><strong>{{ languageLabel() }}</strong></div>
+                  <div class="stat"><p class="muted">Original Language</p><strong data-testid="original-language">{{ detail()!.book.originalLanguage || '—' }}</strong></div>
+                  <div class="stat"><p class="muted">Last Updated</p><strong>{{ detail()!.book.updatedAt | date:'mediumDate' }}</strong></div>
+                  <div class="stat"><p class="muted">Fetched</p><strong>{{ detail()!.book.lastFetchedAt ? (detail()!.book.lastFetchedAt | date:'medium') : '—' }}</strong></div>
+                  <div class="stat"><p class="muted">Last Upload</p><strong>{{ detail()!.book.lastUploadedAt ? (detail()!.book.lastUploadedAt | date:'medium') : '—' }}</strong></div>
+                  @if (detail()!.book.timesRead > 1) {
+                    <div class="stat"><p class="muted">Times Read</p><strong data-testid="times-read">{{ detail()!.book.timesRead }} times</strong></div>
                   }
-                  @if (detail()!.book.lastUploadedAt) {
-                    <span class="pill ghost" data-testid="last-uploaded-at">Last uploaded: {{ detail()!.book.lastUploadedAt | date:'mediumDate' }}</span>
-                  }
-                  @if (detail()!.book.originalLanguage) {
-                    <span class="pill ghost" data-testid="original-language">Original language: {{ detail()!.book.originalLanguage }}</span>
-                  }
+                  <div class="stat"><p class="muted">Chapter Count</p><strong>{{ chapterCountLabel() }}</strong></div>
                 </div>
-
-                @if (detail()!.book.timesRead > 1) {
-                  <p data-testid="times-read" class="muted">Read {{ detail()!.book.timesRead }} times</p>
-                }
 
                 <div class="related-section-wrapper">
                   @if (detail()!.sources.length > 0) {
@@ -322,6 +321,7 @@ export class BookDetailsPageComponent {
     const count = this.detail()!.book.chapterCount;
     return count === null ? 'Unknown' : String(count);
   });
+  readonly primarySourceUrl = computed(() => this.detail()?.sources.at(0)?.url ?? '');
 
   constructor() {
     const resolved = this.resolved();

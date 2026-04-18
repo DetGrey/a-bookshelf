@@ -15,6 +15,21 @@ describe('MetadataFetcherComponent', () => {
     coverUrl: new FormControl('', { nonNullable: true }),
   });
 
+  it('prefills Source URL input when prefillSourceUrl is provided and input is empty', () => {
+    TestBed.configureTestingModule({
+      imports: [MetadataFetcherComponent, ReactiveFormsModule],
+      providers: [{ provide: SUPABASE_CLIENT, useValue: { functions: { invoke: jest.fn() } } }],
+    });
+
+    const fixture = TestBed.createComponent(MetadataFetcherComponent);
+    fixture.componentRef.setInput('form', createForm());
+    fixture.componentRef.setInput('prefillSourceUrl', 'https://example.com/series');
+    fixture.detectChanges();
+
+    const input = fixture.debugElement.query(By.css('[data-testid="metadata-url-input"]')).nativeElement as HTMLInputElement;
+    expect(input.value).toBe('https://example.com/series');
+  });
+
   it('fetches metadata and shows a rich preview card before applying', async () => {
     const invoke = jest.fn().mockResolvedValue({
       data: {

@@ -11,24 +11,27 @@ import { buildMetadataPatch, MetadataPayload } from './metadata-fetcher.mapper';
   styleUrl: './metadata-fetcher.component.scss',
   template: `
     <fieldset class="metadata-fetcher">
+      <p class="eyebrow">Fetch Metadata</p>
+
       <label class="field">
         <span>Source URL</span>
         <div class="fetch-controls">
           <input
             data-testid="metadata-url-input"
-            [(ngModel)]="sourceUrl"
+            [value]="sourceUrl || prefillSourceUrl()"
             name="metadataSourceUrl"
             placeholder="https://example.com/volume-12"
+            (input)="onSourceUrlInput($event)"
           />
 
           <button
             data-testid="metadata-fetch-button"
             type="button"
-            class="primary"
-            [disabled]="isLoading() || !sourceUrl.trim()"
+            [class]="compact() ? 'ghost' : 'primary'"
+            [disabled]="isLoading() || !resolvedSourceUrl().trim()"
             (click)="fetchMetadata()"
           >
-            @if (isLoading()) { Fetching… } @else { Fetch metadata }
+            @if (isLoading()) { Fetching… } @else { Fetch }
           </button>
         </div>
       </label>
@@ -95,6 +98,7 @@ export class MetadataFetcherComponent {
 
   readonly form = input.required<FormGroup>();
   readonly compact = input(false);
+  readonly prefillSourceUrl = input('');
 
   readonly isLoading = signal(false);
   readonly errorMessage = signal<string | null>(null);
@@ -103,8 +107,13 @@ export class MetadataFetcherComponent {
 
   sourceUrl = '';
 
+  onSourceUrlInput(event: Event): void {
+    const target = event.target as HTMLInputElement;
+    this.sourceUrl = target.value ?? '';
+  }
+
   async fetchMetadata(): Promise<void> {
-    const url = this.sourceUrl.trim();
+    const url = this.resolvedSourceUrl().trim();
     if (!url) {
       this.errorMessage.set('Source URL is required.');
       this.fetchedMetadata.set(null);
@@ -191,5 +200,9 @@ export class MetadataFetcherComponent {
     }
 
     return data as MetadataPayload;
+  }
+
+  resolvedSourceUrl(): string {
+    return this.sourceUrl.trim() || this.prefillSourceUrl().trim();
   }
 }

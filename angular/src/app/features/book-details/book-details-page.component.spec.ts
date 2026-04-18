@@ -300,6 +300,72 @@ describe('BookDetailsPageComponent', () => {
     expect(fixture.nativeElement.querySelector('app-metadata-fetcher')).not.toBeNull();
   });
 
+  it('prefills metadata Source URL from the first existing source when entering edit mode', () => {
+    TestBed.configureTestingModule({
+      imports: [BookDetailsPageComponent],
+      providers: [
+        {
+          provide: ActivatedRoute,
+          useValue: {
+            snapshot: {
+              data: {
+                book: {
+                  success: true,
+                  data: {
+                    book: {
+                      id: 'book-1',
+                      userId: 'user-1',
+                      title: 'Solo Leveling',
+                      description: 'Hunters and gates',
+                      score: 9,
+                      status: 'reading',
+                      genres: ['Action', 'Fantasy'],
+                      language: 'English',
+                      chapterCount: 210,
+                      coverUrl: 'https://images.example.com/solo.jpg',
+                      createdAt: new Date('2026-01-01T00:00:00.000Z'),
+                      updatedAt: new Date('2026-01-02T00:00:00.000Z'),
+                    },
+                    sources: [
+                      { siteName: 'Primary', url: 'https://example.com/solo' },
+                      { siteName: 'Mirror', url: 'https://mirror.example.com/solo' },
+                    ],
+                    relatedBooks: [],
+                    shelves: [],
+                  },
+                },
+              },
+            },
+          },
+        },
+        {
+          provide: BookService,
+          useValue: {
+            updateBook: jest.fn(),
+            deleteBook: jest.fn(),
+            books: signal([]),
+          },
+        },
+        {
+          provide: SUPABASE_CLIENT,
+          useValue: {
+            functions: { invoke: jest.fn().mockResolvedValue({ data: null, error: null }) },
+          },
+        },
+      ],
+    });
+
+    const fixture = TestBed.createComponent(BookDetailsPageComponent);
+    fixture.detectChanges();
+
+    const editButton = fixture.nativeElement.querySelector('[data-testid="enter-edit-mode"]') as HTMLButtonElement;
+    editButton.click();
+    fixture.detectChanges();
+
+    const metadataUrlInput = fixture.nativeElement.querySelector('[data-testid="metadata-url-input"]') as HTMLInputElement;
+    expect(metadataUrlInput.value).toBe('https://example.com/solo');
+  });
+
   it('surfaces clear error when save fails', async () => {
     const updateBook = jest.fn().mockResolvedValue({
       success: false,

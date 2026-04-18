@@ -5,6 +5,29 @@
 .book-details-page {
   display: grid;
   gap: var(--space-6);
+
+  .pill-row {
+    gap: 6px;
+  }
+
+  .pill,
+  button.pill {
+    gap: 6px;
+    padding: 5px 10px;
+    font-size: 0.85rem;
+    min-height: 20px;
+    font-weight: 600;
+  }
+
+  .pill.ghost {
+    border-color: var(--accent);
+    color: var(--accent);
+  }
+
+  .pill.ghost:not(button):not(a):hover {
+    border-color: var(--accent);
+    color: var(--accent);
+  }
 }
 
 .read-actions,
@@ -54,13 +77,14 @@
 
 .genre-remove-button {
   cursor: pointer;
-  font-size: 0.75rem;
-  padding: 0 8px;
 }
 
-.detail-meta-pills {
-  margin-top: 4px;
-  gap: 8px;
+.source-card,
+.source-card:hover,
+.source-card:active,
+.source-card:focus,
+.source-card:focus-visible {
+  text-decoration: underline;
 }
 
 .related-books-grid {
