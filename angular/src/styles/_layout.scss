@@ -677,7 +677,7 @@ button:disabled {
   padding: 10px 12px;
   border: 1px solid var(--border);
   border-radius: var(--radius-sm);
-  background: var(--bg);
+  background: var(--panel-strong, var(--panel));
 }
 
 .quality-result-list {
@@ -725,7 +725,7 @@ button:disabled {
   padding: 12px;
   border: 1px solid var(--border);
   border-radius: var(--radius-sm);
-  background: var(--bg);
+  background: var(--panel-strong, var(--panel));
 
   ul {
     list-style: none;

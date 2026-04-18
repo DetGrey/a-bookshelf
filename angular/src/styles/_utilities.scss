@@ -6,7 +6,7 @@
   font-size: 0.75rem;
   text-transform: uppercase;
   letter-spacing: 0.08em;
-  color: var(--text-muted);
+  color: var(--accent);
 }
 
 .emoji-text {
@@ -32,6 +32,14 @@
     background: var(--panel);
     border: 1px solid var(--border);
   }
+}
+
+a.pill,
+a.pill:hover,
+a.pill:active,
+a.pill:focus,
+a.pill:focus-visible {
+  text-decoration: none;
 }
 
 .pill-row {
@@ -76,6 +84,16 @@
 
   &:hover {
     border-color: var(--accent);
+  }
+}
+
+.pill.ghost:not(button):not(a) {
+  cursor: default;
+
+  &:hover {
+    border-color: var(--border);
+    color: var(--text-muted);
+    background: transparent;
   }
 }
 
