@@ -27,10 +27,11 @@ jobs:
           node-version: 22
           cache: npm
           cache-dependency-path: |
+            angular/package-lock.json
             frontend/package-lock.json
 
       - name: Install Angular dependencies
-        run: npm install
+        run: npm ci
         working-directory: angular
 
       - name: Install React dependencies
@@ -39,6 +40,7 @@ jobs:
 
       - name: Set environment variables
         run: |
+          cp src/environments/environment.prod.example.ts src/environments/environment.prod.ts
           sed -i "s|supabaseUrl: ''|supabaseUrl: '${{ secrets.SUPABASE_URL }}'|" src/environments/environment.prod.ts
           sed -i "s|supabaseAnonKey: ''|supabaseAnonKey: '${{ secrets.SUPABASE_ANON_KEY }}'|" src/environments/environment.prod.ts
           sed -i "s|imageProxyUrl: ''|imageProxyUrl: '${{ secrets.IMAGE_PROXY_URL }}'|" src/environments/environment.prod.ts
