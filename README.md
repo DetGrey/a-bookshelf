@@ -3,6 +3,11 @@ A personal library dashboard that tracks reading status, progress, and links acr
 
 Deployment link: https://detgrey.github.io/a-bookshelf/
 
+## GitHub Pages deployment layout
+- React app (legacy/current): served at `/a-bookshelf/` from `frontend/dist`
+- Angular app (v2): served at `/a-bookshelf/v2/` from `angular/dist/a-bookshelf/browser`
+- Workflow: `.github/workflows/deploy.yml` builds both apps and publishes a merged artifact where Angular files are copied into the `v2/` subfolder
+
 ## Highlights
 - Smart add: paste a URL (Webtoons, Bato) and the `fetch-metadata` Edge Function scrapes title, description, cover, genres, original language, language, latest chapter, and upload date.
 - **Image proxy**: Book cover images are automatically downloaded, converted to WebP format, and stored in Cloudflare R2 via a Workers proxy. Ensures images remain available even if the original source goes down. Fast global delivery via Cloudflare's CDN. Gracefully falls back to original URLs if upload fails.

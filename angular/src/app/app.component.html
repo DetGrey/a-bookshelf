@@ -2,13 +2,37 @@
   @if (showNavigation()) {
     <nav class="app-nav">
       @if (auth.currentUser()) {
-        <a routerLink="/dashboard" routerLinkActive="active-link">Dashboard</a>
-        <a routerLink="/bookshelf" routerLinkActive="active-link">Bookshelf</a>
-        <a routerLink="/add" routerLinkActive="active-link">Add</a>
-        <button type="button" (click)="logout()">Logout</button>
+        <a routerLink="/bookshelf" class="brand" aria-label="A Bookshelf home">
+          <span class="brand-mark" aria-hidden="true">AB</span>
+          <span class="brand-copy">
+            <span class="brand-title">A Bookshelf</span>
+            <span class="brand-subtitle">Personal library HQ</span>
+          </span>
+        </a>
+
+        <div class="nav-links" aria-label="Primary">
+          <a routerLink="/dashboard" routerLinkActive="active-link" class="nav-link">Dashboard</a>
+          <a routerLink="/bookshelf" routerLinkActive="active-link" class="nav-link">Bookshelf</a>
+          <a routerLink="/add" routerLinkActive="active-link" class="nav-link">Smart Add</a>
+        </div>
+
+        <div class="nav-actions">
+          <span class="nav-email">{{ auth.currentUser()?.email }}</span>
+          <button type="button" class="ghost" (click)="logout()">Sign out</button>
+        </div>
       } @else {
-        <a routerLink="/login" routerLinkActive="active-link">Login</a>
-        <a routerLink="/signup" routerLinkActive="active-link">Signup</a>
+        <a routerLink="/bookshelf" class="brand" aria-label="A Bookshelf home">
+          <span class="brand-mark" aria-hidden="true">AB</span>
+          <span class="brand-copy">
+            <span class="brand-title">A Bookshelf</span>
+            <span class="brand-subtitle">Personal library HQ</span>
+          </span>
+        </a>
+
+        <div class="nav-actions nav-actions-auth">
+          <a routerLink="/login" routerLinkActive="active-link" class="ghost">Log in</a>
+          <a routerLink="/signup" routerLinkActive="active-link" class="ghost">Create account</a>
+        </div>
       }
     </nav>
   }

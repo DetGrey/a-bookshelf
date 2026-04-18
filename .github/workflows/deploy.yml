@@ -26,11 +26,17 @@ jobs:
         with:
           node-version: 22
           cache: npm
-          cache-dependency-path: angular/package-lock.json
+          cache-dependency-path: |
+            angular/package-lock.json
+            frontend/package-lock.json
 
-      - name: Install dependencies
+      - name: Install Angular dependencies
         run: npm ci
         working-directory: angular
+
+      - name: Install React dependencies
+        run: npm ci
+        working-directory: frontend
 
       - name: Set environment variables
         run: |
@@ -39,9 +45,24 @@ jobs:
           sed -i "s|imageProxyUrl: ''|imageProxyUrl: '${{ secrets.IMAGE_PROXY_URL }}'|" src/environments/environment.prod.ts
         working-directory: angular
 
-      - name: Build
+      - name: Build Angular (v2)
         run: npm run build
         working-directory: angular
+
+      - name: Build React (root)
+        run: npm run build
+        working-directory: frontend
+        env:
+          VITE_SUPABASE_URL: ${{ secrets.SUPABASE_URL }}
+          VITE_SUPABASE_ANON_KEY: ${{ secrets.SUPABASE_ANON_KEY }}
+          VITE_IMAGE_PROXY_URL: ${{ secrets.IMAGE_PROXY_URL }}
+
+      - name: Prepare combined Pages artifact
+        run: |
+          rm -rf _site
+          mkdir -p _site/v2
+          cp -R frontend/dist/. _site/
+          cp -R angular/dist/a-bookshelf/browser/. _site/v2/
 
       - name: Setup Pages
         uses: actions/configure-pages@v4
@@ -49,7 +70,7 @@ jobs:
       - name: Upload artifact
         uses: actions/upload-pages-artifact@v3
         with:
-          path: angular/dist/a-bookshelf/browser
+          path: _site
 
   deploy:
     environment:
