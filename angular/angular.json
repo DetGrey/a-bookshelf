@@ -42,6 +42,7 @@
             "production": {
               "baseHref": "/a-bookshelf/",
               "deployUrl": "/a-bookshelf/",
+              "serviceWorker": "ngsw-config.json",
               "fileReplacements": [
                 {
                   "replace": "src/environments/environment.ts",

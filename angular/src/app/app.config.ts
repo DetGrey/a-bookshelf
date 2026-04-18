@@ -1,5 +1,6 @@
 import { ApplicationConfig, inject, provideAppInitializer, provideZoneChangeDetection } from '@angular/core';
 import { provideRouter } from '@angular/router';
+import { provideServiceWorker } from '@angular/service-worker';
 import { createClient } from '@supabase/supabase-js';
 import { environment } from '../environments/environment';
 import { AuthService } from './core/auth/auth.service';
@@ -23,6 +24,10 @@ export const appConfig: ApplicationConfig = {
         return createClient(supabaseUrl, supabaseAnonKey);
       },
     },
+    provideServiceWorker('ngsw-worker.js', {
+      enabled: environment.production,
+      registrationStrategy: 'registerWhenStable:30000',
+    }),
     provideAppInitializer(() => initializeAuth(inject(AuthService))()),
   ]
 };
