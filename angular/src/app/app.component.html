@@ -1,6 +1,6 @@
 <div class="app-shell">
   @if (showNavigation()) {
-    <nav class="app-nav">
+    <nav #appNav class="app-nav" [class.nav-hidden]="navHidden()">
       @if (auth.currentUser()) {
         <a routerLink="/bookshelf" class="brand" aria-label="A Bookshelf home">
           <span class="brand-mark" aria-hidden="true">AB</span>

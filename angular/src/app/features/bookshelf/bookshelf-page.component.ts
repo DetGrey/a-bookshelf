@@ -1,5 +1,5 @@
 import { DOCUMENT } from '@angular/common';
-import { afterNextRender, ChangeDetectionStrategy, Component, computed, inject, signal } from '@angular/core';
+import { ElementRef, ViewChild, afterNextRender, ChangeDetectionStrategy, Component, HostListener, computed, inject, signal } from '@angular/core';
 import { BookService, WaitingUpdateProgress, WaitingUpdateSummary } from '../../core/book/book.service';
 import { ShelfService } from '../../core/shelf/shelf.service';
 import { BookGridComponent } from '../../shared/components/book-grid/book-grid.component';
@@ -24,7 +24,7 @@ import { escapeRegex } from '../../shared/utils/string.util';
       </div>
 
       <section class="bookshelf-layout">
-        <aside class="shelf-sidebar">
+        <aside class="shelf-sidebar desktop-only">
           <div class="block">
             <div class="block-head cursor-pointer" (click)="statusOpen.set(!statusOpen())">
               <p class="eyebrow">Status {{ statusOpen() ? '▼' : '▶' }}</p>
@@ -78,6 +78,25 @@ import { escapeRegex } from '../../shared/utils/string.util';
             </div>
 
             @if (customOpen()) {
+              @if (showNewShelfForm()) {
+                <form class="stack" (submit)="onCreateShelfSubmit($event)">
+                  <label class="field">
+                    <span>Shelf name</span>
+                    <input
+                      data-testid="create-shelf-input"
+                      name="newShelfName"
+                      [(ngModel)]="newShelfName"
+                      placeholder="Favorites, To Buy..."
+                    />
+                  </label>
+
+                  <div class="shelf-form-section">
+                    <button data-testid="create-shelf-button" type="submit" class="primary shelf-form-button">Create</button>
+                    <button type="button" class="ghost shelf-form-button" (click)="showNewShelfForm.set(false)">Cancel</button>
+                  </div>
+                </form>
+              }
+
               <nav class="shelf-list">
                 @for (shelf of customShelves(); track shelf.id) {
                   <div class="shelf-item-wrapper">
@@ -105,25 +124,6 @@ import { escapeRegex } from '../../shared/utils/string.util';
                   </div>
                 }
               </nav>
-
-              @if (showNewShelfForm()) {
-                <form class="stack" (submit)="onCreateShelfSubmit($event)">
-                  <label class="field">
-                    <span>Shelf name</span>
-                    <input
-                      data-testid="create-shelf-input"
-                      name="newShelfName"
-                      [(ngModel)]="newShelfName"
-                      placeholder="Favorites, To Buy..."
-                    />
-                  </label>
-
-                  <div class="shelf-form-section">
-                    <button data-testid="create-shelf-button" type="submit" class="primary shelf-form-button">Create</button>
-                    <button type="button" class="ghost shelf-form-button" (click)="showNewShelfForm.set(false)">Cancel</button>
-                  </div>
-                </form>
-              }
             }
           </div>
 
@@ -140,7 +140,277 @@ import { escapeRegex } from '../../shared/utils/string.util';
           } @else if (books().length === 0) {
             <p>No books yet.</p>
           } @else {
-            <div class="shelf-controls">
+            <div #mobileMiniBar class="mobile-mini-bar mobile-only" [class.mobile-mini-hidden]="miniSearchHidden()">
+              <div class="mobile-mini-top">
+                <label class="field mobile-mini-search">
+                  <span class="sr-only">Search</span>
+                  <input
+                    data-testid="mobile-search-input"
+                    [value]="filters.search()"
+                    (input)="onSearchInput($event)"
+                    placeholder="Search titles..."
+                  />
+                </label>
+
+                <button
+                  type="button"
+                  class="ghost mobile-filter-trigger"
+                  data-testid="mobile-filter-toggle"
+                  (click)="toggleFilterSheet()"
+                >
+                  Filters
+                </button>
+              </div>
+
+              <p class="muted mobile-mini-summary" data-testid="mobile-filter-summary">
+                {{ activeFilterCount() }} active • Sort: {{ sortLabel() }} {{ filters.sortDir() === 'desc' ? '↓' : '↑' }}
+              </p>
+            </div>
+
+            @if (filterSheetOpen()) {
+              <div class="mobile-filter-sheet-backdrop mobile-only" (click)="closeFilterSheet()"></div>
+              <section class="mobile-filter-sheet block mobile-only" data-testid="mobile-filter-sheet">
+                <div class="mobile-sheet-head">
+                  <h2 class="mobile-sheet-title">Filters</h2>
+                  <button type="button" class="ghost" (click)="closeFilterSheet()">Close</button>
+                </div>
+
+                <div>
+                  <p class="eyebrow">Sort & Language</p>
+                  <div class="mobile-inline-controls">
+                    <label class="field mobile-inline-field mobile-inline-sort">
+                      <span>Sort by</span>
+                      <select [value]="filters.sort()" (change)="onSortChange($event)">
+                        @if (filters.search()) {
+                          <option value="relevance">Relevance (search)</option>
+                        }
+                        <option value="createdAt">Date Added</option>
+                        <option value="updatedAt">Last Updated</option>
+                        <option value="lastRead">Last Read</option>
+                        <option value="lastUploadedAt">Last Uploaded</option>
+                        <option value="score">Score</option>
+                        <option value="chapterCount">Chapter Count</option>
+                        <option value="title">Title (A-Z)</option>
+                        <option value="status">Status</option>
+                      </select>
+                    </label>
+
+                    <button
+                      class="ghost sort-direction-button mobile-inline-direction"
+                      type="button"
+                      (click)="toggleSortDirection()"
+                      [attr.title]="filters.sortDir() === 'desc' ? 'Descending' : 'Ascending'"
+                    >
+                      {{ filters.sortDir() === 'desc' ? '↓' : '↑' }}
+                    </button>
+
+                    <label class="field mobile-inline-field mobile-inline-language">
+                      <span>Language</span>
+                      <select [value]="filters.language() || 'all'" (change)="onLanguageChange($event)">
+                        <option value="all">All languages</option>
+                        @for (language of allLanguages(); track language) {
+                          <option [value]="language">{{ language }}</option>
+                        }
+                      </select>
+                    </label>
+                  </div>
+                </div>
+
+                <div>
+                  <div class="mobile-sheet-subhead">
+                    <p class="eyebrow">Genres</p>
+
+                    @if (filters.genres().length > 0) {
+                      <div class="mode-toggle genre-mode-toggle">
+                        <button
+                          type="button"
+                          class="pill filter-toggle-button"
+                          [class.ghost]="filters.genreMode() !== 'any'"
+                          (click)="setGenreMode('any')"
+                        >
+                          Any
+                        </button>
+                        <button
+                          type="button"
+                          class="pill filter-toggle-button"
+                          [class.ghost]="filters.genreMode() !== 'all'"
+                          (click)="setGenreMode('all')"
+                        >
+                          All
+                        </button>
+                      </div>
+                    }
+                  </div>
+
+                  <div class="filter-options">
+                    @if (filters.genres().length > 0) {
+                      <button class="pill radius-8" type="button" (click)="clearGenres()">✕ Clear</button>
+                    }
+
+                    @for (genre of allGenres(); track genre) {
+                      <button
+                        type="button"
+                        class="pill radius-8 filter-chip"
+                        [class.ghost]="!isGenreActive(genre)"
+                        (click)="onGenreToggled(genre)"
+                      >
+                        {{ genre }}
+                      </button>
+                    }
+                  </div>
+                </div>
+
+                <div>
+                  <div class="mobile-sheet-subhead">
+                    <p class="eyebrow">Chapter Count</p>
+
+                    @if (filters.chapterValue() !== null) {
+                      <div class="mode-toggle">
+                        <button
+                          type="button"
+                          class="filter-toggle-button"
+                          [class.pill]="filters.chapterMode() === 'max'"
+                          [class.ghost]="filters.chapterMode() !== 'max'"
+                          (click)="setChapterMode('max')"
+                        >
+                          Max
+                        </button>
+                        <button
+                          type="button"
+                          class="filter-toggle-button"
+                          [class.pill]="filters.chapterMode() === 'min'"
+                          [class.ghost]="filters.chapterMode() !== 'min'"
+                          (click)="setChapterMode('min')"
+                        >
+                          Min
+                        </button>
+                      </div>
+                    }
+                  </div>
+
+                  <div class="preset-options">
+                    @if (filters.chapterValue() !== null) {
+                      <button class="pill radius-8 filter-chip" type="button" (click)="clearChapterFilter()">✕ Clear</button>
+                    } @else {
+                      <button class="pill filter-chip" type="button" (click)="setChapterValue(null)">Any</button>
+                    }
+
+                    @for (preset of chapterPresets; track preset) {
+                      <button
+                        type="button"
+                        class="pill radius-8 filter-chip"
+                        [class.ghost]="filters.chapterValue() !== preset"
+                        (click)="setChapterValue(preset)"
+                      >
+                        {{ preset }} chapters
+                      </button>
+                    }
+                  </div>
+                </div>
+
+                <div>
+                  <div class="mobile-sheet-subhead">
+                    <p class="eyebrow">Status</p>
+                  </div>
+
+                  <nav class="shelf-list">
+                    <button
+                      data-testid="mobile-shelf-all"
+                      type="button"
+                      class="shelf-item"
+                      [class.active]="isShelfSelected('all')"
+                      (click)="selectShelf('all')"
+                    >
+                      <div>
+                        <span>All Books</span>
+                        <span class="shelf-count">{{ books().length }}</span>
+                      </div>
+                    </button>
+
+                    @for (statusShelf of statusShelves(); track statusShelf.key) {
+                      <button
+                        [attr.data-testid]="'mobile-shelf-status-' + statusShelf.value"
+                        type="button"
+                        class="shelf-item"
+                        [class.active]="isShelfSelected(statusShelf.key)"
+                        (click)="selectShelf(statusShelf.key)"
+                      >
+                        <div>
+                          <span>{{ statusShelf.label }}</span>
+                          <span class="shelf-count">{{ statusShelf.count }}</span>
+                        </div>
+                      </button>
+                    }
+                  </nav>
+                </div>
+
+                <div>
+                  <div class="mobile-sheet-subhead">
+                    <p class="eyebrow">Custom Shelves</p>
+                    <button
+                      class="ghost"
+                      type="button"
+                      (click)="showNewShelfForm.set(!showNewShelfForm())"
+                    >
+                      + New
+                    </button>
+                  </div>
+
+                  @if (showNewShelfForm()) {
+                    <form class="stack" (submit)="onCreateShelfSubmit($event)">
+                      <label class="field">
+                        <span>Shelf name</span>
+                        <input
+                          data-testid="mobile-create-shelf-input"
+                          name="newShelfName"
+                          [(ngModel)]="newShelfName"
+                          placeholder="Favorites, To Buy..."
+                        />
+                      </label>
+
+                      <div class="shelf-form-section">
+                        <button type="submit" class="primary shelf-form-button">Create</button>
+                        <button type="button" class="ghost shelf-form-button" (click)="showNewShelfForm.set(false)">Cancel</button>
+                      </div>
+                    </form>
+                  }
+
+                  <nav class="shelf-list">
+                    @for (shelf of customShelves(); track shelf.id) {
+                      <div class="shelf-item-wrapper">
+                        <button
+                          [attr.data-testid]="'mobile-shelf-custom-' + shelf.id"
+                          type="button"
+                          class="shelf-item flex-1"
+                          [class.active]="isShelfSelected('custom:' + shelf.id)"
+                          (click)="selectShelf('custom:' + shelf.id)"
+                        >
+                          <div>
+                            <span>{{ shelf.name }}</span>
+                            <span class="shelf-count">{{ shelf.bookCount }}</span>
+                          </div>
+                        </button>
+
+                        <button
+                          [attr.data-testid]="'mobile-delete-shelf-' + shelf.id"
+                          type="button"
+                          class="shelf-delete"
+                          (click)="deleteCustomShelf(shelf.id)"
+                        >
+                          ×
+                        </button>
+                      </div>
+                    }
+                  </nav>
+
+                  @if (sidebarMessage()) {
+                    <p class="error">{{ sidebarMessage() }}</p>
+                  }
+                </div>
+              </section>
+            }
+
+            <div class="shelf-controls desktop-only">
               <label class="field shelf-search">
                 <span>Search</span>
                 <input
@@ -188,7 +458,7 @@ import { escapeRegex } from '../../shared/utils/string.util';
               </div>
             </div>
 
-            <div class="block mt-12">
+            <div class="block mt-12 desktop-only">
               <div class="filter-header" data-testid="genre-filter-toggle" (click)="genreFilterOpen.set(!genreFilterOpen())">
                 <p class="eyebrow">Filter by Genre {{ genreFilterOpen() ? '▼' : '▶' }}</p>
 
@@ -253,7 +523,7 @@ import { escapeRegex } from '../../shared/utils/string.util';
               }
             </div>
 
-            <div class="block mt-12">
+            <div class="block mt-12 desktop-only">
               <div class="filter-header" data-testid="chapter-filter-toggle" (click)="chapterFilterOpen.set(!chapterFilterOpen())">
                 <p class="eyebrow">Filter by Chapter Count {{ chapterFilterOpen() ? '▼' : '▶' }}</p>
 
@@ -413,9 +683,48 @@ export class BookshelfPageComponent {
   readonly waitingErrorDetails = computed(() => this.waitingUpdateSummary()?.outcomes.filter((item) => item.status === 'error') ?? []);
   readonly statusOpen = signal(true);
   readonly customOpen = signal(true);
-  readonly showNewShelfForm = signal(true);
+  readonly showNewShelfForm = signal(false);
   readonly genreFilterOpen = signal(false);
   readonly chapterFilterOpen = signal(false);
+  readonly filterSheetOpen = signal(false);
+  readonly miniSearchHidden = signal(false);
+  private lastScrollY = 0;
+  private miniRevealThreshold = 120;
+  private readonly miniDeltaThreshold = 8;
+  private miniOriginCaptured = false;
+  private miniBarElement: HTMLElement | null = null;
+
+  @ViewChild('mobileMiniBar')
+  set mobileMiniBarRef(ref: ElementRef<HTMLElement> | undefined) {
+    this.miniBarElement = ref?.nativeElement ?? null;
+    this.captureMiniOriginThreshold();
+  }
+  readonly sortLabel = computed(() => this.sortLabels[this.filters.sort()] ?? 'Last Updated');
+  readonly activeFilterCount = computed(() => {
+    let count = 0;
+
+    if (this.selectedShelf() !== 'all') {
+      count += 1;
+    }
+
+    if (this.filters.search().trim().length > 0) {
+      count += 1;
+    }
+
+    if ((this.filters.language() ?? '').trim().length > 0) {
+      count += 1;
+    }
+
+    if (this.filters.genres().length > 0) {
+      count += 1;
+    }
+
+    if (this.filters.chapterValue() !== null) {
+      count += 1;
+    }
+
+    return count;
+  });
   readonly statusShelves = computed(() => {
     const source = this.books();
     return this.statusOptions.map((status) => ({
@@ -508,6 +817,7 @@ export class BookshelfPageComponent {
 
     afterNextRender(() => {
       this.restoreViewMemory();
+      this.captureMiniOriginThreshold();
     });
   }
 
@@ -534,6 +844,17 @@ export class BookshelfPageComponent {
   readonly waitingUpdateError = signal<string | null>(null);
 
   readonly statusOptions: readonly BookStatus[] = ['reading', 'plan_to_read', 'waiting', 'completed', 'dropped', 'on_hold'];
+  readonly sortLabels: Record<ReturnType<typeof this.filters.sort>, string> = {
+    createdAt: 'Date Added',
+    updatedAt: 'Last Updated',
+    lastRead: 'Last Read',
+    lastUploadedAt: 'Last Uploaded',
+    score: 'Score',
+    chapterCount: 'Chapter Count',
+    title: 'Title',
+    status: 'Status',
+    relevance: 'Relevance',
+  };
 
   readonly statusLabels: Record<BookStatus, string> = {
     reading: 'Reading',
@@ -617,6 +938,44 @@ export class BookshelfPageComponent {
   toggleSortDirection(): void {
     const next = this.filters.sortDir() === 'desc' ? 'asc' : 'desc';
     void this.filters.updateFilter('sortDir', next);
+  }
+
+  toggleFilterSheet(): void {
+    this.filterSheetOpen.set(!this.filterSheetOpen());
+  }
+
+  closeFilterSheet(): void {
+    this.filterSheetOpen.set(false);
+  }
+
+  @HostListener('window:scroll')
+  onWindowScroll(): void {
+    const view = this.document.defaultView;
+    const current = view?.scrollY ?? 0;
+
+    if (!this.miniOriginCaptured || current <= 32) {
+      this.captureMiniOriginThreshold();
+    }
+
+    if (current <= this.miniRevealThreshold) {
+      this.miniSearchHidden.set(false);
+      this.lastScrollY = current;
+      return;
+    }
+
+    const delta = current - this.lastScrollY;
+    if (delta > this.miniDeltaThreshold) {
+      this.miniSearchHidden.set(true);
+    } else if (delta < -this.miniDeltaThreshold) {
+      this.miniSearchHidden.set(false);
+    }
+
+    this.lastScrollY = current;
+  }
+
+  @HostListener('window:resize')
+  onWindowResize(): void {
+    this.captureMiniOriginThreshold();
   }
 
   onLanguageInput(event: Event): void {
@@ -790,5 +1149,18 @@ export class BookshelfPageComponent {
     const trimmed = value.trim();
     const match = this.allGenres().find((genre) => genre.toLowerCase() === trimmed.toLowerCase());
     return match ?? trimmed;
+  }
+
+  private captureMiniOriginThreshold(): void {
+    const view = this.document.defaultView;
+    const element = this.miniBarElement;
+
+    if (!view || !element) {
+      return;
+    }
+
+    const top = element.getBoundingClientRect().top + view.scrollY;
+    this.miniRevealThreshold = Math.max(0, Math.round(top));
+    this.miniOriginCaptured = true;
   }
 }

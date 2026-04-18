@@ -13,7 +13,6 @@ import { buildMetadataPatch, MetadataPayload } from './metadata-fetcher.mapper';
     <fieldset class="metadata-fetcher">
       <label class="field">
         <span>Source URL</span>
-        <p class="muted">Right now it only works with bato pages.</p>
         <div class="fetch-controls">
           <input
             data-testid="metadata-url-input"

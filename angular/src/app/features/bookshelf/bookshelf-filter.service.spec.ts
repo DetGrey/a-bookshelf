@@ -94,7 +94,7 @@ describe('BookshelfFilterService', () => {
     expect(service.shelf()).toBe('all');
   });
 
-  it('updateFilter navigates with merged query params and resets page except when page is updated', async () => {
+  it('updateFilter navigates with query params and resets page except when page is updated', async () => {
     const navigate = jest.fn().mockResolvedValue(true);
 
     TestBed.configureTestingModule({
@@ -119,25 +119,49 @@ describe('BookshelfFilterService', () => {
     await service.updateFilter('search', 'new value');
     expect(navigate).toHaveBeenCalledWith([], {
       queryParams: expect.objectContaining({ q: 'new value', page: 1 }),
-      queryParamsHandling: 'merge',
     });
 
     await service.updateFilter('genreMode', 'any');
     expect(navigate).toHaveBeenCalledWith([], {
       queryParams: expect.objectContaining({ genreMode: 'any', page: 1 }),
-      queryParamsHandling: 'merge',
     });
 
     await service.updateFilter('chapterValue', 100);
     expect(navigate).toHaveBeenCalledWith([], {
       queryParams: expect.objectContaining({ chapterValue: 100, page: 1 }),
-      queryParamsHandling: 'merge',
     });
 
     await service.updateFilter('page', 2);
     expect(navigate).toHaveBeenCalledWith([], {
       queryParams: expect.objectContaining({ page: 2 }),
-      queryParamsHandling: 'merge',
+    });
+  });
+
+  it('removes genres query param when last selected genre is cleared', async () => {
+    const navigate = jest.fn().mockResolvedValue(true);
+
+    TestBed.configureTestingModule({
+      providers: [
+        BookshelfFilterService,
+        {
+          provide: ActivatedRoute,
+          useValue: {
+            snapshot: { queryParams: { genres: 'action', page: '3', sort: 'updatedAt' } },
+            queryParams: new BehaviorSubject<Params>({ genres: 'action', page: '3', sort: 'updatedAt' }).asObservable(),
+          },
+        },
+        {
+          provide: Router,
+          useValue: { navigate },
+        },
+      ],
+    });
+
+    const service = TestBed.inject(BookshelfFilterService);
+    await service.updateFilter('genres', []);
+
+    expect(navigate).toHaveBeenCalledWith([], {
+      queryParams: { page: 1, sort: 'updatedAt' },
     });
   });
 

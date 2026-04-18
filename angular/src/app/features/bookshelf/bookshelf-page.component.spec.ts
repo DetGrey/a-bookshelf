@@ -204,6 +204,9 @@ describe('BookshelfPageComponent', () => {
     const fixture = TestBed.createComponent(BookshelfPageComponent);
     fixture.detectChanges();
 
+    fixture.debugElement.query(By.css('.shelf-header-button')).nativeElement.click();
+    fixture.detectChanges();
+
     fixture.componentInstance.newShelfName = 'Weekend Reads';
     fixture.detectChanges();
     fixture.debugElement.query(By.css('[data-testid="create-shelf-button"]')).nativeElement.click();

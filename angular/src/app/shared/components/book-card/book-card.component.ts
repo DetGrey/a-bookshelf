@@ -64,7 +64,7 @@ const SCORE_OPTIONS: Record<number, string> = {
             }
 
             @if (book().chapterCount !== null) {
-              <span data-testid="chapter-count-pill" class="pill ghost">Chapters: {{ book().chapterCount }}</span>
+              <span data-testid="chapter-count-pill" class="pill ghost chapter-count-pill">Chapters: {{ book().chapterCount }}</span>
             }
 
             @if (!compact()) {

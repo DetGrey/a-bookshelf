@@ -76,7 +76,6 @@ export class BookshelfFilterService {
 
     return this.router.navigate([], {
       queryParams: currentParams,
-      queryParamsHandling: 'merge'
     });
   }
 
