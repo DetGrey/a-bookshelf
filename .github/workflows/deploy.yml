@@ -38,17 +38,13 @@ jobs:
         run: npm ci
         working-directory: frontend
 
-      - name: Set environment variables
-        run: |
-          cp src/environments/environment.prod.example.ts src/environments/environment.prod.ts
-          sed -i "s|supabaseUrl: ''|supabaseUrl: '${{ secrets.SUPABASE_URL }}'|" src/environments/environment.prod.ts
-          sed -i "s|supabaseAnonKey: ''|supabaseAnonKey: '${{ secrets.SUPABASE_ANON_KEY }}'|" src/environments/environment.prod.ts
-          sed -i "s|imageProxyUrl: ''|imageProxyUrl: '${{ secrets.IMAGE_PROXY_URL }}'|" src/environments/environment.prod.ts
-        working-directory: angular
-
       - name: Build Angular (v2)
         run: npm run build
         working-directory: angular
+        env:
+          SUPABASE_URL: ${{ secrets.SUPABASE_URL }}
+          SUPABASE_ANON_KEY: ${{ secrets.SUPABASE_ANON_KEY }}
+          IMAGE_PROXY_URL: ${{ secrets.IMAGE_PROXY_URL }}
 
       - name: Build React (root)
         run: npm run build
