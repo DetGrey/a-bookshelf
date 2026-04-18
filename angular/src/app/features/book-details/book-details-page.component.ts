@@ -1,6 +1,7 @@
 import { DatePipe, DOCUMENT } from '@angular/common';
-import { ChangeDetectionStrategy, Component, computed, inject, signal } from '@angular/core';
+import { ChangeDetectionStrategy, Component, computed, effect, inject, signal } from '@angular/core';
 import { ActivatedRoute, Router, RouterLink } from '@angular/router';
+import { Title } from '@angular/platform-browser';
 import { FormArray, FormControl, FormGroup, ReactiveFormsModule, Validators } from '@angular/forms';
 import { BookService } from '../../core/book/book.service';
 import { ShelfService } from '../../core/shelf/shelf.service';
@@ -235,6 +236,7 @@ export class BookDetailsPageComponent {
   private readonly route = inject(ActivatedRoute);
   private readonly bookService = inject(BookService);
   private readonly router = inject(Router);
+  private readonly title = inject(Title);
   private readonly document = inject(DOCUMENT);
   readonly shelfService = inject(ShelfService);
 
@@ -328,6 +330,11 @@ export class BookDetailsPageComponent {
     if (resolved.success) {
       this.detailState.set(resolved.data);
     }
+
+    effect(() => {
+      const detail = this.detail();
+      this.title.setTitle(detail ? `${detail.book.title} - A Bookshelf` : 'Book Details - A Bookshelf');
+    });
 
     void this.shelfService.loadShelves();
   }

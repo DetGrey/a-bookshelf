@@ -1,6 +1,9 @@
 import { DOCUMENT } from '@angular/common';
 import { ChangeDetectionStrategy, Component, ElementRef, HostListener, OnDestroy, ViewChild, inject, signal } from '@angular/core';
+import { Title } from '@angular/platform-browser';
 import { Router, RouterLink, RouterLinkActive, RouterOutlet } from '@angular/router';
+import { filter } from 'rxjs';
+import { NavigationEnd } from '@angular/router';
 import { AuthService } from './core/auth/auth.service';
 
 @Component({
@@ -12,6 +15,7 @@ import { AuthService } from './core/auth/auth.service';
 })
 export class AppComponent {
   private readonly router = inject(Router);
+  private readonly title = inject(Title);
   private readonly document = inject(DOCUMENT);
   readonly auth = inject(AuthService);
   readonly navHidden = signal(false);
@@ -22,6 +26,15 @@ export class AppComponent {
   private upwardScrollProgress = 0;
   private navResizeObserver: ResizeObserver | null = null;
   private navElement: HTMLElement | null = null;
+
+  constructor() {
+    this.updatePageTitle();
+    this.router.events
+      .pipe(filter((event): event is NavigationEnd => event instanceof NavigationEnd))
+      .subscribe(() => {
+        this.updatePageTitle();
+      });
+  }
 
   @ViewChild('appNav')
   set appNavRef(ref: ElementRef<HTMLElement> | undefined) {
@@ -128,5 +141,25 @@ export class AppComponent {
   private syncNavHeightVar(): void {
     const height = this.navElement?.offsetHeight ?? 0;
     this.document.documentElement.style.setProperty('--app-nav-height', `${height}px`);
+  }
+
+  private updatePageTitle(): void {
+    const path = this.router.url?.split('?')[0] ?? '';
+
+    if (path.startsWith('/book/')) {
+      // Book details sets dynamic title from resolved book data.
+      return;
+    }
+
+    const labelByPath: Record<string, string> = {
+      '/dashboard': 'Dashboard',
+      '/bookshelf': 'Bookshelf',
+      '/add': 'Smart Add',
+      '/login': 'Login',
+      '/signup': 'Signup',
+    };
+
+    const pageLabel = labelByPath[path];
+    this.title.setTitle(pageLabel ? `${pageLabel} - A Bookshelf` : 'A Bookshelf');
   }
 }

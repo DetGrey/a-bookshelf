@@ -2,8 +2,10 @@
   @if (showNavigation()) {
     <nav #appNav class="app-nav" [class.nav-hidden]="navHidden()">
       @if (auth.currentUser()) {
-        <a [routerLink]="['/bookshelf']" class="brand" aria-label="A Bookshelf home">
-          <span class="brand-mark" aria-hidden="true">AB</span>
+        <a [routerLink]="['/dashboard']" class="brand" aria-label="A Bookshelf home">
+          <span class="brand-mark" aria-hidden="true">
+            <img src="a_bookshelf_favicon.png" alt="" class="brand-mark-icon" />
+          </span>
           <span class="brand-copy">
             <span class="brand-title">A Bookshelf</span>
             <span class="brand-subtitle">Personal library HQ</span>
@@ -21,8 +23,10 @@
           <button type="button" class="ghost" (click)="logout()">Sign out</button>
         </div>
       } @else {
-        <a [routerLink]="['/bookshelf']" class="brand" aria-label="A Bookshelf home">
-          <span class="brand-mark" aria-hidden="true">AB</span>
+        <a [routerLink]="['/dashboard']" class="brand" aria-label="A Bookshelf home">
+          <span class="brand-mark" aria-hidden="true">
+            <img src="a_bookshelf_favicon.png" alt="" class="brand-mark-icon" />
+          </span>
           <span class="brand-copy">
             <span class="brand-title">A Bookshelf</span>
             <span class="brand-subtitle">Personal library HQ</span>
