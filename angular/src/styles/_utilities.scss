@@ -74,7 +74,7 @@ a.pill:focus-visible {
   }
 }
 
-.ghost {
+.ghost:not(.pill) {
   background: transparent;
   border: 1px solid var(--border);
   border-radius: var(--radius-sm);
@@ -89,12 +89,6 @@ a.pill:focus-visible {
 
 .pill.ghost:not(button):not(a) {
   cursor: default;
-
-  &:hover {
-    border-color: var(--border);
-    color: var(--text-muted);
-    background: transparent;
-  }
 }
 
 .field {

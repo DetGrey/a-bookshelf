@@ -1,5 +1,5 @@
 import { DOCUMENT } from '@angular/common';
-import { ElementRef, ViewChild, afterNextRender, ChangeDetectionStrategy, Component, HostListener, computed, inject, signal } from '@angular/core';
+import { afterNextRender, ChangeDetectionStrategy, Component, HostListener, computed, inject, signal } from '@angular/core';
 import { BookService, WaitingUpdateProgress, WaitingUpdateSummary } from '../../core/book/book.service';
 import { ShelfService } from '../../core/shelf/shelf.service';
 import { BookGridComponent } from '../../shared/components/book-grid/book-grid.component';
@@ -140,7 +140,7 @@ import { escapeRegex } from '../../shared/utils/string.util';
           } @else if (books().length === 0) {
             <p>No books yet.</p>
           } @else {
-            <div #mobileMiniBar class="mobile-mini-bar mobile-only" [class.mobile-mini-hidden]="miniSearchHidden()">
+            <div class="mobile-mini-bar mobile-only">
               <div class="mobile-mini-top">
                 <label class="field mobile-mini-search">
                   <span class="sr-only">Search</span>
@@ -154,7 +154,7 @@ import { escapeRegex } from '../../shared/utils/string.util';
 
                 <button
                   type="button"
-                  class="ghost mobile-filter-trigger"
+                  class="ghost mobile-filter-trigger mobile-only"
                   data-testid="mobile-filter-toggle"
                   (click)="toggleFilterSheet()"
                 >
@@ -687,18 +687,6 @@ export class BookshelfPageComponent {
   readonly genreFilterOpen = signal(false);
   readonly chapterFilterOpen = signal(false);
   readonly filterSheetOpen = signal(false);
-  readonly miniSearchHidden = signal(false);
-  private lastScrollY = 0;
-  private miniRevealThreshold = 120;
-  private readonly miniDeltaThreshold = 8;
-  private miniOriginCaptured = false;
-  private miniBarElement: HTMLElement | null = null;
-
-  @ViewChild('mobileMiniBar')
-  set mobileMiniBarRef(ref: ElementRef<HTMLElement> | undefined) {
-    this.miniBarElement = ref?.nativeElement ?? null;
-    this.captureMiniOriginThreshold();
-  }
   readonly sortLabel = computed(() => this.sortLabels[this.filters.sort()] ?? 'Last Updated');
   readonly activeFilterCount = computed(() => {
     let count = 0;
@@ -817,7 +805,6 @@ export class BookshelfPageComponent {
 
     afterNextRender(() => {
       this.restoreViewMemory();
-      this.captureMiniOriginThreshold();
     });
   }
 
@@ -950,32 +937,12 @@ export class BookshelfPageComponent {
 
   @HostListener('window:scroll')
   onWindowScroll(): void {
-    const view = this.document.defaultView;
-    const current = view?.scrollY ?? 0;
-
-    if (!this.miniOriginCaptured || current <= 32) {
-      this.captureMiniOriginThreshold();
-    }
-
-    if (current <= this.miniRevealThreshold) {
-      this.miniSearchHidden.set(false);
-      this.lastScrollY = current;
-      return;
-    }
-
-    const delta = current - this.lastScrollY;
-    if (delta > this.miniDeltaThreshold) {
-      this.miniSearchHidden.set(true);
-    } else if (delta < -this.miniDeltaThreshold) {
-      this.miniSearchHidden.set(false);
-    }
-
-    this.lastScrollY = current;
+    return;
   }
 
   @HostListener('window:resize')
   onWindowResize(): void {
-    this.captureMiniOriginThreshold();
+    return;
   }
 
   onLanguageInput(event: Event): void {
@@ -1151,16 +1118,4 @@ export class BookshelfPageComponent {
     return match ?? trimmed;
   }
 
-  private captureMiniOriginThreshold(): void {
-    const view = this.document.defaultView;
-    const element = this.miniBarElement;
-
-    if (!view || !element) {
-      return;
-    }
-
-    const top = element.getBoundingClientRect().top + view.scrollY;
-    this.miniRevealThreshold = Math.max(0, Math.round(top));
-    this.miniOriginCaptured = true;
-  }
 }

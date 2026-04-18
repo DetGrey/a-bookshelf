@@ -33,7 +33,35 @@
 
 .preview-content {
   display: grid;
-  gap: 10px;
+  gap: 12px;
+}
+
+.preview-thumb {
+  width: min(100%, 280px);
+  aspect-ratio: 1 / 1;
+}
+
+.preview-details {
+  display: grid;
+  gap: 8px;
+}
+
+.preview-details h5,
+.preview-details p {
+  margin: 0;
+}
+
+.preview-pills {
+  gap: 6px;
+  row-gap: 6px;
+}
+
+.genres-row {
+  margin-top: 8px;
+}
+
+.meta-row {
+  margin-top: 4px;
 }
 
 .preview-actions {

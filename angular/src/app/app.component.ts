@@ -46,8 +46,19 @@ export class AppComponent {
 
   @HostListener('window:scroll')
   onWindowScroll(): void {
-    const view = window;
+    const view = this.document.defaultView;
+    if (!view) {
+      return;
+    }
+
     const current = view.scrollY;
+
+    if (view.matchMedia('(min-width: 768px)').matches) {
+      this.setNavHidden(false);
+      this.upwardScrollProgress = 0;
+      this.lastScrollY = current;
+      return;
+    }
 
     if (current <= this.scrollRevealThreshold) {
       this.setNavHidden(false);
@@ -77,6 +88,11 @@ export class AppComponent {
   @HostListener('window:resize')
   onWindowResize(): void {
     this.syncNavHeightVar();
+
+    const view = this.document.defaultView;
+    if (view?.matchMedia('(min-width: 768px)').matches) {
+      this.setNavHidden(false);
+    }
   }
 
   ngOnDestroy(): void {

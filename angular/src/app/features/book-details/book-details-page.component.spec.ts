@@ -508,7 +508,7 @@ describe('BookDetailsPageComponent', () => {
     confirmSpy.mockRestore();
   });
 
-  it('shows fetch-latest-chapter button only when the book has at least one source', () => {
+  it('shows fetch-latest-chapter button in book details', () => {
     TestBed.configureTestingModule({
       imports: [BookDetailsPageComponent],
       providers: [
@@ -567,7 +567,7 @@ describe('BookDetailsPageComponent', () => {
     expect(fixture.nativeElement.querySelector('[data-testid="fetch-latest-chapter"]')).not.toBeNull();
   });
 
-  it('hides fetch-latest-chapter button when the book has no sources', () => {
+  it('still shows fetch-latest-chapter button when the book has no sources', () => {
     TestBed.configureTestingModule({
       imports: [BookDetailsPageComponent],
       providers: [
@@ -623,7 +623,7 @@ describe('BookDetailsPageComponent', () => {
     const fixture = TestBed.createComponent(BookDetailsPageComponent);
     fixture.detectChanges();
 
-    expect(fixture.nativeElement.querySelector('[data-testid="fetch-latest-chapter"]')).toBeNull();
+    expect(fixture.nativeElement.querySelector('[data-testid="fetch-latest-chapter"]')).not.toBeNull();
   });
 
   it('shows updated message after successful fetch-latest-chapter', async () => {

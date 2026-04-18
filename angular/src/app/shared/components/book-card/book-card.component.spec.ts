@@ -296,4 +296,28 @@ describe('BookCardComponent', () => {
       expect(notesEl.nativeElement.textContent.trim()).toBe('📝 One two three four five six seven eight nine ten eleven twelve thirteen fourteen fifteen…');
     });
   });
+
+  describe('Source Label Logic', () => {
+    it('truncates long source labels to six characters plus dots', () => {
+      component.book = {
+        ...component.book,
+        sources: [{ siteName: 'novelupdates', url: 'https://example.com' }],
+      } as Book;
+      fixture.detectChanges();
+
+      const sourceLink = fixture.debugElement.query(By.css('[data-testid="source-link"]'));
+      expect(sourceLink.nativeElement.textContent.trim()).toBe('novelu...');
+    });
+
+    it('keeps short source labels unchanged', () => {
+      component.book = {
+        ...component.book,
+        sources: [{ siteName: 'Bato', url: 'https://example.com' }],
+      } as Book;
+      fixture.detectChanges();
+
+      const sourceLink = fixture.debugElement.query(By.css('[data-testid="source-link"]'));
+      expect(sourceLink.nativeElement.textContent.trim()).toBe('Bato');
+    });
+  });
 });

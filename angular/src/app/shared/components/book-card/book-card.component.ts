@@ -117,7 +117,7 @@ const SCORE_OPTIONS: Record<number, string> = {
         <div class="card-links">
           @for (source of visibleSources(); track source.url) {
             <a data-testid="source-link" [attr.href]="source.url" target="_blank" rel="noreferrer" class="ghost">
-              {{ source.siteName || 'Source' }}
+              {{ sourceLabel(source.siteName) }}
             </a>
           }
 
@@ -183,6 +183,11 @@ export class BookCardComponent {
     const sources = this.book().sources ?? [];
     return sources.slice(0, this.compact() ? 2 : 1);
   };
+
+  sourceLabel(siteName: string | null | undefined): string {
+    const label = (siteName ?? 'Source').trim() || 'Source';
+    return label.length > 6 ? `${label.slice(0, 6)}...` : label;
+  }
 
   statusLabel(status: Book['status']): string {
     const labels: Record<Book['status'], string> = {

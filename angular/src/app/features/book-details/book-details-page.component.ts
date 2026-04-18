@@ -134,17 +134,15 @@ type EditBookFormGroup = FormGroup<{
                 </div>
 
                 <div class="related-section-wrapper">
-                  @if (detail()!.sources.length > 0) {
-                    <button
-                      class="primary related-link-preview"
-                      data-testid="fetch-latest-chapter"
-                      type="button"
-                      [disabled]="fetchingLatest()"
-                      (click)="fetchLatestChapter()"
-                    >
-                      {{ fetchingLatest() ? 'Fetching…' : 'Fetch Latest Chapter' }}
-                    </button>
-                  }
+                  <button
+                    class="primary related-link-preview"
+                    data-testid="fetch-latest-chapter"
+                    type="button"
+                    [disabled]="fetchingLatest()"
+                    (click)="fetchLatestChapter()"
+                  >
+                    {{ fetchingLatest() ? 'Fetching…' : 'Fetch Latest Chapter' }}
+                  </button>
 
                   @if (fetchLatestResult()) {
                     <p data-testid="fetch-latest-result" class="related-link-title">{{ fetchLatestResult() }}</p>

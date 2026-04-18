@@ -1,4 +1,4 @@
-import { FormControl, FormGroup, ReactiveFormsModule } from '@angular/forms';
+import { FormArray, FormControl, FormGroup, ReactiveFormsModule } from '@angular/forms';
 import { TestBed } from '@angular/core/testing';
 import { By } from '@angular/platform-browser';
 import { SUPABASE_CLIENT } from '../../../core/supabase.token';
@@ -13,6 +13,7 @@ describe('MetadataFetcherComponent', () => {
     latestChapter: new FormControl('', { nonNullable: true }),
     chapterCount: new FormControl<number | null>(null),
     coverUrl: new FormControl('', { nonNullable: true }),
+    sources: new FormArray([]),
   });
 
   it('prefills Source URL input when prefillSourceUrl is provided and input is empty', () => {
@@ -181,6 +182,84 @@ describe('MetadataFetcherComponent', () => {
     expect(form.controls.title.value).toBe('Wrapped title');
     expect(form.controls.latestChapter.value).toBe('Episode 12');
     expect(form.controls.chapterCount.value).toBe(12);
+  });
+
+  it('auto-applies fetched metadata and hides inline preview when configured', async () => {
+    const invoke = jest.fn().mockResolvedValue({
+      data: {
+        title: 'Auto title',
+        description: 'Auto description',
+        image: 'https://images.example.com/auto.jpg',
+        genres: ['Action', 'Fantasy'],
+        language: 'English',
+        latest_chapter: 'Chapter 99',
+        chapter_count: 99,
+      },
+      error: null,
+    });
+
+    const form = createForm();
+
+    TestBed.configureTestingModule({
+      imports: [MetadataFetcherComponent, ReactiveFormsModule],
+      providers: [{ provide: SUPABASE_CLIENT, useValue: { functions: { invoke } } }],
+    });
+
+    const fixture = TestBed.createComponent(MetadataFetcherComponent);
+    fixture.componentRef.setInput('form', form);
+    fixture.componentRef.setInput('autoApplyOnFetch', true);
+    fixture.componentRef.setInput('showFetchedPreview', false);
+    fixture.detectChanges();
+
+    fixture.componentInstance.sourceUrl = 'https://example.com/auto';
+    await fixture.componentInstance.fetchMetadata();
+    fixture.detectChanges();
+
+    expect(form.controls.title.value).toBe('Auto title');
+    expect(form.controls.description.value).toBe('Auto description');
+    expect(form.controls.coverUrl.value).toBe('https://images.example.com/auto.jpg');
+    expect(form.controls.genres.value).toContain('Action');
+    expect(form.controls.latestChapter.value).toBe('Chapter 99');
+    expect(form.controls.chapterCount.value).toBe(99);
+    expect(fixture.debugElement.query(By.css('[data-testid="fetched-preview"]'))).toBeFalsy();
+    expect(fixture.nativeElement.textContent).toContain('Metadata fetched. Review or edit fields below, then save.');
+  });
+
+  it('can auto-add the fetched URL as a source when configured', async () => {
+    const invoke = jest.fn().mockResolvedValue({
+      data: {
+        title: 'Auto source title',
+        description: 'Auto source description',
+        image: 'https://images.example.com/auto-source.jpg',
+        genres: [],
+        language: 'English',
+        latest_chapter: 'Chapter 1',
+        chapter_count: 1,
+      },
+      error: null,
+    });
+
+    const form = createForm();
+
+    TestBed.configureTestingModule({
+      imports: [MetadataFetcherComponent, ReactiveFormsModule],
+      providers: [{ provide: SUPABASE_CLIENT, useValue: { functions: { invoke } } }],
+    });
+
+    const fixture = TestBed.createComponent(MetadataFetcherComponent);
+    fixture.componentRef.setInput('form', form);
+    fixture.componentRef.setInput('autoApplyOnFetch', true);
+    fixture.componentRef.setInput('autoAddSource', true);
+    fixture.componentRef.setInput('showFetchedPreview', false);
+    fixture.detectChanges();
+
+    fixture.componentInstance.sourceUrl = 'https://www.example.com/series/1';
+    await fixture.componentInstance.fetchMetadata();
+    fixture.detectChanges();
+
+    expect(form.controls.sources.length).toBe(1);
+    expect(form.controls.sources.at(0).controls.siteName.value).toBe('example.com');
+    expect(form.controls.sources.at(0).controls.url.value).toBe('https://www.example.com/series/1');
   });
 
   it('shows endpoint error state when fetch fails', async () => {

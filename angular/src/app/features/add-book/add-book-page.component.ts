@@ -60,7 +60,7 @@ type AddBookFormGroup = FormGroup<{
       </div>
 
       <section class="card add-book-fetch">
-        <app-metadata-fetcher [form]="bookForm" />
+        <app-metadata-fetcher [form]="bookForm" [autoApplyOnFetch]="true" [autoAddSource]="true" [showFetchedPreview]="false" />
       </section>
 
       <form class="card stack add-book-form" [formGroup]="bookForm" (ngSubmit)="onSubmit()">
@@ -77,7 +77,7 @@ type AddBookFormGroup = FormGroup<{
         }
 
         <div class="save-row">
-          <button class="ghost" data-testid="save-book-button" type="submit" [disabled]="isSubmitting()">
+            <button class="primary" data-testid="save-book-button" type="submit" [disabled]="isSubmitting()">
             {{ isSubmitting() ? 'Saving…' : 'Save to Library' }}
           </button>
         </div>
