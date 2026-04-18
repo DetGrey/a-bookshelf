@@ -42,7 +42,7 @@ import { AuthService } from '../../../core/auth/auth.service';
           <p class="success">{{ successMessage() }}</p>
         }
 
-        <a routerLink="/login">Back to login</a>
+        <a [routerLink]="['/login']">Back to login</a>
       </article>
     </section>
   `,

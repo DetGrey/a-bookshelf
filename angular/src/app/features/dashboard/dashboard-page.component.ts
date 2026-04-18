@@ -2,6 +2,7 @@ import { DOCUMENT } from '@angular/common';
 import { afterNextRender, ChangeDetectionStrategy, Component, computed, DestroyRef, inject, signal } from '@angular/core';
 import { takeUntilDestroyed } from '@angular/core/rxjs-interop';
 import { FormsModule } from '@angular/forms';
+import { RouterLink } from '@angular/router';
 import { BookService } from '../../core/book/book.service';
 import { Book } from '../../models/book.model';
 import { QualityToolsService, CoverHealthScanResult, DuplicateTitleScanResult, StaleWaitingScanResult } from '../../core/quality/quality-tools.service';
@@ -22,7 +23,7 @@ type SimilarGenrePair = {
 @Component({
   selector: 'app-dashboard-page',
   standalone: true,
-  imports: [FormsModule, BookGridComponent],
+  imports: [FormsModule, BookGridComponent, RouterLink],
   template: `
     <div class="page dashboard-page">
       <div class="page-head">
@@ -31,7 +32,7 @@ type SimilarGenrePair = {
           <h1>Dashboard</h1>
           <p class="muted">Track reading, pull metadata, and jump back into the next chapter fast.</p>
         </div>
-        <a href="/add" class="primary">Smart Add</a>
+        <a [routerLink]="['/add']" class="primary">Smart Add</a>
       </div>
 
       <section class="dashboard-stats stat-grid">
@@ -191,7 +192,7 @@ type SimilarGenrePair = {
                       </div>
                       <div class="quality-result-links">
                         @for (bookId of group.books; track bookId) {
-                          <a class="ghost quality-inline-link" [attr.href]="'/book/' + bookId">{{ titleById(bookId) }}</a>
+                          <a class="ghost quality-inline-link" [routerLink]="['/book', bookId]">{{ titleById(bookId) }}</a>
                         }
                       </div>
                     </div>
@@ -222,7 +223,7 @@ type SimilarGenrePair = {
                       <div class="quality-result-card">
                         <div class="duplicate-comparison">
                           <div class="duplicate-titles-wrapper">
-                            <a class="quality-title-link" [attr.href]="'/book/' + bookId"><strong>{{ titleById(bookId) }}</strong></a>
+                            <a class="quality-title-link" [routerLink]="['/book', bookId]"><strong>{{ titleById(bookId) }}</strong></a>
                             <p class="muted m-0">Stale in {{ group.label }}</p>
                           </div>
                           <span class="pill ghost">{{ group.oldestDays }} days</span>
@@ -278,7 +279,7 @@ type SimilarGenrePair = {
                     @for (issue of coverIssuesPreview(); track issue.bookId) {
                       <div class="quality-result-card">
                         <div class="duplicate-comparison">
-                          <a class="quality-title-link" [attr.href]="'/book/' + issue.bookId"><strong>{{ issue.title }}</strong></a>
+                          <a class="quality-title-link" [routerLink]="['/book', issue.bookId]"><strong>{{ issue.title }}</strong></a>
                           <span class="pill ghost">{{ issue.status }}</span>
                         </div>
                       </div>

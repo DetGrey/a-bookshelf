@@ -17,7 +17,7 @@
     "prebuild": "node scripts/generate-prod-env.js",
     "build": "ng build && cp dist/a-bookshelf/browser/index.html dist/a-bookshelf/browser/404.html",
     "watch": "ng build --watch --configuration development",
-    "lint": "eslint \"src/**/*.{ts,html}\"",
+    "lint": "eslint \"src/**/*.{ts,html}\" && node scripts/lint-internal-links.js",
     "lint:fix": "eslint \"src/**/*.{ts,html}\" --fix",
     "test": "jest --passWithNoTests --runInBand"
   },

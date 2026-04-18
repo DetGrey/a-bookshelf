@@ -1,4 +1,5 @@
 import { ChangeDetectionStrategy, Component, input, output, signal } from '@angular/core';
+import { RouterLink } from '@angular/router';
 import { Book } from '../../../models/book.model';
 import { Shelf } from '../../../models/shelf.model';
 import { truncateText } from '../../utils/string.util';
@@ -20,12 +21,12 @@ const SCORE_OPTIONS: Record<number, string> = {
 @Component({
   selector: 'app-book-card',
   standalone: true,
-  imports: [CoverImageComponent],
+  imports: [CoverImageComponent, RouterLink],
   styleUrl: './book-card.component.scss',
   template: `
     <article class="card book-card" [class.compact]="compact()" [id]="'book-anchor-' + book().id">
       <div class="card-head">
-        <a class="cover-link" [attr.href]="'/book/' + book().id" (click)="opened.emit(book().id)">
+        <a class="cover-link" [routerLink]="['/book', book().id]" (click)="opened.emit(book().id)">
           <app-cover-image class="thumb" [src]="book().coverUrl" [alt]="book().title" />
         </a>
 
@@ -155,7 +156,7 @@ const SCORE_OPTIONS: Record<number, string> = {
           <a
             data-testid="book-detail-link"
             class="primary"
-            [attr.href]="'/book/' + book().id"
+            [routerLink]="['/book', book().id]"
             (click)="opened.emit(book().id)"
           >
             Details

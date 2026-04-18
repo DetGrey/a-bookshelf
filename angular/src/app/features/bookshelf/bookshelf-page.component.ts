@@ -5,13 +5,14 @@ import { ShelfService } from '../../core/shelf/shelf.service';
 import { BookGridComponent } from '../../shared/components/book-grid/book-grid.component';
 import { BookshelfFilterService } from './bookshelf-filter.service';
 import { FormsModule } from '@angular/forms';
+import { RouterLink } from '@angular/router';
 import { Book, BookStatus } from '../../models/book.model';
 import { escapeRegex } from '../../shared/utils/string.util';
 
 @Component({
   selector: 'app-bookshelf-page',
   standalone: true,
-  imports: [BookGridComponent, FormsModule],
+  imports: [BookGridComponent, FormsModule, RouterLink],
   template: `
     <div class="page">
       <div class="page-head">
@@ -20,7 +21,7 @@ import { escapeRegex } from '../../shared/utils/string.util';
           <h1>Bookshelf</h1>
           <p class="muted">Browse, filter, and organize your collection</p>
         </div>
-        <a href="/add" class="primary">Smart Add</a>
+        <a [routerLink]="['/add']" class="primary">Smart Add</a>
       </div>
 
       <section class="bookshelf-layout">

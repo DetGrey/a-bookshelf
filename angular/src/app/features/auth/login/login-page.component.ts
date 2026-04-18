@@ -33,7 +33,7 @@ import { AuthService } from '../../../core/auth/auth.service';
           <p class="error">{{ errorMessage() }}</p>
         }
 
-        <a routerLink="/signup">Create account</a>
+        <a [routerLink]="['/signup']">Create account</a>
       </article>
     </section>
   `,

@@ -2,7 +2,7 @@
   @if (showNavigation()) {
     <nav #appNav class="app-nav" [class.nav-hidden]="navHidden()">
       @if (auth.currentUser()) {
-        <a routerLink="/bookshelf" class="brand" aria-label="A Bookshelf home">
+        <a [routerLink]="['/bookshelf']" class="brand" aria-label="A Bookshelf home">
           <span class="brand-mark" aria-hidden="true">AB</span>
           <span class="brand-copy">
             <span class="brand-title">A Bookshelf</span>
@@ -11,9 +11,9 @@
         </a>
 
         <div class="nav-links" aria-label="Primary">
-          <a routerLink="/dashboard" routerLinkActive="active-link" class="nav-link">Dashboard</a>
-          <a routerLink="/bookshelf" routerLinkActive="active-link" class="nav-link">Bookshelf</a>
-          <a routerLink="/add" routerLinkActive="active-link" class="nav-link">Smart Add</a>
+          <a [routerLink]="['/dashboard']" routerLinkActive="active-link" class="nav-link">Dashboard</a>
+          <a [routerLink]="['/bookshelf']" routerLinkActive="active-link" class="nav-link">Bookshelf</a>
+          <a [routerLink]="['/add']" routerLinkActive="active-link" class="nav-link">Smart Add</a>
         </div>
 
         <div class="nav-actions">
@@ -21,7 +21,7 @@
           <button type="button" class="ghost" (click)="logout()">Sign out</button>
         </div>
       } @else {
-        <a routerLink="/bookshelf" class="brand" aria-label="A Bookshelf home">
+        <a [routerLink]="['/bookshelf']" class="brand" aria-label="A Bookshelf home">
           <span class="brand-mark" aria-hidden="true">AB</span>
           <span class="brand-copy">
             <span class="brand-title">A Bookshelf</span>
@@ -30,8 +30,8 @@
         </a>
 
         <div class="nav-actions nav-actions-auth">
-          <a routerLink="/login" routerLinkActive="active-link" class="ghost">Log in</a>
-          <a routerLink="/signup" routerLinkActive="active-link" class="ghost">Create account</a>
+          <a [routerLink]="['/login']" routerLinkActive="active-link" class="ghost">Log in</a>
+          <a [routerLink]="['/signup']" routerLinkActive="active-link" class="ghost">Create account</a>
         </div>
       }
     </nav>
