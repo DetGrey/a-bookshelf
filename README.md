@@ -1,12 +1,12 @@
 # A Bookshelf
-A personal library dashboard that tracks reading status, progress, and links across multiple sources. The frontend is a React + Vite SPA hosted on GitHub Pages and backed by Supabase Auth, tables, and two Edge Functions.
+A personal library dashboard that tracks reading status, progress, and links across multiple sources. The production frontend is Angular (v2) hosted on GitHub Pages and backed by Supabase Auth, tables, and two Edge Functions.
 
 Deployment link: https://detgrey.github.io/a-bookshelf/
 
 ## GitHub Pages deployment layout
-- React app (legacy/current): served at `/a-bookshelf/` from `frontend/dist`
-- Angular app (v2): served at `/a-bookshelf/v2/` from `angular/dist/a-bookshelf/browser`
-- Workflow: `.github/workflows/deploy.yml` builds both apps and publishes a merged artifact where Angular files are copied into the `v2/` subfolder
+- Angular app (v2): served at `/a-bookshelf/` from `angular/dist/a-bookshelf/browser`
+- React app (legacy): kept in this repository under `frontend/`, but not deployed by the main GitHub Pages workflow
+- Workflow: `.github/workflows/deploy.yml` builds and deploys Angular only
 
 ## Highlights
 - Smart add: paste a URL (Webtoons, Bato) and the `fetch-metadata` Edge Function scrapes title, description, cover, genres, original language, language, latest chapter, and upload date.

@@ -40,8 +40,8 @@
           },
           "configurations": {
             "production": {
-              "baseHref": "/a-bookshelf/v2/",
-              "deployUrl": "/a-bookshelf/v2/",
+              "baseHref": "/a-bookshelf/",
+              "deployUrl": "/a-bookshelf/",
               "fileReplacements": [
                 {
                   "replace": "src/environments/environment.ts",
