@@ -9,7 +9,7 @@ Deployment link: https://detgrey.github.io/a-bookshelf/
 - Workflow: `.github/workflows/deploy.yml` builds and deploys Angular only
 
 ## Highlights
-- Smart add: paste a URL (Webtoons, Bato) and the `fetch-metadata` Edge Function scrapes title, description, cover, genres, original language, language, latest chapter, and upload date.
+- Smart add: paste a URL (Webtoons, Mangago, Asura Scans, etc.) and the `fetch-metadata` Edge Function scrapes title, description, cover, genres, original language, language, latest chapter, and upload date.
 - **Image proxy**: Book cover images are automatically downloaded, converted to WebP format, and stored in Cloudflare R2 via a Workers proxy. Ensures images remain available even if the original source goes down. Fast global delivery via Cloudflare's CDN. Gracefully falls back to original URLs if upload fails.
 - Reading states and shelves: built-in shelves (reading, plan to read, waiting, completed, dropped, on hold) plus custom shelves.
 - Progress tracking: personal notes, last read, latest scraped chapter, and last uploaded timestamp per book.
@@ -62,7 +62,7 @@ See [GUIDE.md](./GUIDE.md) for detailed step-by-step instructionsANON_KEY`.
 - fetch-metadata
 	- Request: `{ "url": "https://example.com/some-book" }`
 	- Response: `{ metadata: { title, description, image, genres[], original_language, latest_chapter, last_uploaded_at } }`
-	- Supports Webtoons, Bato (ing/si), and a generic Bato v3 parser; returns 200 with error payload on failures to avoid client-side swallowing.
+	- Supports Webtoons, Mangago, Asura Scans, Comix, and generic fallback parsing; returns 200 with error payload on failures to avoid client-side swallowing.
 - fetch-latest
 	- Request: `{ "url": "https://example.com/some-book" }`
 	- Response: `{ latest_chapter, last_uploaded_at }`

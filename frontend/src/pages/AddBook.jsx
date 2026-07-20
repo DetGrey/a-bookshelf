@@ -265,7 +265,7 @@ function AddBook() {
         <label className="field">
           <span>Source URL</span>
           <p className="muted">
-            Right now it only works with bato pages.
+            Paste a URL from supported sites (e.g., Webtoons, Mangago, Asura Scans).
           </p>
           <div className="flex gap-8">
             <input

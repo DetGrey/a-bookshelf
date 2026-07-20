@@ -55,3 +55,5 @@ coverage/
 # EXTRA
 secret.md
 html_samples/
+
+node_modules/
