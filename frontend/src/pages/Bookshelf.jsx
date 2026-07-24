@@ -470,22 +470,36 @@ function Bookshelf() {
       const updatedIds = new Set()
       const updates = []
 
-      for (let i = 0; i < waitingBooks.length; i += batchSize) {
-        const batch = waitingBooks.slice(i, i + batchSize)
-            const batchResults = await Promise.all(
-              batch.map(async (book) => {
-            const url = book.sources?.[0]?.url
-            if (!url) return { bookId: book.id, title: book.title, skipped: 'no_url' }
+      const itemsToFetch = waitingBooks
+        .map(book => ({ id: book.id, url: book.sources?.[0]?.url }))
+        .filter(item => Boolean(item.url))
 
-            const { data: payload, error: fnError } = await supabase.functions.invoke('fetch-latest', {
-              body: { url },
-            })
+      const noUrlResults = waitingBooks
+        .filter(book => !book.sources?.[0]?.url)
+        .map(book => ({ bookId: book.id, title: book.title, skipped: 'no_url' }))
 
-            if (fnError || !payload) return { bookId: book.id, title: book.title, error: fnError?.message || 'fetch failed' }
+      let batchResults = []
 
-            const payloadLatest = normalizeText(payload.latest_chapter)
-            const payloadUploaded = payload.last_uploaded_at
-            const payloadCount = normalizeCount(payload.chapter_count)
+      if (itemsToFetch.length > 0) {
+        const { data: responseData, error: fnError } = await supabase.functions.invoke('fetch-latest', {
+          body: { items: itemsToFetch },
+        })
+
+        const resultsMap = new Map((responseData?.results || []).map(r => [r.id || r.url, r]))
+
+        batchResults = await Promise.all(
+          itemsToFetch.map(async ({ id, url }) => {
+            const book = waitingBooks.find(b => b.id === id)
+            if (!book) return { bookId: id, title: 'Unknown', error: 'Book not found' }
+
+            const res = resultsMap.get(id) || resultsMap.get(url)
+            if (fnError || !res || !res.success) {
+              return { bookId: book.id, title: book.title, error: res?.error || fnError?.message || 'fetch failed' }
+            }
+
+            const payloadLatest = normalizeText(res.latest_chapter)
+            const payloadUploaded = res.last_uploaded_at
+            const payloadCount = normalizeCount(res.chapter_count)
 
             const latestHasText = payloadLatest !== ''
             const uploadHasValue = Boolean(payloadUploaded)
@@ -493,14 +507,12 @@ function Bookshelf() {
             const emptyPayload = !latestHasText && !uploadHasValue && !countHasValue
 
             if (emptyPayload) {
-              return { bookId: book.id, title: book.title, payload, skipped: 'empty_payload' }
+              return { bookId: book.id, title: book.title, payload: res, skipped: 'empty_payload' }
             }
 
-            // Compare latest chapter: normalize both strings and check if they differ
             const normalizedCurrentLatest = normalizeText(book.latest_chapter)
             const hasLatestChange = latestHasText && payloadLatest !== normalizedCurrentLatest
 
-            // Compare upload dates: only count as change if dates are different days (ignore time of day)
             const parsedPayloadUpload = uploadHasValue ? new Date(payloadUploaded) : null
             const parsedCurrentUpload = book.last_uploaded_at ? new Date(book.last_uploaded_at) : null
             const payloadUploadMs = parsedPayloadUpload && !isNaN(parsedPayloadUpload) ? parsedPayloadUpload.getTime() : null
@@ -512,11 +524,10 @@ function Bookshelf() {
             const currentCount = normalizeCount(book.chapter_count)
             const hasCountChange = countHasValue && payloadCount !== currentCount
 
-            // Determine if any field changed (latest chapter, upload date, or chapter count)
             const hasChange = hasLatestChange || hasUploadChange || hasCountChange
 
             if (!hasChange) {
-              return { bookId: book.id, title: book.title, payload, skipped: 'no_change' }
+              return { bookId: book.id, title: book.title, payload: res, skipped: 'no_change' }
             }
 
             if (hasChange) {
@@ -540,18 +551,13 @@ function Bookshelf() {
             if (hasUploadChange) changes.push(`Upload: ${book.last_uploaded_at ? new Date(book.last_uploaded_at).toLocaleString() : '—'} → ${payloadUploaded ? new Date(payloadUploaded).toLocaleString() : '—'}`)
             if (hasCountChange) changes.push(`Chapters: ${book.chapter_count ?? '—'} → ${payloadCount}`)
 
-            return { bookId: book.id, title: book.title, payload, updated: hasChange, changes }
+            return { bookId: book.id, title: book.title, payload: res, updated: hasChange, changes }
           })
         )
-
-        updates.push(...batchResults)
-        setWaitingProgress({ current: Math.min(waitingBooks.length, (i + batch.length)), total: waitingBooks.length })
-
-        // Throttle between batches (skip after last batch)
-        if (i + batchSize < waitingBooks.length) {
-          await sleep(delayMs)
-        }
       }
+
+      updates.push(...noUrlResults, ...batchResults)
+      setWaitingProgress({ current: waitingBooks.length, total: waitingBooks.length })
 
       const updatesById = new Map(updates.map((u) => [u.bookId, u]))
       const updatedDetails = updates

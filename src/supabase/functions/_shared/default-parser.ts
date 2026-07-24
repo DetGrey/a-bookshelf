@@ -8,20 +8,22 @@ export function parseDefaultLatest($: cheerio.CheerioAPI): ParsedLatest {
   let last_uploaded_at: string | null = null;
   let chapter_count: number | null = null;
 
-  const chapterCandidates = $('[name="chapter-list"] a, .scrollable-panel a')
-    .filter((_: any, el: any) => {
-      const text = $(el).text().trim();
-      const href = $(el).attr('href') || '';
-      return text.length > 0 && /\/title\//.test(href);
-    })
+  let chapterCandidates = $('[name="chapter-list"] a, .scrollable-panel a, ul.chapter-list a, .chapter-list a, div.chapters a, .wp-manga-chapter a, ul.row-content-chapter a, div.chapter-list a')
+    .filter((_: any, el: any) => $(el).text().trim().length > 0)
     .toArray();
+
+  if (chapterCandidates.length === 0) {
+    chapterCandidates = $('a[href*="/chapter"], a[href*="/ch-"], a[href*="/read"], a[href*="/title/"], a[href*="/series/"]')
+      .filter((_: any, el: any) => $(el).text().trim().length > 0)
+      .toArray();
+  }
 
   let best = { text: '', ts: -Infinity } as { text: string; ts: number };
 
   chapterCandidates.forEach((el: any) => {
     const $el = $(el);
-    const row = $el.closest('div');
-    const timeTag = row.find('time').first();
+    const row = $el.closest('div, li, tr');
+    const timeTag = row.find('time, span.chapter-time, span.date, span.post-on').first();
     const tsAttr = timeTag.attr('time') || timeTag.attr('data-time') || timeTag.attr('datetime');
     let tsNum = Number.NEGATIVE_INFINITY;
     if (tsAttr) {
@@ -30,6 +32,12 @@ export function parseDefaultLatest($: cheerio.CheerioAPI): ParsedLatest {
         tsNum = maybeNum;
       } else {
         const d = new Date(tsAttr);
+        if (!Number.isNaN(d.getTime())) tsNum = d.getTime();
+      }
+    } else {
+      const txt = timeTag.text().trim();
+      if (txt) {
+        const d = new Date(txt);
         if (!Number.isNaN(d.getTime())) tsNum = d.getTime();
       }
     }
@@ -41,9 +49,8 @@ export function parseDefaultLatest($: cheerio.CheerioAPI): ParsedLatest {
 
   if (best.text) {
     latest_chapter = best.text;
-  } else if (chapterCandidates.length) {
-    const lastLink = chapterCandidates[chapterCandidates.length - 1];
-    latest_chapter = $(lastLink).text().trim();
+  } else if (chapterCandidates.length > 0) {
+    latest_chapter = $(chapterCandidates[0]).text().trim();
   }
 
   const uniqueChapterKeys = new Set<string>();
@@ -68,7 +75,7 @@ export function parseDefaultLatest($: cheerio.CheerioAPI): ParsedLatest {
   }
 
   if (!chapter_count) {
-    const headingCountText = $('b:contains("Chapters")').next('span').text();
+    const headingCountText = $('b:contains("Chapters"), span:contains("Chapters")').next().text();
     const match = headingCountText.match(/(\d+)/);
     if (match) {
       const parsed = parseInt(match[1], 10);

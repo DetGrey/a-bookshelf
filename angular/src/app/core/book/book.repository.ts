@@ -274,6 +274,18 @@ export class BookRepository {
     return { success: true, data: undefined };
   }
 
+  async isCoverUrlInUse(coverUrl: string): Promise<boolean> {
+    const { data, error } = await this.supabase.rpc('is_cover_url_in_use', {
+      target_url: coverUrl,
+    });
+
+    if (error || typeof data !== 'boolean') {
+      return true;
+    }
+
+    return data;
+  }
+
   async upsertBooks(records: readonly BookRecord[]): Promise<Result<void>> {
     if (records.length === 0) {
       return { success: true, data: undefined };

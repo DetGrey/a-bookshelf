@@ -5,6 +5,8 @@ import { ErrorCode, Result } from '../../models/result.model';
 import { toBook, toSupabasePayload } from '../../models/mappers/book.mapper';
 import { BookRepository } from './book.repository';
 import { SUPABASE_CLIENT } from '../supabase.token';
+import { deleteProxiedCover, isProxiedUrl } from '../../shared/utils/image-proxy';
+import { environment } from '../../../environments/environment';
 
 export interface WaitingUpdateProgress {
   processed: number;
@@ -285,6 +287,9 @@ export class BookService {
     }
 
     const previousBooks = this.books();
+    const targetBook = previousBooks.find((b) => b.id === bookId);
+    const targetCoverUrl = targetBook?.coverUrl;
+
     this.pendingOptimisticBookIds.add(bookId);
     this.books.update((books) => books.filter((book) => book.id !== bookId));
     this.errorMessage.set(null);
@@ -295,6 +300,19 @@ export class BookService {
       this.pendingOptimisticBookIds.delete(bookId);
       this.rollbackBooks(previousBooks, `Could not delete book. ${result.error.message}`);
       return result;
+    }
+
+    if (targetCoverUrl && isProxiedUrl(targetCoverUrl)) {
+      this.repository
+        .isCoverUrlInUse(targetCoverUrl)
+        .then((isInUse) => {
+          if (!isInUse) {
+            deleteProxiedCover(targetCoverUrl, environment.imageProxyUrl).catch((err) =>
+              console.error('Error deleting proxied cover:', err)
+            );
+          }
+        })
+        .catch((err) => console.error('Error checking cover URL in use:', err));
     }
 
     this.pendingOptimisticBookIds.delete(bookId);
@@ -353,23 +371,16 @@ export class BookService {
       });
     };
 
-    const processBook = async (book: Book): Promise<void> => {
-      const sourceResult = await this.repository.getPrimarySourceUrl(book.id);
-      if (!sourceResult.success) {
-        errors += 1;
-        outcomes.push({
-          bookId: book.id,
-          title: book.title,
-          status: 'error',
-          detail: sourceResult.error.message,
-        });
-        processed += 1;
-        emitProgress();
-        return;
-      }
+    const itemsToFetch: Array<{ id: string; url: string }> = [];
+    const booksById = new Map<string, Book>();
 
-      const sourceUrl = sourceResult.data?.trim() ?? '';
-      if (!sourceUrl) {
+    for (const book of waitingBooks) {
+      booksById.set(book.id, book);
+      const sourceResult = await this.repository.getPrimarySourceUrl(book.id);
+      const sourceUrl = sourceResult.success ? (sourceResult.data?.trim() ?? '') : '';
+      if (sourceUrl) {
+        itemsToFetch.push({ id: book.id, url: sourceUrl });
+      } else {
         skipped += 1;
         outcomes.push({
           bookId: book.id,
@@ -379,84 +390,98 @@ export class BookService {
         });
         processed += 1;
         emitProgress();
-        return;
       }
+    }
 
+    if (itemsToFetch.length > 0) {
       const { data, error } = await supabase.functions.invoke('fetch-latest', {
-        body: { url: sourceUrl },
+        body: { items: itemsToFetch },
       });
 
-      if (error) {
-        errors += 1;
-        outcomes.push({
-          bookId: book.id,
-          title: book.title,
-          status: 'error',
-          detail: error.message ?? 'Latest fetch failed.',
-        });
-        processed += 1;
-        emitProgress();
-        return;
-      }
-
-      const payload = this.buildLatestUpdatePayload(book, (data ?? {}) as {
+      const responseResults = (data?.results ?? []) as Array<{
+        id?: string;
+        url?: string;
+        success?: boolean;
         latest_chapter?: string | null;
         chapter_count?: number | null;
         last_uploaded_at?: string | null;
-      });
+        error?: string | null;
+      }>;
+      const resultMap = new Map(responseResults.map((r) => [r.id || r.url || '', r]));
 
-      if (Object.keys(payload).length === 0) {
-        skipped += 1;
+      for (const item of itemsToFetch) {
+        const book = booksById.get(item.id);
+        if (!book) continue;
+
+        if (error) {
+          errors += 1;
+          outcomes.push({
+            bookId: book.id,
+            title: book.title,
+            status: 'error',
+            detail: error.message ?? 'Latest fetch failed.',
+          });
+          processed += 1;
+          emitProgress();
+          continue;
+        }
+
+        const res = resultMap.get(item.id) || resultMap.get(item.url);
+        if (!res || res.success === false) {
+          errors += 1;
+          outcomes.push({
+            bookId: book.id,
+            title: book.title,
+            status: 'error',
+            detail: res?.error ?? 'Latest fetch failed.',
+          });
+          processed += 1;
+          emitProgress();
+          continue;
+        }
+
+        const payload = this.buildLatestUpdatePayload(book, res);
+
+        if (Object.keys(payload).length === 0) {
+          skipped += 1;
+          outcomes.push({
+            bookId: book.id,
+            title: book.title,
+            status: 'skipped',
+            detail: 'No fields changed.',
+          });
+          processed += 1;
+          emitProgress();
+          continue;
+        }
+
+        const updateResult = await this.repository.update(user.id, book.id, payload);
+        if (!updateResult.success) {
+          errors += 1;
+          outcomes.push({
+            bookId: book.id,
+            title: book.title,
+            status: 'error',
+            detail: updateResult.error.message,
+          });
+          processed += 1;
+          emitProgress();
+          continue;
+        }
+
+        updated += 1;
         outcomes.push({
           bookId: book.id,
           title: book.title,
-          status: 'skipped',
-          detail: 'No fields changed.',
+          status: 'updated',
+          detail: 'Updated latest fields.',
         });
+
+        const mapped = toBook(updateResult.data);
+        this.books.update((existing) => existing.map((item) => (item.id === mapped.id ? mapped : item)));
+
         processed += 1;
         emitProgress();
-        return;
-      }
-
-      const updateResult = await this.repository.update(user.id, book.id, payload);
-      if (!updateResult.success) {
-        errors += 1;
-        outcomes.push({
-          bookId: book.id,
-          title: book.title,
-          status: 'error',
-          detail: updateResult.error.message,
-        });
-        processed += 1;
-        emitProgress();
-        return;
-      }
-
-      updated += 1;
-      outcomes.push({
-        bookId: book.id,
-        title: book.title,
-        status: 'updated',
-        detail: 'Updated latest fields.',
-      });
-
-      const mapped = toBook(updateResult.data);
-      this.books.update((existing) => existing.map((item) => (item.id === mapped.id ? mapped : item)));
-
-      processed += 1;
-      emitProgress();
-    };
-
-    this.isLoading.set(true);
-    this.errorMessage.set(null);
-    emitProgress();
-
-    for (let start = 0; start < waitingBooks.length; start += batchSize) {
-      const batch = waitingBooks.slice(start, start + batchSize);
-      await Promise.all(batch.map((book) => processBook(book)));
-
-      if (throttleMs > 0 && start + batchSize < waitingBooks.length) {
-        await this.delay(throttleMs);
       }
     }
 

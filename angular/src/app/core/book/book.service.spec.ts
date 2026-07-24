@@ -483,6 +483,45 @@ describe('BookService read state', () => {
     expect(service.errorMessage()).toContain('Could not delete book');
   });
 
+  it('deletes book and checks if proxied cover is in use globally', async () => {
+    const repository = {
+      delete: jest.fn().mockResolvedValue({ success: true, data: undefined }),
+      isCoverUrlInUse: jest.fn().mockResolvedValue(false),
+    } as unknown as BookRepository;
+
+    TestBed.configureTestingModule({
+      providers: [
+        BookService,
+        { provide: BookRepository, useValue: repository },
+        {
+          provide: AuthService,
+          useValue: {
+            currentUser: signal(authUser),
+          },
+        },
+      ],
+    });
+
+    const service = TestBed.inject(BookService);
+    service.books.set([
+      {
+        id: 'book-1', userId: 'user-1', title: 'Original title', description: 'desc',
+        score: 7, status: 'reading' as const, genres: ['action'], language: 'en',
+        chapterCount: 45, latestChapter: null, lastUploadedAt: null, lastFetchedAt: null,
+        notes: null, timesRead: 1, lastRead: null, originalLanguage: null,
+        coverUrl: 'https://bookshelf-image-proxy.workers.dev/covers/abc.webp',
+        createdAt: new Date('2026-01-01T00:00:00.000Z'), updatedAt: new Date('2026-01-02T00:00:00.000Z'),
+      },
+    ]);
+
+    const result = await service.deleteBook('book-1');
+
+    expect(result.success).toBe(true);
+    expect(service.books().length).toBe(0);
+    expect(repository.delete).toHaveBeenCalledWith('user-1', 'book-1');
+    expect(repository.isCoverUrlInUse).toHaveBeenCalledWith('https://bookshelf-image-proxy.workers.dev/covers/abc.webp');
+  });
+
   it('starts and stops realtime subscription with auth state changes', async () => {
     const handlers: Record<string, (payload: unknown) => void> = {};
     let channel: any;

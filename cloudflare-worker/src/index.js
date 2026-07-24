@@ -30,6 +30,22 @@ function buildObjectKey(prefix, fileName) {
   return `${normalizedPrefix}/${fileName}`
 }
 
+function extractKey(input) {
+  if (!input || typeof input !== 'string') return null;
+  const trimmed = input.trim();
+  if (!trimmed) return null;
+  if (trimmed.startsWith('http://') || trimmed.startsWith('https://')) {
+    try {
+      const parsed = new URL(trimmed);
+      const key = parsed.pathname.replace(/^\/+/, '');
+      return key || null;
+    } catch {
+      return null;
+    }
+  }
+  return trimmed.replace(/^\/+/, '');
+}
+
 // Helper to convert image to WebP using Cloudflare's Image Resizing
 async function convertToWebP(imageData, contentType) {
   try {
@@ -67,7 +83,7 @@ async function convertToWebP(imageData, contentType) {
 function getCorsHeaders(origin) {
   return {
     'Access-Control-Allow-Origin': origin || '*',
-    'Access-Control-Allow-Methods': 'GET, POST, OPTIONS',
+    'Access-Control-Allow-Methods': 'GET, POST, DELETE, OPTIONS',
     'Access-Control-Allow-Headers': 'Content-Type',
     'Access-Control-Max-Age': '86400',
   };
@@ -307,6 +323,133 @@ export default {
       }
     }
 
+    // GET /list - List all stored image objects in R2
+    if (request.method === 'GET' && url.pathname === '/list') {
+      try {
+        let truncated = true;
+        let cursor = undefined;
+        const objects = [];
+
+        while (truncated) {
+          const list = await env.BOOK_COVERS.list({ cursor });
+          for (const obj of list.objects) {
+            objects.push({
+              key: obj.key,
+              size: obj.size,
+              uploadedAt: obj.uploaded
+            });
+          }
+          truncated = list.truncated;
+          cursor = list.truncated ? list.cursor : undefined;
+        }
+
+        const workerUrl = new URL(request.url);
+        const keys = objects.map(o => o.key);
+        const urls = objects.map(o => `${workerUrl.origin}/${o.key}`);
+
+        return new Response(JSON.stringify({
+          success: true,
+          count: objects.length,
+          keys,
+          urls,
+          objects
+        }), {
+          status: 200,
+          headers: {
+            'Content-Type': 'application/json',
+            ...corsHeaders
+          }
+        });
+      } catch (error) {
+        return new Response(JSON.stringify({
+          success: false,
+          error: error.message || 'Failed to list objects'
+        }), {
+          status: 500,
+          headers: {
+            'Content-Type': 'application/json',
+            ...corsHeaders
+          }
+        });
+      }
+    }
+
+    // DELETE /delete or POST /delete - Delete single or multiple images by URL or key
+    if ((request.method === 'POST' || request.method === 'DELETE') && url.pathname === '/delete') {
+      try {
+        const body = await request.json().catch(() => ({}));
+        const items = [];
+        if (body.key) items.push(body.key);
+        if (body.url) items.push(body.url);
+        if (Array.isArray(body.keys)) items.push(...body.keys);
+        if (Array.isArray(body.urls)) items.push(...body.urls);
+
+        const keys = Array.from(new Set(items.map(extractKey).filter(Boolean)));
+        let deletedCount = 0;
+
+        for (const key of keys) {
+          try {
+            await env.BOOK_COVERS.delete(key);
+            deletedCount++;
+          } catch (err) {
+            console.error(`Failed to delete key ${key}:`, err);
+          }
+        }
+
+        return new Response(JSON.stringify({
+          success: true,
+          deletedCount,
+          keys
+        }), {
+          status: 200,
+          headers: {
+            'Content-Type': 'application/json',
+            ...corsHeaders
+          }
+        });
+      } catch (error) {
+        return new Response(JSON.stringify({
+          success: false,
+          error: error.message || 'Failed to delete'
+        }), {
+          status: 500,
+          headers: {
+            'Content-Type': 'application/json',
+            ...corsHeaders
+          }
+        });
+      }
+    }
+
+    // DELETE /:key - Delete single image from R2 by key
+    if (request.method === 'DELETE' && url.pathname !== '/') {
+      const key = url.pathname.slice(1);
+      try {
+        await env.BOOK_COVERS.delete(key);
+        return new Response(JSON.stringify({
+          success: true,
+          key
+        }), {
+          status: 200,
+          headers: {
+            'Content-Type': 'application/json',
+            ...corsHeaders
+          }
+        });
+      } catch (error) {
+        return new Response(JSON.stringify({
+          success: false,
+          error: error.message || 'Failed to delete'
+        }), {
+          status: 500,
+          headers: {
+            'Content-Type': 'application/json',
+            ...corsHeaders
+          }
+        });
+      }
+    }
+
     // Root path - return info
     if (url.pathname === '/') {
       return new Response(JSON.stringify({
@@ -314,7 +457,8 @@ export default {
         version: '1.0.0',
         endpoints: {
           upload: 'POST /upload with { imageUrl: "..." }',
-          serve: 'GET /:key'
+          serve: 'GET /:key',
+          delete: 'DELETE /:key or POST /delete with { url / urls / key / keys }'
         }
       }), {
         headers: { 

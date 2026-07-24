@@ -70,8 +70,9 @@ export async function parseWebtoonsLatest(
   const html = await response.text();
   const $mobile = cheerio.load(html);
 
-  const title = $mobile('h1.subj, h2.title, meta[property="og:title"]').first().text().trim() || 
-                $mobile('meta[property="og:title"]').attr('content') || '';
+  const title = $mobile('h1.subj, h2.title').first().text().trim() || 
+                $mobile('meta[property="og:title"]').attr('content') || 
+                '';
 
   const mobileInfo = parseWebtoonsMobileGenres($mobile);
 
@@ -83,6 +84,17 @@ export async function parseWebtoonsLatest(
     if (muData) {
       latest_chapter = muData.latest_chapter;
       chapter_count = muData.chapter_count;
+    }
+  }
+
+  // Fallback: extract latest episode directly from Webtoons mobile DOM if MangaUpdates API returned empty
+  if (!latest_chapter) {
+    const topEpisodeText = $mobile('ul#_episodeList li span.subj, ul.m_episode_list li span.subj, div.episode_title').first().text().trim();
+    const topEpisodeNum = $mobile('ul#_episodeList li span.tx, ul.m_episode_list li span.tx').first().text().trim();
+    if (topEpisodeNum) {
+      latest_chapter = topEpisodeNum;
+    } else if (topEpisodeText) {
+      latest_chapter = topEpisodeText;
     }
   }
 
