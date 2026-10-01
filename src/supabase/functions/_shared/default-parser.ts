@@ -2,6 +2,7 @@ import * as cheerio from "cheerio";
 import type { ParsedMetadata, ParsedLatest } from "./types.ts";
 import { normalizeLanguageName } from "./language.ts";
 import { toSupabaseIsoString } from "./date-utils.ts";
+import { extractTextWithNewlines } from "./text-utils.ts";
 
 export function parseDefaultLatest($: cheerio.CheerioAPI): ParsedLatest {
   let latest_chapter: string | null = null;
@@ -100,7 +101,7 @@ export function parseDefaultMetadata($: cheerio.CheerioAPI, hostname: string): P
                 '';
 
   // -- Description --
-  const description = $('div.limit-html-p').first().text().trim() || 
+  const description = extractTextWithNewlines($, 'div.limit-html-p') || 
                          $('meta[property="og:description"]').attr('content') || 
                          $('meta[name="description"]').attr('content') || 
                          '';

@@ -1,6 +1,8 @@
 import * as cheerio from "cheerio";
 import type { ParsedMetadata, ParsedLatest } from "./types.ts";
 import { toSupabaseIsoString } from "./date-utils.ts";
+import { normalizeLanguageName } from "./language.ts";
+import { extractTextWithNewlines } from "./text-utils.ts";
 
 /**
  * Parses chapter listing, total unique chapter count, and latest upload date from Mangago HTML.
@@ -151,7 +153,8 @@ export function parseMangagoMetadata($: cheerio.CheerioAPI): ParsedMetadata {
   const title = rawTitle.replace(/\s*\(yaoi\)$/i, '').trim();
 
   // -- Description --
-  const rawDescription = $('div.manga_summary').first().text() || 
+  const summaryElem = $('div.manga_summary').first();
+  const rawDescription = extractTextWithNewlines($, summaryElem) || 
                          $('meta[property="og:description"]').attr('content') || 
                          '';
   const description = rawDescription
@@ -177,7 +180,7 @@ export function parseMangagoMetadata($: cheerio.CheerioAPI): ParsedMetadata {
     description,
     image,
     genres: Array.from(genresSet),
-    language: null,
+    language: normalizeLanguageName('en'), // Mangago is primarily English content
     original_language: null,
     latest_chapter: latestInfo.latest_chapter || '',
     last_uploaded_at: latestInfo.last_uploaded_at,

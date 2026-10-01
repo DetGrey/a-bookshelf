@@ -161,14 +161,14 @@ describe('book mapper tracer bullet', () => {
     expect(toBook(record).notes).toBeNull();
   });
 
-  it('normalizes times_read to minimum 1: null → 1, 0 → 1, 3 → 3', () => {
+  it('normalizes times_read to minimum 0: null → 0, 0 → 0, 3 → 3', () => {
     const base: BookRecord = {
       id: 'x', user_id: 'u', title: 'T', description: null, score: null,
       status: 'reading', genres: null, language: null, chapter_count: null,
       cover_url: null, created_at: '2026-01-01T00:00:00.000Z', updated_at: '2026-01-02T00:00:00.000Z',
     };
-    expect(toBook({ ...base, times_read: null }).timesRead).toBe(1);
-    expect(toBook({ ...base, times_read: 0 }).timesRead).toBe(1);
+    expect(toBook({ ...base, times_read: null }).timesRead).toBe(0);
+    expect(toBook({ ...base, times_read: 0 }).timesRead).toBe(0);
     expect(toBook({ ...base, times_read: 3 }).timesRead).toBe(3);
   });
 
@@ -247,7 +247,7 @@ describe('book mapper tracer bullet', () => {
     };
     const result = toSupabasePayload(form);
     expect(result.notes).toBeNull();
-    expect(result.times_read).toBe(1);
+    expect(result.times_read).toBe(0);
     expect(result.last_read).toBeNull();
     expect(result.latest_chapter).toBeNull();
     expect(result.last_uploaded_at).toBeNull();

@@ -249,6 +249,18 @@ function AddBook() {
     }
   }
 
+  const handleFormChange = (newForm) => {
+    let updatedTimesRead = newForm.times_read
+    if (newForm.status !== form.status) {
+      if (newForm.status === 'waiting') {
+        updatedTimesRead = 0
+      } else if (form.status === 'waiting' || form.times_read === 0) {
+        updatedTimesRead = 1
+      }
+    }
+    setForm({ ...newForm, times_read: updatedTimesRead })
+  }
+
   return (
     <div className="page narrow">
       <div className="page-head">
@@ -292,7 +304,7 @@ function AddBook() {
       <section className="card mt-16">
         <div className="stack">
           <p className="eyebrow">Book Details</p>
-          <BookFormFields form={form} onChange={setForm} />
+          <BookFormFields form={form} onChange={handleFormChange} />
 
           <SourceManager
             sources={sources}

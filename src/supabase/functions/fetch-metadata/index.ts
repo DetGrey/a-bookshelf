@@ -69,7 +69,17 @@ Deno.serve(async (req) => {
       }
     }
 
-    // 4. Return JSON
+    // 4. Return JSON (with trimmed string fields)
+    if (metadata && typeof metadata === 'object') {
+      for (const [key, value] of Object.entries(metadata)) {
+        if (typeof value === 'string') {
+          metadata[key] = value.trim();
+        } else if (Array.isArray(value)) {
+          metadata[key] = value.map((item) => (typeof item === 'string' ? item.trim() : item));
+        }
+      }
+    }
+
     return new Response(
       JSON.stringify({ metadata }),
       { headers: { ...corsHeaders, 'Content-Type': 'application/json' } }

@@ -50,8 +50,8 @@ async function processSingleUrl(url: string, baseHeaders: Record<string, string>
   }
 
   return {
-    latest_chapter: info?.latest_chapter ?? null,
-    last_uploaded_at: info?.last_uploaded_at ?? null,
+    latest_chapter: info?.latest_chapter ? String(info.latest_chapter).trim() : null,
+    last_uploaded_at: info?.last_uploaded_at ? String(info.last_uploaded_at).trim() : null,
     chapter_count: info?.chapter_count ?? null,
   };
 }

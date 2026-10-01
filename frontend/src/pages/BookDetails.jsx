@@ -623,6 +623,10 @@ function BookDetails() {
                   <strong>{book.original_language || '—'}</strong>
                 </div>
                 <div className="stat">
+                  <p className="muted">Created At</p>
+                  <strong>{book.created_at ? new Date(book.created_at).toLocaleDateString() : '—'}</strong>
+                </div>
+                <div className="stat">
                   <p className="muted">Last Updated</p>
                   <strong>{book.updated_at ? new Date(book.updated_at).toLocaleDateString() : '—'}</strong>
                 </div>
@@ -636,7 +640,7 @@ function BookDetails() {
                 </div>
                 <div className="stat">
                   <p className="muted">Times Read</p>
-                  <strong>{book.times_read ?? 1}</strong>
+                  <strong>{book.times_read ?? 0}</strong>
                 </div>
                 <div className="stat">
                   <p className="muted">Chapter Count</p>

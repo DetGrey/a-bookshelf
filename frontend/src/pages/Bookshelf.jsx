@@ -478,82 +478,91 @@ function Bookshelf() {
         .filter(book => !book.sources?.[0]?.url)
         .map(book => ({ bookId: book.id, title: book.title, skipped: 'no_url' }))
 
-      let batchResults = []
+      const batchSize = 12
+      let processedCount = noUrlResults.length
+      setWaitingProgress({ current: processedCount, total: waitingBooks.length })
 
       if (itemsToFetch.length > 0) {
-        const { data: responseData, error: fnError } = await supabase.functions.invoke('fetch-latest', {
-          body: { items: itemsToFetch },
-        })
-
-        const resultsMap = new Map((responseData?.results || []).map(r => [r.id || r.url, r]))
-
-        batchResults = await Promise.all(
-          itemsToFetch.map(async ({ id, url }) => {
-            const book = waitingBooks.find(b => b.id === id)
-            if (!book) return { bookId: id, title: 'Unknown', error: 'Book not found' }
-
-            const res = resultsMap.get(id) || resultsMap.get(url)
-            if (fnError || !res || !res.success) {
-              return { bookId: book.id, title: book.title, error: res?.error || fnError?.message || 'fetch failed' }
-            }
-
-            const payloadLatest = normalizeText(res.latest_chapter)
-            const payloadUploaded = res.last_uploaded_at
-            const payloadCount = normalizeCount(res.chapter_count)
-
-            const latestHasText = payloadLatest !== ''
-            const uploadHasValue = Boolean(payloadUploaded)
-            const countHasValue = payloadCount !== null
-            const emptyPayload = !latestHasText && !uploadHasValue && !countHasValue
-
-            if (emptyPayload) {
-              return { bookId: book.id, title: book.title, payload: res, skipped: 'empty_payload' }
-            }
-
-            const normalizedCurrentLatest = normalizeText(book.latest_chapter)
-            const hasLatestChange = latestHasText && payloadLatest !== normalizedCurrentLatest
-
-            const parsedPayloadUpload = uploadHasValue ? new Date(payloadUploaded) : null
-            const parsedCurrentUpload = book.last_uploaded_at ? new Date(book.last_uploaded_at) : null
-            const payloadUploadMs = parsedPayloadUpload && !isNaN(parsedPayloadUpload) ? parsedPayloadUpload.getTime() : null
-            const currentUploadMs = parsedCurrentUpload && !isNaN(parsedCurrentUpload) ? parsedCurrentUpload.getTime() : null
-            const payloadUploadDate = payloadUploadMs ? new Date(payloadUploadMs).toISOString().split('T')[0] : null
-            const currentUploadDate = currentUploadMs ? new Date(currentUploadMs).toISOString().split('T')[0] : null
-            const hasUploadChange = uploadHasValue && payloadUploadDate !== currentUploadDate
-
-            const currentCount = normalizeCount(book.chapter_count)
-            const hasCountChange = countHasValue && payloadCount !== currentCount
-
-            const hasChange = hasLatestChange || hasUploadChange || hasCountChange
-
-            if (!hasChange) {
-              return { bookId: book.id, title: book.title, payload: res, skipped: 'no_change' }
-            }
-
-            if (hasChange) {
-              const { error: updateError } = await supabase
-                .from('books')
-                .update({
-                  latest_chapter: hasLatestChange ? payloadLatest : book.latest_chapter,
-                  last_uploaded_at: hasUploadChange ? payloadUploaded : book.last_uploaded_at,
-                  chapter_count: hasCountChange ? payloadCount : book.chapter_count,
-                  last_fetched_at: now,
-                })
-                .eq('id', book.id)
-
-              if (!updateError) {
-                updatedIds.add(book.id)
-              }
-            }
-
-            const changes = []
-            if (hasLatestChange) changes.push(`Latest: ${normalizedCurrentLatest || '—'} → ${payloadLatest || '—'}`)
-            if (hasUploadChange) changes.push(`Upload: ${book.last_uploaded_at ? new Date(book.last_uploaded_at).toLocaleString() : '—'} → ${payloadUploaded ? new Date(payloadUploaded).toLocaleString() : '—'}`)
-            if (hasCountChange) changes.push(`Chapters: ${book.chapter_count ?? '—'} → ${payloadCount}`)
-
-            return { bookId: book.id, title: book.title, payload: res, updated: hasChange, changes }
+        for (let i = 0; i < itemsToFetch.length; i += batchSize) {
+          const chunk = itemsToFetch.slice(i, i + batchSize)
+          const { data: responseData, error: fnError } = await supabase.functions.invoke('fetch-latest', {
+            body: { items: chunk },
           })
-        )
+
+          const resultsMap = new Map((responseData?.results || []).map(r => [r.id || r.url, r]))
+
+          const chunkResults = await Promise.all(
+            chunk.map(async ({ id, url }) => {
+              const book = waitingBooks.find(b => b.id === id)
+              if (!book) return { bookId: id, title: 'Unknown', error: 'Book not found' }
+
+              const res = resultsMap.get(id) || resultsMap.get(url)
+              if (fnError || !res || !res.success) {
+                return { bookId: book.id, title: book.title, error: res?.error || fnError?.message || 'fetch failed' }
+              }
+
+              const payloadLatest = normalizeText(res.latest_chapter)
+              const payloadUploaded = res.last_uploaded_at
+              const payloadCount = normalizeCount(res.chapter_count)
+
+              const latestHasText = payloadLatest !== ''
+              const uploadHasValue = Boolean(payloadUploaded)
+              const countHasValue = payloadCount !== null
+              const emptyPayload = !latestHasText && !uploadHasValue && !countHasValue
+
+              if (emptyPayload) {
+                return { bookId: book.id, title: book.title, payload: res, skipped: 'empty_payload' }
+              }
+
+              const normalizedCurrentLatest = normalizeText(book.latest_chapter)
+              const hasLatestChange = latestHasText && payloadLatest !== normalizedCurrentLatest
+
+              const parsedPayloadUpload = uploadHasValue ? new Date(payloadUploaded) : null
+              const parsedCurrentUpload = book.last_uploaded_at ? new Date(book.last_uploaded_at) : null
+              const payloadUploadMs = parsedPayloadUpload && !isNaN(parsedPayloadUpload) ? parsedPayloadUpload.getTime() : null
+              const currentUploadMs = parsedCurrentUpload && !isNaN(parsedCurrentUpload) ? parsedCurrentUpload.getTime() : null
+              const payloadUploadDate = payloadUploadMs ? new Date(payloadUploadMs).toISOString().split('T')[0] : null
+              const currentUploadDate = currentUploadMs ? new Date(currentUploadMs).toISOString().split('T')[0] : null
+              const hasUploadChange = uploadHasValue && payloadUploadDate !== currentUploadDate
+
+              const currentCount = normalizeCount(book.chapter_count)
+              const hasCountChange = countHasValue && payloadCount !== currentCount
+
+              const hasChange = hasLatestChange || hasUploadChange || hasCountChange
+
+              if (!hasChange) {
+                return { bookId: book.id, title: book.title, payload: res, skipped: 'no_change' }
+              }
+
+              if (hasChange) {
+                const { error: updateError } = await supabase
+                  .from('books')
+                  .update({
+                    latest_chapter: hasLatestChange ? payloadLatest : book.latest_chapter,
+                    last_uploaded_at: hasUploadChange ? payloadUploaded : book.last_uploaded_at,
+                    chapter_count: hasCountChange ? payloadCount : book.chapter_count,
+                    last_fetched_at: now,
+                  })
+                  .eq('id', book.id)
+
+                if (!updateError) {
+                  updatedIds.add(book.id)
+                }
+              }
+
+              const changes = []
+              if (hasLatestChange) changes.push(`Latest: ${normalizedCurrentLatest || '—'} → ${payloadLatest || '—'}`)
+              if (hasUploadChange) changes.push(`Upload: ${book.last_uploaded_at ? new Date(book.last_uploaded_at).toLocaleString() : '—'} → ${payloadUploaded ? new Date(payloadUploaded).toLocaleString() : '—'}`)
+              if (hasCountChange) changes.push(`Chapters: ${book.chapter_count ?? '—'} → ${payloadCount}`)
+
+              return { bookId: book.id, title: book.title, payload: res, updated: hasChange, changes }
+            })
+          )
+
+          batchResults.push(...chunkResults)
+          processedCount += chunk.length
+          setWaitingProgress({ current: processedCount, total: waitingBooks.length })
+        }
       }
 
       updates.push(...noUrlResults, ...batchResults)

@@ -67,13 +67,13 @@ function BookFormFields({ form, onChange }) {
           <span>Times Read</span>
           <input
             type="number"
-            min="1"
-            value={form.times_read ?? 1}
+            min="0"
+            value={form.times_read ?? 0}
             onChange={(e) => handleChange('times_read', e.target.value === '' ? '' : Number(e.target.value))}
             onBlur={(e) => {
               const val = Number(e.target.value)
-              if (!Number.isFinite(val) || val < 1) {
-                handleChange('times_read', 1)
+              if (!Number.isFinite(val) || val < 0) {
+                handleChange('times_read', 0)
               } else {
                 handleChange('times_read', Math.round(val))
               }

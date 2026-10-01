@@ -28,7 +28,7 @@ const normalizeLanguageName = (value) => {
 
 const normalizeTimesRead = (value) => {
   const n = Number(value)
-  if (!Number.isFinite(n) || n < 1) return 1
+  if (!Number.isFinite(n) || n < 0) return 0
   return Math.round(n)
 }
 
@@ -98,7 +98,7 @@ export async function getBooks(userId) {
     latest_chapter: b.latest_chapter ?? '',
     last_fetched_at: b.last_fetched_at ?? null,
     last_uploaded_at: b.last_uploaded_at ?? null,
-    times_read: b.times_read ?? 1,
+    times_read: b.times_read ?? 0,
     chapter_count: b.chapter_count ?? null,
     created_at: b.created_at,
     updated_at: b.updated_at,
@@ -132,7 +132,7 @@ export async function getBook(bookId) {
     latest_chapter: data.latest_chapter ?? '',
     last_fetched_at: data.last_fetched_at ?? null,
     last_uploaded_at: data.last_uploaded_at ?? null,
-    times_read: data.times_read ?? 1,
+    times_read: data.times_read ?? 0,
     chapter_count: data.chapter_count ?? null,
     created_at: data.created_at,
     updated_at: data.updated_at,
@@ -141,9 +141,24 @@ export async function getBook(bookId) {
   }
 }
 
+const trimStringValues = (obj) => {
+  if (!obj || typeof obj !== 'object') return obj
+  const result = Array.isArray(obj) ? [] : {}
+  for (const [k, v] of Object.entries(obj)) {
+    if (typeof v === 'string') {
+      result[k] = v.trim()
+    } else if (Array.isArray(v)) {
+      result[k] = v.map((item) => (typeof item === 'string' ? item.trim() : item))
+    } else {
+      result[k] = v
+    }
+  }
+  return result
+}
+
 export async function updateBook(bookId, patch) {
   const timesRead = normalizeTimesRead(patch.times_read)
-  const payload = {
+  const payload = trimStringValues({
     title: patch.title,
     description: patch.description,
     cover_url: patch.cover_url,
@@ -160,14 +175,14 @@ export async function updateBook(bookId, patch) {
     times_read: timesRead,
     chapter_count: patch.chapter_count,
     updated_at: new Date().toISOString(),
-  }
+  })
   const { error } = await supabase.from('books').update(payload).eq('id', bookId)
   if (error) throw error
 }
 
 export async function createBook(userId, book) {
   const timesRead = normalizeTimesRead(book.times_read)
-  const payload = {
+  const payload = trimStringValues({
     user_id: userId,
     title: book.title,
     description: book.description ?? '',
@@ -186,7 +201,7 @@ export async function createBook(userId, book) {
     chapter_count: book.chapter_count ?? null,
     created_at: new Date().toISOString(),
     updated_at: new Date().toISOString(),
-  }
+  })
   const { data, error } = await supabase.from('books').insert(payload).select('id').single()
   if (error) throw error
   return data?.id
@@ -198,7 +213,8 @@ export async function deleteBook(bookId) {
 }
 
 export async function addLink(bookId, siteName, url) {
-  const { error } = await supabase.from('book_links').insert({ book_id: bookId, site_name: siteName, url })
+  const payload = trimStringValues({ book_id: bookId, site_name: siteName, url })
+  const { error } = await supabase.from('book_links').insert(payload)
   if (error) throw error
 }
 
