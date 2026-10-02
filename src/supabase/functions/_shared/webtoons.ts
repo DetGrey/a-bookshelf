@@ -49,10 +49,15 @@ export function formatWebtoonsCompleted(latestChapter: string | null, isComplete
 }
 
 function getWebtoonsTitle($: cheerio.CheerioAPI): string {
-  return $(`h1.subj, h2.title, h3.subj, .subj._challengeTitle`)
+  const title = $(`h1.subj, h2.title, h3.subj, .subj._challengeTitle`)
     .first()
     .text()
     .trim() || $('meta[property="og:title"]').attr('content') || '';
+
+  return title
+    .replace(/\s*\(\s*BL\s*\)\s*/gi, ' ')
+    .replace(/\s+/g, ' ')
+    .trim();
 }
 
 async function fetchWebtoonsDocument(
@@ -123,6 +128,12 @@ function parseWebtoonsEpisodeInfo($: cheerio.CheerioAPI): {
   return { latestChapter, chapterCount, lastUploadedAt };
 }
 
+function extractChapterNumber(chapter: string | null): number | null {
+  if (!chapter) return null;
+  const match = chapter.match(/(?:episode|chapter|ep|ch)?\s*(\d+(?:\.\d+)?)/i);
+  return match ? Math.floor(parseFloat(match[1])) : null;
+}
+
 /**
  * Parses Webtoons latest chapter info using Mobile Webtoons + MangaUpdates API in a single clean pass.
  */
@@ -145,7 +156,12 @@ export async function parseWebtoonsLatest(
 
   if (title) {
     const muData = await fetchMangaUpdatesLatest(title, customFetch);
-    if (muData) {
+    const visibleChapterNumber = extractChapterNumber(webtoonEpisodeInfo.latestChapter);
+    const mangaUpdatesChapterNumber = muData ? (muData.chapter_count ?? extractChapterNumber(muData.latest_chapter)) : null;
+    const mangaUpdatesIsPlausible = !visibleChapterNumber ||
+      !mangaUpdatesChapterNumber ||
+      mangaUpdatesChapterNumber >= visibleChapterNumber;
+    if (muData && mangaUpdatesIsPlausible) {
       latest_chapter = muData.latest_chapter;
       chapter_count = muData.chapter_count;
     }
@@ -203,7 +219,12 @@ export async function parseWebtoonsMetadata(
 
   if (title) {
     const muData = await fetchMangaUpdatesLatest(title, customFetch);
-    if (muData) {
+    const visibleChapterNumber = extractChapterNumber(webtoonEpisodeInfo.latestChapter);
+    const mangaUpdatesChapterNumber = muData ? (muData.chapter_count ?? extractChapterNumber(muData.latest_chapter)) : null;
+    const mangaUpdatesIsPlausible = !visibleChapterNumber ||
+      !mangaUpdatesChapterNumber ||
+      mangaUpdatesChapterNumber >= visibleChapterNumber;
+    if (muData && mangaUpdatesIsPlausible) {
       latest_chapter = muData.latest_chapter;
       chapter_count = muData.chapter_count;
       mangaUpdatesGenres = muData.genres;

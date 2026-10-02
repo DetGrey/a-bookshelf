@@ -10,6 +10,16 @@ export interface MangaUpdatesInfo {
   genres: string[];
 }
 
+function normalizeSeriesTitle(title: string): string {
+  return title
+    .toLowerCase()
+    .replace(/\([^)]*\)/g, ' ')
+    .replace(/\[[^\]]*\]/g, ' ')
+    .replace(/[^a-z0-9]+/g, ' ')
+    .trim()
+    .replace(/\s+/g, ' ');
+}
+
 /**
  * Queries MangaUpdates public API to find the newest release chapter name, number, total count, and genres.
  */
@@ -32,7 +42,12 @@ export async function fetchMangaUpdatesLatest(
     const searchData = await searchRes.json();
     if (!searchData.results || searchData.results.length === 0) return null;
 
-    const record = searchData.results[0].record;
+    const normalizedTitle = normalizeSeriesTitle(cleanTitle);
+    const matchingResult = searchData.results.find((result: any) => {
+      const resultTitle = result?.record?.title;
+      return typeof resultTitle === 'string' && normalizeSeriesTitle(resultTitle) === normalizedTitle;
+    });
+    const record = matchingResult?.record;
     if (!record || !record.series_id) return null;
 
     const seriesId = record.series_id;
